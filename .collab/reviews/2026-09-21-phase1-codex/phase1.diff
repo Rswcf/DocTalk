@@ -1,0 +1,3659 @@
+diff --git a/frontend/src/app/editorial.css b/frontend/src/app/editorial.css
+index ca7d391..a05db7f 100644
+--- a/frontend/src/app/editorial.css
++++ b/frontend/src/app/editorial.css
+@@ -1,26 +1,72 @@
+-/* Editorial design layer — "Monocle-crisp". Every rule is scoped under
+-   .dt-editorial so it never affects the functional app UI. Light only. */
++/* Editorial design layer. Every rule is scoped under .dt-editorial so it
++   never affects the functional app UI.
++
++   Token set = §5.3 of `.collab/plans/2026-09-20-apple-design-direction.md`
++   (Phase 1, layer 1). The plan writes the target names unprefixed
++   (`--stage`, `--surface`, `--inset`, `--ink-*`, …) because under decision
++   A2 they become ONE set shared with the app in Phases 3–4. They are kept
++   `--ed-*` here for two hard reasons:
++     1. `--surface-2` already exists in globals.css `:root` with a different
++        value (#f4f4f5 / #27272a). Redeclaring it inside .dt-editorial would
++        shadow the app token for every subtree that renders inside a
++        marketing shell (DocumentDiffPanel surface="editorial", the language
++        popover, …).
++     2. Dark mode has to reach ~40 components that already write
++        `var(--ed-paper-2)` inline, and the untouchable !important counter-
++        rule below that resolves `var(--ed-paper)`. Overriding the SAME names
++        in `.dark .dt-editorial` gives all of them dark for free; new names
++        would leave them light-on-dark.
++   Mapping for the Phase 3 rename: stage→--ed-paper, inset→--ed-paper-2,
++   surface→--ed-surface, surface-2→--ed-surface-2, ink*→--ed-ink*,
++   signal→--ed-signal, hairline→--ed-rule.
++
++   Colour roles (§5.3): terracotta = action + links (always underlined);
++   olive = verified/ready ONLY; amber = evidence/citation ONLY; red = error
++   ONLY. Slate is RETIRED as a role and survives only for the handful of
++   existing consumers until Phase 2 sweeps them. Accent-as-text ≥ 15px. */
+ .dt-editorial {
+-  /* Counterpoint palette (2026-08-04 redesign). Two accents, not one:
+-     rust = action (primary CTA, brand mark, feature eyebrows), slate =
+-     structure (links, secondary CTA, quote borders, nav hover, decorative
+-     set-dressing), olive = verified/positive state ONLY. */
+-  --ed-paper: #eae8e3;
+-  --ed-paper-2: #e4e2db;
+-  --ed-ink: #20211e;
+-  --ed-ink-2: #4a4943;
+-  --ed-ink-3: #5f5e56;
+-  --ed-signal: #843c28;
+-  --ed-signal-deep: #6d3120;
+-  --ed-slate: #1f3a4d;
++  --ed-paper: #eae8e3;          /* stage                                    */
++  --ed-paper-2: #e5e3dc;        /* inset band — was #e4e2db, +1 step so body
++                                   prose on EdSection alt clears 7:1 (7.03) */
++  --ed-surface: #f6f5f2;        /* raised card / panel / product frame      */
++  --ed-surface-2: #ffffff;      /* document page inside a frame             */
++  --ed-ink: #20211e;            /* 13.22 on stage · 14.84 on surface        */
++  --ed-ink-2: #4a4943;          /* 7.38 / 8.28 / 7.03 on stage/surface/inset*/
++  --ed-ink-3: #5f5e56;          /* 5.32 / 5.98 / 5.08 — captions ≥ 13px only*/
++  --ed-signal: #843c28;         /* 6.45 on stage · 7.90 under white         */
++  --ed-signal-deep: #6d3120;    /* hover — 8.13 on stage · 9.95 under white */
++  --ed-on-signal: #ffffff;      /* label ON a signal fill — 7.90            */
++  --ed-slate: #1f3a4d;          /* retired role, kept for live consumers    */
+   --ed-slate-2: #2f556b;
+-  --ed-olive: #35592c;
++  --ed-olive: #35592c;          /* verified — 6.55 on stage                 */
++  --ed-evidence: #7a4b00;       /* citation text/marker — 6.05 on stage     */
++  --ed-evidence-soft: #fff0c2;  /* highlight fill — ink on it 14.25         */
++  --ed-danger: #9a2119;         /* error — 6.58 on stage; icon + label too  */
++  --ed-control-border: #86847b; /* 3.06 on stage (WCAG 1.4.11 non-text ≥ 3) */
+   --ed-rule: rgba(32, 33, 30, 0.12);
+ 
+-  /* Glass material tokens (warm, Ocean v5 recipe — spec §2.3). Consumed by
+-     the .ed-glass utility classes below; never reference these directly
+-     from a component's inline style (fallbacks require @media, which
+-     inline styles cannot express). */
++  /* Radius scale (§5.2) — five steps, no sixth. */
++  --ed-r-1: 8px;    /* inputs, chips        */
++  --ed-r-2: 12px;   /* controls, menus      */
++  --ed-r-3: 16px;   /* cards, panels        */
++  --ed-r-4: 24px;   /* product frames       */
++  --ed-r-pill: 999px;
++
++  /* Motion (§5.5). */
++  --ed-dur-1: 120ms;  /* colour / opacity   */
++  --ed-dur-2: 200ms;  /* open / close       */
++  --ed-dur-3: 320ms;  /* sheets, hero reveal*/
++  --ed-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
++
++  /* The ONE raised-card shadow of the content layer (§5.4). */
++  --ed-shadow-card: 0 1px 2px rgba(20, 18, 14, 0.06),
++                    0 12px 32px -16px rgba(20, 18, 14, 0.18);
++
++  /* Glass material tokens. After Phase 1 these feed exactly two consumers,
++     both functional-layer chrome: the sticky marketing header and the
++     language popover (§5.4). Never reference them from a component's inline
++     style — the fallbacks require @media, which inline styles cannot
++     express. */
+   --ed-glass: rgba(250, 249, 246, 0.55);
+   --ed-glass-strong: rgba(251, 250, 247, 0.85);
+   --ed-glass-blur: blur(22px) saturate(150%);
+@@ -34,6 +80,59 @@
+   color: var(--ed-ink-2);
+   font-family: var(--dt-body);
+   -webkit-font-smoothing: antialiased;
++
++  /* next-themes writes the concrete scheme onto <html> inline, so declare the
++     one that is actually applied rather than `light dark` — otherwise a user
++     who has FORCED light while the OS is dark gets dark UA widgets inside a
++     paper page. */
++  color-scheme: light;
++
++  /* §5.1 — a missing face must look missing during QA, not like a faux bold
++     or a faux italic. The shorthand is for Safari < 16.4, which never learned
++     the longhands. */
++  font-synthesis: none;
++  font-synthesis-weight: none;
++  font-synthesis-style: none;
++}
++
++/* ─── Dark (§5.3) — a warm near-black, not an inversion of paper and not
++   zinc. Hue is fixed at H13–16 across both modes; only lightness moves.
++   Overriding the same token names means the ~40 inline `var(--ed-paper-2)`
++   consumers and the !important counter-rule below follow automatically. */
++.dark .dt-editorial {
++  --ed-paper: #171614;          /* stage                                    */
++  --ed-paper-2: #1c1b18;        /* inset band                               */
++  --ed-surface: #211f1c;        /* raised                                   */
++  --ed-surface-2: #2a2825;
++  --ed-ink: #ece9e2;            /* 14.91 on stage · 13.56 on surface        */
++  --ed-ink-2: #b8b4ab;          /* 8.74 / 7.95 / 8.33                       */
++  --ed-ink-3: #948f86;          /* 5.63 / 5.11 — captions ≥ 13px only       */
++  --ed-signal: #e0957a;         /* 7.53 on stage — same hue, L68            */
++  --ed-signal-deep: #eaa78f;    /* hover BRIGHTENS in dark — 8.97 on stage  */
++  --ed-on-signal: #171614;      /* CTA label on the signal fill — 7.53.
++                                   #843c28 must NOT stay the dark fill: it is
++                                   2.29 against the stage.                  */
++  --ed-slate: #a8bfd0;          /* retired role, lifted so it stays legible */
++  --ed-slate-2: #9fb8c9;
++  --ed-olive: #8fc27d;          /* 8.77 on stage · 7.97 on surface          */
++  --ed-evidence: #f0b323;       /* 9.62 on stage · 7.08 on the soft fill    */
++  --ed-evidence-soft: #3a2e10;
++  --ed-danger: #ff7a6b;         /* 7.10 on stage · 6.46 on surface          */
++  --ed-control-border: #767268; /* 3.43 on surface                          */
++  --ed-rule: rgba(236, 233, 226, 0.12);
++
++  --ed-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.12),
++                    0 12px 32px -16px rgba(0, 0, 0, 0.36);
++
++  /* Glass has to be re-mixed, not inherited: the light recipe would paint a
++     near-white slab for the header and popover on a near-black page. */
++  --ed-glass: rgba(33, 31, 28, 0.62);
++  --ed-glass-strong: rgba(33, 31, 28, 0.86);
++  --ed-glass-line: rgba(236, 233, 226, 0.12);
++  --ed-glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.06);
++  --ed-glass-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.6);
++
++  color-scheme: dark;
+ }
+ 
+ /* Counter the app-surface reset at globals.css:819-826:
+@@ -64,28 +163,21 @@
+   opacity: 0.5;
+   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.09  0 0 0 0 0.07  0 0 0 0.035 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+ }
++/* Dark: the same turbulence with the colour matrix inverted, so the grain is
++   a faint LIGHT speckle on the near-black stage instead of invisible black
++   on black. Opacity .35 (§5.6) — the texture reads stronger on a dark
++   ground at equal alpha. */
++.dark .dt-editorial::before {
++  opacity: 0.35;
++  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.93  0 0 0 0 0.91  0 0 0 0 0.88  0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
++}
+ .dt-editorial > * { position: relative; z-index: 1; }
+ 
+-/* Ambient canvas — restrained, asymmetric static gradients so glass has
+-   something to blur. Static gradients only (not filter:blur) for zero
+-   scroll repaint (spec §3). Sits above the paper-grain ::before, below
+-   real content (z-index 1, set above). */
+-.dt-editorial::after {
+-  content: "";
+-  position: absolute;
+-  inset: 0;
+-  z-index: 0;
+-  pointer-events: none;
+-  background:
+-    radial-gradient(680px 480px at 14% 0%, rgba(160, 75, 52, 0.10), transparent 60%),
+-    radial-gradient(560px 420px at 92% 38%, rgba(31, 58, 77, 0.07), transparent 65%);
+-}
+-@media (prefers-reduced-transparency: reduce) {
+-  .dt-editorial::after { display: none; }
+-}
+-@media print {
+-  .dt-editorial::after { display: none; }
+-}
++/* The ambient `::after` glow is RETIRED (§5.4/§5.6). It existed for exactly
++   one reason — to give content-layer glass something to blur — and the
++   content-layer glass is gone (EdCardGrid, EdFaqList, EdCtaBanner,
++   EdComparisonTable, HeroCollage). Do not reintroduce it: the two surviving
++   glass consumers are chrome and blur the real page beneath them. */
+ 
+ .dt-editorial .ed-shell {
+   max-width: 1200px;
+@@ -107,37 +199,70 @@
+   .dt-editorial .ed-section { padding: 56px 0; }
+ }
+ 
+-/* Hero display headline — heavy grotesque with italic-serif emphasis
+-   words (wrap emphasis in <em>). A mixed-voice editorial headline. */
++/* ─── Type ramp (§5.1) ────────────────────────────────────────────────
++   Two families, one job each. Fraunces (--dt-serif) is the display voice
++   and appears on display-1/display-2/title-1 ONLY — never below h2, never
++   italic, never on numerals. IBM Plex Sans (--dt-body) is every other
++   glyph. Presence comes from size, leading and tracking, not weight:
++   Fraunces above 600 reads "Cooper", and Plex Sans tops out at 700.
++   Optical size FOLLOWS the rendered size (`font-optical-sizing: auto`); only
++   SOFT is pinned. An earlier revision pinned "opsz" 144 to force the
++   high-contrast display master at every size. That master is drawn for very
++   large settings, and its narrow spacing crowds words together at phone
++   sizes: measured 2026-09-21 on the /pricing h1 at 36px, the gap between
++   "Pricing" and "built" was 5.21px (0.145em) pinned vs 7.03px with auto --
++   visibly "Pricingbuilt". Auto is also what the HIG describes for Apple's
++   own faces ("dynamic optical sizes ... precisely adapted to the point
++   size"). At desktop display sizes auto still selects a high-contrast cut,
++   because opsz tracks the 56-80px rendered size. Do not re-pin opsz. Under :lang(zh|ja|ko|ar|hi) --dt-serif already
++   resolves to the sans stack (globals.css:17-45): the degradation rules at
++   the end of this block make that honest instead of accidental. */
++
++/* display-1 — landing h1 only. ≤ 2 lines, ≤ 22 chars/line at 80px. */
+ .dt-editorial .ed-display {
+-  font-family: var(--dt-body);
+-  font-weight: 700;
+-  font-size: clamp(46px, 7.4vw, 88px);
+-  line-height: 1.0;
+-  letter-spacing: -0.035em;
++  font-family: var(--dt-serif);
++  font-weight: 600;
++  font-variation-settings: "SOFT" 0;
++  font-optical-sizing: auto;
++  font-size: clamp(44px, 6.5vw, 80px);
++  line-height: 1.02;
++  letter-spacing: -0.02em;
+   color: var(--ed-ink);
+ }
+-.dt-editorial .ed-display em {
+-  font-family: var(--dt-serif);
+-  font-weight: 500;
+-  font-style: italic;
+-  letter-spacing: -0.01em;
++
++/* The italic-serif `<em>` split is retired (§5.0). Deleting the old rule is
++   not enough on its own — the UA default for <em> is italic, Fraunces ships
++   an italic, and `font-synthesis-style: none` would leave Latin italic while
++   the five non-Latin locales go upright. Neutralising it here retires the
++   split everywhere without touching HeroSection's markup or any i18n key. */
++.dt-editorial .ed-display em,
++.dt-editorial .ed-h1 em,
++.dt-editorial .ed-h2 em {
++  font-family: inherit;
++  font-style: normal;
++  font-weight: inherit;
++  letter-spacing: inherit;
+ }
+ 
++/* title-1 — marketing h2. */
+ .dt-editorial .ed-h2 {
+   font-family: var(--dt-serif);
+-  font-weight: 400;
+-  font-size: clamp(28px, 3.5vw, 40px);
+-  line-height: 1.1;
+-  letter-spacing: -0.015em;
++  font-weight: 600;
++  font-variation-settings: "SOFT" 0;
++  font-optical-sizing: auto;
++  font-size: clamp(28px, 3.2vw, 40px);
++  line-height: 1.12;
++  letter-spacing: -0.01em;
+   color: var(--ed-ink);
+ }
+ 
++/* title-2 — h3 and card titles. Plex Sans, not the display voice. */
+ .dt-editorial .ed-h3 {
+-  font-family: var(--dt-serif);
+-  font-weight: 500;
+-  font-size: 21px;
++  font-family: var(--dt-body);
++  font-weight: 600;
++  font-size: 22px;
+   line-height: 1.25;
++  letter-spacing: -0.01em;
+   color: var(--ed-ink);
+ }
+ 
+@@ -153,20 +278,28 @@
+   color: var(--ed-ink-2);
+ }
+ 
++/* Product label — an Apple "MacBook Pro"-style name, sentence case, Plex
++   Sans 15/600. NOT mono, NOT ALL-CAPS, NOT 11px (§2.5, §5.1). Colour lifts
++   from --ed-ink-3 to --ed-ink-2 because at 15/600 this is a real line of
++   text, not a caption. */
+ .dt-editorial .ed-label {
+-  font-family: var(--dt-mono);
+-  font-size: 11px;
+-  text-transform: uppercase;
+-  letter-spacing: 0.13em;
+-  color: var(--ed-ink-3);
++  font-family: var(--dt-body);
++  font-size: 15px;
++  font-weight: 600;
++  letter-spacing: 0;
++  color: var(--ed-ink-2);
+ }
+ 
+ .dt-editorial .ed-label-num { color: var(--ed-signal); }
+ 
++/* caption — the floor of the ramp at 13px. Nothing in this file may go
++   below 12px, and 12px is reserved for tabular numerals inside chips. */
+ .dt-editorial .ed-caption {
+-  font-family: var(--dt-mono);
+-  font-size: 10.5px;
+-  letter-spacing: 0.04em;
++  font-family: var(--dt-body);
++  font-size: 13px;
++  font-weight: 400;
++  line-height: 1.4;
++  letter-spacing: 0.005em;
+   color: var(--ed-ink-3);
+ }
+ 
+@@ -178,21 +311,54 @@
+   color: var(--ed-ink);
+ }
+ 
++/* The one dominant action per view (§5.2). Pill, not the 3px "print"
++   rectangle. The label colour is a token because the dark fill is the
++   LIGHT terracotta with a near-black label — #ffffff on #e0957a would be
++   1.9:1. */
+ .dt-editorial .ed-cta {
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+   background: var(--ed-signal);
+-  color: #ffffff;
+-  font-family: var(--font-plex-sans), sans-serif;
+-  font-size: 14px;
+-  font-weight: 500;
+-  padding: 13px 22px;
+-  border-radius: 3px;
+-  transition: background-color 150ms ease;
++  color: var(--ed-on-signal);
++  font-family: var(--dt-body);
++  font-size: 15px;
++  font-weight: 600;
++  line-height: 1.4;
++  padding: 12px 24px;
++  border-radius: var(--ed-r-pill);
++  transition: background-color var(--ed-dur-1) var(--ed-ease);
+ }
+ .dt-editorial .ed-cta:hover { background: var(--ed-signal-deep); }
+ 
++/* The secondary action (§5.2: "everything else is ink-outline or text").
++   Same pill geometry as .ed-cta so the two sit together, but ink rather than
++   terracotta, so the page's one filled action is never contested. Used for
++   the masthead's Sign In, which is on every marketing page and used to be a
++   second filled terracotta pill beside each page's own primary action.
++   Measured: ink on stage 13.22 light / 14.91 dark; control border on stage
++   3.06 / 3.77 (WCAG 1.4.11 non-text, floor 3:1). */
++.dt-editorial .ed-cta-quiet {
++  display: inline-flex;
++  align-items: center;
++  gap: 8px;
++  background: transparent;
++  color: var(--ed-ink);
++  border: 1px solid var(--ed-control-border);
++  font-family: var(--dt-body);
++  font-size: 15px;
++  font-weight: 600;
++  line-height: 1.4;
++  padding: 11px 23px;
++  border-radius: var(--ed-r-pill);
++  transition: background-color var(--ed-dur-1) var(--ed-ease),
++    border-color var(--ed-dur-1) var(--ed-ease);
++}
++.dt-editorial .ed-cta-quiet:hover {
++  background: var(--ed-surface);
++  border-color: var(--ed-ink-3);
++}
++
+ .dt-editorial .ed-link {
+   display: inline-flex;
+   align-items: center;
+@@ -246,32 +412,71 @@
+ .dt-editorial .ed-crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
+ .dt-editorial .ed-crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); }
+ 
+-/* Inner-page hero headline — quieter than the landing .ed-display. */
++/* display-2 — inner-page hero headline (EdPageHero, the h1 of 46 routes). */
+ .dt-editorial .ed-h1 {
+   font-family: var(--dt-serif);
+-  font-weight: 500;
+-  font-size: clamp(34px, 4.6vw, 56px);
+-  line-height: 1.08;
+-  letter-spacing: -0.02em;
++  font-weight: 600;
++  font-variation-settings: "SOFT" 0;
++  font-optical-sizing: auto;
++  font-size: clamp(36px, 4.8vw, 56px);
++  line-height: 1.06;
++  letter-spacing: -0.015em;
+   color: var(--ed-ink);
+ }
+ 
+-/* Hairline-bordered editorial card on the inset paper tone. */
++/* ─── Non-Latin degradation (§5.1) ────────────────────────────────────
++   --dt-serif already resolves to the sans stack for these locales, so the
++   display steps render in the body family. Made explicit here: weight 600
++   (PingFang SC tops out at Semibold and `font-synthesis: none` means 700
++   would simply not render), tracking 0 (negative tracking collides CJK and
++   Arabic glyphs), and looser display leading. `font-variation-settings` is
++   cleared so the opsz/SOFT axes are not inherited onto a static face. */
++.dt-editorial:lang(zh) .ed-display,
++.dt-editorial:lang(zh) .ed-h1,
++.dt-editorial:lang(zh) .ed-h2,
++.dt-editorial:lang(ja) .ed-display,
++.dt-editorial:lang(ja) .ed-h1,
++.dt-editorial:lang(ja) .ed-h2,
++.dt-editorial:lang(ko) .ed-display,
++.dt-editorial:lang(ko) .ed-h1,
++.dt-editorial:lang(ko) .ed-h2,
++.dt-editorial:lang(hi) .ed-display,
++.dt-editorial:lang(hi) .ed-h1,
++.dt-editorial:lang(hi) .ed-h2 {
++  font-weight: 600;
++  font-variation-settings: normal;
++  letter-spacing: 0;
++  line-height: 1.2;
++}
++.dt-editorial:lang(ar) .ed-display,
++.dt-editorial:lang(ar) .ed-h1,
++.dt-editorial:lang(ar) .ed-h2 {
++  font-weight: 600;
++  font-variation-settings: normal;
++  letter-spacing: 0;
++  line-height: 1.3;
++}
++
++/* Hairline-bordered card — content layer (§5.4): opaque --ed-surface (a step
++   LIGHTER than the stage, which is what reads as raised in light mode),
++   hairline border, the one raised-card shadow, r-3. */
+ .dt-editorial .ed-card {
+   border: 1px solid var(--ed-rule);
+-  background: var(--ed-paper-2);
++  background: var(--ed-surface);
++  border-radius: var(--ed-r-3);
++  box-shadow: var(--ed-shadow-card);
+   padding: 22px;
+ }
+ 
+-/* Breadcrumb trail link. */
++/* Breadcrumb trail link — sentence case Plex Sans at the 13px floor. */
+ .dt-editorial .ed-crumb {
+-  font-family: var(--dt-mono);
+-  font-size: 10.5px;
+-  letter-spacing: 0.06em;
+-  text-transform: uppercase;
++  font-family: var(--dt-body);
++  font-size: 13px;
++  font-weight: 500;
++  letter-spacing: 0;
+   color: var(--ed-ink-3);
+   text-decoration: none;
+-  transition: color 150ms ease;
++  transition: color var(--ed-dur-1) var(--ed-ease);
+ }
+ .dt-editorial a.ed-crumb:hover { color: var(--ed-signal); }
+ 
+@@ -290,17 +495,18 @@
+ }
+ 
+ /* Clickable editorial cards (anchor cards) get hover feedback;
+-   non-interactive .ed-card divs are unaffected. */
++   non-interactive .ed-card divs are unaffected. No hover translation on any
++   control (§5.5) — the feedback is colour, at 120ms.
++   The former `a.ed-card.ed-glass:hover` rule (and its reduced-transparency /
++   print counterparts) is deleted: cards are opaque now, so it matched
++   nothing. */
+ .dt-editorial a.ed-card {
+-  transition: border-color 150ms ease, background-color 150ms ease;
++  transition: border-color var(--ed-dur-1) var(--ed-ease),
++              background-color var(--ed-dur-1) var(--ed-ease);
+ }
+ .dt-editorial a.ed-card:hover {
+   border-color: var(--ed-ink-3);
+-  background: var(--ed-paper);
+-}
+-.dt-editorial a.ed-card.ed-glass:hover {
+-  background: var(--ed-glass-strong);
+-  border-color: rgba(31, 58, 77, 0.28);
++  background: var(--ed-surface-2);
+ }
+ 
+ /* Bulleted lists inside editorial prose. */
+@@ -328,15 +534,39 @@
+ }
+ .dt-editorial .ed-prose ul li:last-child { margin-bottom: 0; }
+ 
+-/* ─── Liquid Glass utility classes (spec §2.3, §4.1) ───────────────────
+-   Glass is chrome, not content: apply only to nav, cards, popovers, CTA
+-   panels, FAQ/comparison containers, hero art. NEVER to EdProse/article
+-   body/EdSection text or anything rendering real document/quote text.
+-   backdrop-filter appears exactly once below (the .ed-glass base) with
+-   its two required fallbacks directly underneath — do not add
+-   backdrop-filter anywhere else in this file without both. Source order
+-   matters: this block is appended AFTER .ed-card so `.ed-card.ed-glass`
+-   (Task 5) resolves background/border to the glass values. */
++/* ─── Content layer (§5.4) ─────────────────────────────────────────────
++   Standard materials: opaque, hairline, ONE raised-card shadow. No
++   backdrop-filter, no translucency. These two classes are what the five
++   ex-glass consumers use.
++
++   .ed-panel — a raised container that groups content (FAQ list, comparison
++   table, hero plates). Same material as .ed-card, without the padding.
++   .ed-band  — a full-bleed section band (the CTA banner). Not a card: no
++   radius, no shadow, a hairline at the top edge only. */
++.dt-editorial .ed-panel {
++  background: var(--ed-surface);
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-3);
++  box-shadow: var(--ed-shadow-card);
++}
++.dt-editorial .ed-band,
++.dt-editorial.ed-band {
++  background: var(--ed-surface);
++  border-top: 1px solid var(--ed-rule);
++}
++
++/* ─── Liquid Glass utility classes — FUNCTIONAL LAYER ONLY ─────────────
++   After Phase 1 (§5.4) glass has exactly TWO consumers, both chrome that
++   floats over scrolling content: the sticky marketing header
++   (EditorialHeaderBase) and the language popover (EdLanguageSelector).
++   HIG's rule is that the material belongs to controls, not to content, and
++   the five content consumers (HeroCollage, EdCardGrid, EdFaqList,
++   EdCtaBanner, EdComparisonTable) were moved to .ed-panel / .ed-band /
++   .ed-card above. Do not put .ed-glass back on content: at real scale it
++   did not read as glass, and it charged a repaint for the privilege.
++   backdrop-filter appears exactly once below (the .ed-glass base) with its
++   two required fallbacks directly underneath — do not add backdrop-filter
++   anywhere else in this file without both. */
+ .dt-editorial .ed-glass,
+ .dt-editorial.ed-glass {
+   background: var(--ed-glass);
+@@ -367,11 +597,8 @@
+   top: 0;
+   z-index: 50;
+ }
+-.dt-editorial .ed-glass--cta,
+-.dt-editorial.ed-glass--cta {
+-  border-radius: 0;
+-  border-width: 1px 0 0 0;
+-}
++/* `.ed-glass--cta` is deleted with EdCtaBanner's glass: a full-bleed band is
++   content, and it is now `.ed-band` above. */
+ .dt-editorial .ed-glass--popover,
+ .dt-editorial.ed-glass--popover {
+   box-shadow: var(--ed-glass-hi), 0 14px 36px rgba(40, 33, 24, 0.24);
+@@ -379,29 +606,20 @@
+ @media (prefers-reduced-transparency: reduce) {
+   .dt-editorial .ed-glass,
+   .dt-editorial.ed-glass {
+-    background: var(--ed-paper-2);
++    background: var(--ed-surface);
+     backdrop-filter: none;
+     -webkit-backdrop-filter: none;
+   }
+-  .dt-editorial a.ed-card.ed-glass:hover {
+-    background: var(--ed-paper);
+-    border-color: var(--ed-ink-3);
+-  }
+ }
+ @media print {
+   .dt-editorial .ed-glass,
+   .dt-editorial.ed-glass {
+-    background: var(--ed-paper-2);
++    background: var(--ed-surface);
+     backdrop-filter: none;
+     -webkit-backdrop-filter: none;
+     box-shadow: none;
+     border-color: var(--ed-rule);
+   }
+-  .dt-editorial a.ed-card.ed-glass:hover {
+-    background: var(--ed-paper-2);
+-    border-color: var(--ed-rule);
+-    box-shadow: none;
+-  }
+   /* A sticky masthead prints at its stuck offset, so a page printed while
+      scrolled paints the header across the middle of the content (it landed
+      inside the comparison table during Task 10's print check). Static in
+@@ -415,3 +633,239 @@
+   outline: 2px solid var(--ed-signal);
+   outline-offset: 2px;
+ }
++
++/* ─── Reduced motion (§5.5) ───────────────────────────────────────────
++   DELIBERATELY UNSCOPED — the one rule in this file that is not under
++   .dt-editorial, and it must stay that way. It is an accessibility escape
++   hatch, not a style: the plan names targets that live OUTSIDE the
++   marketing surface (the cookie banner's `slideUp`, which layout.tsx
++   renders as a sibling of #page-content), and per-component JS guards
++   cover only the components that remember to add one. Scoping it down
++   would silently drop those.
++   `.01ms` rather than `0s` so animationend/transitionend still fire and
++   nothing that waits on them deadlocks. Component-level guards
++   (ShimmerBadge, StaggeredReveal, TiltCard, BlurReveal, EdFaqList, the
++   PDF/Text viewers' scroll behaviour) stay — this is the floor, not a
++   replacement.
++   Phase 3 moves this to globals.css when the app surface joins the system;
++   until then globals.css is out of scope for this phase. */
++@media (prefers-reduced-motion: reduce) {
++  *,
++  *::before,
++  *::after {
++    animation-duration: 0.01ms !important;
++    transition-duration: 0.01ms !important;
++  }
++}
++
++/* ─── Product frame (landing hero) ────────────────────────────────────
++   Plan 2026-09-20 §7 Phase 1 and owner decision A2: a static depiction of
++   the reader. Three regions map one-to-one onto real reader regions (header
++   strip, chat column, document pane) so the Phase 4 reader can replace it.
++   Content layer, so standard opaque materials only — no glass (§5.4).
++   The ONE accent inside the frame is evidence amber: the answer's citation
++   badge and the highlighted sentence share its colour and its number. */
++.dt-editorial .ed-frame-figure { margin: 56px 0 0; }
++
++.dt-editorial .ed-frame {
++  background: var(--ed-surface);
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-4);
++  box-shadow: var(--ed-shadow-card);
++  overflow: hidden;
++  text-align: start;
++}
++
++.dt-editorial .ed-frame-bar {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  min-height: 44px;
++  padding: 0 16px;
++  border-bottom: 1px solid var(--ed-rule);
++  font-size: 13px;
++  line-height: 1.4;
++}
++.dt-editorial .ed-frame-mark {
++  flex: none;
++  width: 14px;
++  height: 14px;
++  border-radius: 3px;
++  background: var(--ed-ink);
++}
++.dt-editorial .ed-frame-doc {
++  min-width: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++  color: var(--ed-ink-2);
++}
++.dt-editorial .ed-frame-pageno {
++  flex: none;
++  margin-inline-start: auto;
++  color: var(--ed-ink-3);
++  font-variant-numeric: tabular-nums;
++}
++
++.dt-editorial .ed-frame-body { display: grid; grid-template-columns: 1fr; }
++@media (min-width: 768px) {
++  .dt-editorial .ed-frame-body { grid-template-columns: minmax(0, 38fr) minmax(0, 62fr); }
++}
++
++.dt-editorial .ed-frame-chat {
++  padding: 24px;
++  border-bottom: 1px solid var(--ed-rule);
++}
++@media (min-width: 768px) {
++  .dt-editorial .ed-frame-chat {
++    border-bottom: 0;
++    border-inline-end: 1px solid var(--ed-rule);
++  }
++}
++.dt-editorial .ed-frame-q {
++  max-width: 90%;
++  margin-inline-start: auto;
++  padding: 10px 14px;
++  border-radius: var(--ed-r-3);
++  background: var(--ed-paper-2);
++  color: var(--ed-ink);
++  font-size: 15px;
++  line-height: 1.45;
++}
++.dt-editorial .ed-frame-a {
++  margin-top: 20px;
++  color: var(--ed-ink);
++  font-size: 17px;
++  line-height: 1.55;
++}
++
++/* Citation badge, shared by the answer and the source row. Themed: it sits
++   on the chat column, which follows light/dark. 12px is the one sanctioned
++   size below 13 — tabular numerals inside a chip (§5.1). */
++.dt-editorial .ed-frame-cite {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  min-width: 18px;
++  height: 18px;
++  padding: 0 4px;
++  margin-inline-start: 4px;
++  vertical-align: 2px;
++  border: 1px solid var(--ed-evidence);
++  border-radius: 5px;
++  background: var(--ed-evidence-soft);
++  color: var(--ed-evidence);
++  font-size: 12px;
++  font-weight: 600;
++  line-height: 1;
++  font-variant-numeric: tabular-nums;
++}
++.dt-editorial .ed-frame-source {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  margin-top: 20px;
++  padding: 8px 12px;
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-2);
++  font-size: 13px;
++  line-height: 1.4;
++}
++.dt-editorial .ed-frame-source .ed-frame-cite { margin-inline-start: 0; vertical-align: 0; }
++.dt-editorial .ed-frame-source-page {
++  flex: none;
++  color: var(--ed-ink);
++  font-weight: 600;
++  font-variant-numeric: tabular-nums;
++}
++.dt-editorial .ed-frame-source-doc {
++  min-width: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++  color: var(--ed-ink-3);
++}
++
++/* Document pane. The page is a light "paper island" in BOTH themes, the way
++   a real PDF renders — so it carries its own colours and never inherits the
++   dark ink. In dark mode the white is softened (HIG Dark Mode: "soften the
++   color of white backgrounds") so it does not glare against the stage.
++   Measured: page ink 16.18 (light) / 12.76 (dark); muted 9.03 / 7.12;
++   badge 7.54; ink on highlight 13.88 / 10.98. Phase 4 inherits this choice. */
++.dt-editorial .ed-frame-pane {
++  display: flex;
++  justify-content: center;
++  padding: 24px;
++  background: var(--ed-paper-2);
++}
++.dt-editorial .ed-frame-page {
++  --pg-bg: #ffffff;
++  --pg-ink: #20211e;
++  --pg-ink-2: #4a4943;
++  width: 100%;
++  max-width: 540px;
++  padding: 28px 32px 32px;
++  border-radius: 2px;
++  background: var(--pg-bg);
++  color: var(--pg-ink);
++  box-shadow: 0 1px 2px rgba(20, 18, 14, 0.08), 0 8px 24px -12px rgba(20, 18, 14, 0.22);
++  font-size: 13px;
++  line-height: 1.65;
++}
++.dark .dt-editorial .ed-frame-page { --pg-bg: #e8e4dc; }
++.dt-editorial .ed-frame-page-title {
++  color: var(--pg-ink);
++  font-size: 17px;
++  font-weight: 600;
++  line-height: 1.3;
++}
++.dt-editorial .ed-frame-page-text { margin-top: 12px; }
++.dt-editorial .ed-frame-page-muted { color: var(--pg-ink-2); }
++.dt-editorial .ed-frame-page-sub {
++  margin-top: 18px;
++  color: var(--pg-ink);
++  font-size: 14px;
++  font-weight: 600;
++}
++.dt-editorial .ed-frame-mark-cited {
++  padding: 1px 2px;
++  border-radius: 2px;
++  background: rgba(255, 196, 0, 0.3);
++  color: inherit;
++  -webkit-box-decoration-break: clone;
++  box-decoration-break: clone;
++}
++.dt-editorial .ed-frame-badge {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  min-width: 18px;
++  height: 18px;
++  padding: 0 4px;
++  margin-inline-end: 4px;
++  vertical-align: 1px;
++  border: 1px solid #e6c56a;
++  border-radius: 5px;
++  background: #fff0c2;
++  color: #6b4400;
++  font-size: 12px;
++  font-weight: 600;
++  line-height: 1;
++  font-variant-numeric: tabular-nums;
++}
++
++.dt-editorial .ed-frame-caption {
++  max-width: 640px;
++  margin: 20px auto 0;
++  color: var(--ed-ink-2);
++  font-size: 15px;
++  line-height: 1.5;
++  text-align: center;
++}
++
++@media (max-width: 767px) {
++  .dt-editorial .ed-frame-figure { margin-top: 40px; }
++  .dt-editorial .ed-frame-chat { padding: 18px; }
++  .dt-editorial .ed-frame-pane { padding: 16px; }
++  .dt-editorial .ed-frame-page { padding: 20px; }
++}
+diff --git a/frontend/src/app/layout.tsx b/frontend/src/app/layout.tsx
+index 35ab72f..daf9ec0 100644
+--- a/frontend/src/app/layout.tsx
++++ b/frontend/src/app/layout.tsx
+@@ -85,8 +85,13 @@ export default function RootLayout({
+       <head>
+         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
+         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
+-        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+-        <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
++        {/* Paper stage / warm near-black — the §5.3 tokens, so mobile browser
++            chrome matches the page instead of framing it in white or zinc.
++            These are root-level and therefore apply to the app surface too;
++            under decision A2 the app moves onto the same ground in Phase 3,
++            at which point they are already right. */}
++        <meta name="theme-color" content="#eae8e3" media="(prefers-color-scheme: light)" />
++        <meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)" />
+       </head>
+       <body className="font-sans antialiased">
+         {/* i18n: skip link is server-rendered, locale-specific version requires server-side i18n */}
+diff --git a/frontend/src/app/pricing/PricingJsonLd.tsx b/frontend/src/app/pricing/PricingJsonLd.tsx
+index 37f16f9..3e0cac9 100644
+--- a/frontend/src/app/pricing/PricingJsonLd.tsx
++++ b/frontend/src/app/pricing/PricingJsonLd.tsx
+@@ -2,14 +2,26 @@ import { getServerT } from '../../i18n/server';
+ import MarketingPageJsonLd from '../../components/marketing/MarketingPageJsonLd';
+ 
+ export default async function PricingJsonLd({ locale }: { locale: string }) {
+-  const { t } = await getServerT(locale);
++  const { t, tOr } = await getServerT(locale);
++  // One source for the hero line, so the hero and both schema blocks cannot drift.
++  const heroLine = tOr(
++    'pricing.heroLine',
++    'Every plan answers with a citation you can open. Paid tiers raise the limits.',
++  );
+ 
+   return (
+     <MarketingPageJsonLd
+       locale={locale}
+       path="/pricing"
+       title={t('pricing.headline')}
+-      description={t('pricing.description')}
++      // Structured data must describe what the hero visibly says:
++      // tests/marketing-jsonld asserts BOTH Article.description and
++      // SoftwareApplication.description === EdPageHero.lede. The hero's one line
++      // is pricing.heroLine since the 2026-09-20 restructure, so both follow it
++      // (HERO_LINE below). Only the <meta description> -- descKey
++      // 'pricing.description' in app/[locale]/pricing/page.tsx -- is
++      // deliberately unchanged, so this page's search snippet does not move.
++      description={heroLine}
+       breadcrumbs={[
+         { label: t('useCasesHub.breadcrumb.home'), path: '/' },
+         { label: t('pricing.eyebrow') },
+@@ -19,7 +31,7 @@ export default async function PricingJsonLd({ locale }: { locale: string }) {
+         applicationCategory: 'ProductivityApplication',
+         operatingSystem: 'Web',
+         path: '/pricing',
+-        description: t('pricing.description'),
++        description: heroLine,
+         offers: {
+           '@type': 'AggregateOffer',
+           priceCurrency: 'USD',
+diff --git a/frontend/src/app/pricing/PricingPageContent.tsx b/frontend/src/app/pricing/PricingPageContent.tsx
+index 8cea416..db727b4 100644
+--- a/frontend/src/app/pricing/PricingPageContent.tsx
++++ b/frontend/src/app/pricing/PricingPageContent.tsx
+@@ -150,59 +150,7 @@ export default async function PricingPageContent({ locale }: { locale: string })
+     textAlign: 'left',
+   };
+ 
+-  const heroMeta = (
+-    <div>
+-      <div className="flex gap-4 flex-wrap items-center">
+-        <TrackedCtaLink
+-          href={billingHref({ plan: 'plus', source: 'pricing_hero' })}
+-          event={{ name: 'upgrade_click', params: { plan: 'plus', period: 'monthly', source: 'pricing_hero' } }}
+-          className="ed-cta"
+-        >
+-          {t('pricing.plus.cta')}
+-        </TrackedCtaLink>
+-        <Link href={href("/demo")} className="ed-link">
+-          {t('pricing.tryDemo')} <span aria-hidden="true">→</span>
+-        </Link>
+-      </div>
+-      <div
+-        style={{
+-          marginTop: '20px',
+-          maxWidth: '620px',
+-          border: '1px solid var(--ed-rule)',
+-          padding: '12px 16px',
+-        }}
+-      >
+-        <p className="ed-body">
+-          <strong>{tOr('pricing.refundPolicy.title', '7-day fair-use refund.')}</strong>{' '}
+-          {tOr('pricing.refundPolicy.body', 'If DocTalk is not a fit and usage is low, cancel within 7 days and request a refund review.')}
+-        </p>
+-      </div>
+-    </div>
+-  );
+-
+-  return (
+-    <MarketingShell
+-      chrome={chrome}
+-      breadcrumb={[
+-        { label: t('useCasesHub.breadcrumb.home'), href: href('/') },
+-        { label: t('pricing.eyebrow') },
+-      ]}
+-    >
+-      <EdPageHero
+-        eyebrow={t('pricing.eyebrow')}
+-        title={t('pricing.headline')}
+-        lede={t('pricing.description')}
+-        meta={heroMeta}
+-      />
+-
+-      <EdSection alt title={tOr('pricing.creditGuide.title', 'Credits map to real work')}>
+-        <EdCardGrid
+-          columns={3}
+-          items={creditGuide.map((c) => ({ title: c.title, body: c.body, icon: c.icon }))}
+-        />
+-      </EdSection>
+-
+-      <EdSection>
++  const planGrid = (
+         <div
+           className="grid grid-cols-1 lg:grid-cols-3"
+           style={{ gap: '20px', gridAutoRows: '1fr' }}
+@@ -234,22 +182,12 @@ export default async function PricingPageContent({ locale }: { locale: string })
+                   </span>
+                 )}
+               </div>
+-              <p className="ed-body" style={{ marginTop: '10px' }}>
+-                {t(plan.summaryKey)}
+-              </p>
+-              <p
+-                className="ed-caption"
+-                style={{
+-                  marginTop: '12px',
+-                  border: '1px solid var(--ed-rule)',
+-                  padding: '8px 12px',
+-                }}
+-              >
+-                {tOr(plan.fitKey, plan.fitFallback)}
+-              </p>
++              {/* Name, then price: the Apple pricing order. The price used to be the
++                  fifth element in the card, behind a three-line summary and a boxed
++                  note, which put it back under the consent banner on phones. */}
+               <div
+                 style={{
+-                  marginTop: '18px',
++                  marginTop: '8px',
+                   display: 'flex',
+                   alignItems: 'baseline',
+                   gap: '6px',
+@@ -258,20 +196,95 @@ export default async function PricingPageContent({ locale }: { locale: string })
+                 <span className="ed-num">{t(plan.priceKey)}</span>
+                 <span className="ed-caption">{t(plan.cadenceKey)}</span>
+               </div>
+-              <div style={{ flex: 1, marginTop: '18px' }}>
+-                <EdCheckList items={plan.featureKeys.map((k) => t(k))} />
+-              </div>
++              {/* Name, price, then the button — Apple's pricing order. Only the featured
++                  plan is filled: three filled pills side by side would break the
++                  one-dominant-action rule (plan §5.2), and the masthead's Sign In is
++                  now quiet, so without this the page had no action above the fold. */}
+               <TrackedCtaLink
+                 href={plan.ctaHref}
+                 event={plan.intentPlan ? { name: 'upgrade_click', params: { plan: plan.intentPlan, period: 'monthly', source: 'pricing' } } : undefined}
+-                className="ed-cta"
+-                style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '24px' }}
++                className={plan.featured ? 'ed-cta' : 'ed-cta-quiet'}
++                style={{ display: 'flex', width: '100%', justifyContent: 'center', marginTop: '16px' }}
+               >
+                 {t(plan.ctaKey)}
+               </TrackedCtaLink>
++              <p className="ed-body" style={{ marginTop: '14px' }}>
++                {t(plan.summaryKey)}
++              </p>
++              <p
++                className="ed-caption"
++                style={{
++                  marginTop: '12px',
++                  border: '1px solid var(--ed-rule)',
++                  padding: '8px 12px',
++                }}
++              >
++                {tOr(plan.fitKey, plan.fitFallback)}
++              </p>
++              <div style={{ marginTop: '18px' }}>
++                <EdCheckList items={plan.featureKeys.map((k) => t(k))} />
++              </div>
+             </div>
+           ))}
+         </div>
++  );
++
++  const planFootnote = (
++    <p
++      className="ed-caption"
++      style={{ marginTop: '20px', maxWidth: '640px' }}
++    >
++      <strong>{tOr('pricing.refundPolicy.title', '7-day fair-use refund.')}</strong>{' '}
++      {tOr('pricing.refundPolicy.body', 'If DocTalk is not a fit and usage is low, cancel within 7 days and request a refund review.')}
++    </p>
++  );
++
++  return (
++    <MarketingShell
++      chrome={chrome}
++      breadcrumb={[
++        { label: t('useCasesHub.breadcrumb.home'), href: href('/') },
++        { label: t('pricing.eyebrow') },
++      ]}
++    >
++      {/*
++        Apple grammar (plan §5.2): label → one claim → ONE sentence → the product.
++        The plans ARE the product on this page, so they render inside the hero and
++        the explanatory prose moves below them. Measured before this change: on a
++        375×812 phone the first price sat at y=1877 — 2.31 screens down.
++
++        `pricing.headline` and `pricing.description` are NOT edited: they are also
++        `titleKey` and `descKey` in app/[locale]/pricing/page.tsx, so rewording them
++        would silently change the <title> and <meta description> of this page in 11
++        locales. The one-line hero claim is a NEW key shipped via tOr().
++      */}
++      <EdPageHero
++        variant="product"
++        eyebrow={t('pricing.eyebrow')}
++        title={t('pricing.headline')}
++        lede={tOr(
++          'pricing.heroLine',
++          'Every plan answers with a citation you can open. Paid tiers raise the limits.',
++        )}
++        product={
++          <>
++            {planGrid}
++            {planFootnote}
++          </>
++        }
++      />
++
++      <EdSection alt>
++        <p className="ed-lede" style={{ maxWidth: '640px' }}>
++          {t('pricing.description')}
++        </p>
++      </EdSection>
++
++      <EdSection title={tOr('pricing.creditGuide.title', 'Credits map to real work')}>
++        <EdCardGrid
++          columns={3}
++          items={creditGuide.map((c) => ({ title: c.title, body: c.body, icon: c.icon }))}
++        />
+       </EdSection>
+ 
+       <EdSection alt title={t('pricing.comparison.title')}>
+diff --git a/frontend/src/components/CookieConsentBanner.tsx b/frontend/src/components/CookieConsentBanner.tsx
+index aa86748..4b45c14 100644
+--- a/frontend/src/components/CookieConsentBanner.tsx
++++ b/frontend/src/components/CookieConsentBanner.tsx
+@@ -7,15 +7,30 @@ import { useLocale } from '../i18n';
+ 
+ const CONSENT_KEY = 'doctalk_analytics_consent';
+ 
++// Scoped to #page-content so the banner's own .dt-editorial wrapper can never
++// make it detect itself.
++function detectSurface(): 'app' | 'editorial' {
++  return document.querySelector('#page-content .dt-editorial') ? 'editorial' : 'app';
++}
++
+ export function CookieConsentBanner() {
+   const [visible, setVisible] = useState(false);
+   const [dialogOpen, setDialogOpen] = useState(false);
++  // Which visual system is on the page underneath. The banner is mounted once in
++  // app/layout.tsx as a SIBLING of #page-content, so no page can pass it a
++  // `surface` prop the way DocumentDiffPanel receives one — it has to look.
++  const [surface, setSurface] = useState<'app' | 'editorial'>('app');
+   const { t } = useLocale();
+   const pathname = usePathname();
+ 
+   useEffect(() => {
+     const consent = localStorage.getItem(CONSENT_KEY);
+     if (!consent) {
++      // Decide the surface in the same batch that reveals the banner. If it were
++      // left to the observer effect below, which runs after paint, the first
++      // visible frame on a marketing page would be the app-styled banner, and
++      // the swap to the editorial tree would restart its slide-in.
++      setSurface(detectSurface());
+       setVisible(true);
+     }
+   }, []);
+@@ -25,6 +40,7 @@ export function CookieConsentBanner() {
+ 
+     const syncDialogState = () => {
+       setDialogOpen(Boolean(document.querySelector('[role="dialog"][aria-modal="true"]')));
++      setSurface(detectSurface());
+     };
+     syncDialogState();
+ 
+@@ -73,6 +89,68 @@ export function CookieConsentBanner() {
+     setVisible(false);
+   };
+ 
++  if (surface === 'editorial') {
++    // Marketing surface (plan 2026-09-20 §5.3/§5.4). The inner .dt-editorial
++    // wrapper gives the banner the paper tokens, including the warm dark set,
++    // without the outer element inheriting .dt-editorial's position: relative.
++    //   - Opaque raised surface, no backdrop blur: the banner sits over busy
++    //     content (the pricing cards) and its own text must stay legible.
++    //   - Ink, not terracotta. The page already has its one filled terracotta
++    //     action above the fold; a consent control must not compete with it.
++    //   - One compact row on phones. The two-row card sat exactly on top of the
++    //     first price once /pricing moved its plans into the first screen.
++    //   - Buttons meet the HIG 44pt minimum hit target.
++    return (
++      <div
++        className="fixed z-40 bottom-2 left-2 right-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))] overflow-hidden animate-[slideUp_0.3s_ease-out] motion-reduce:animate-none"
++        style={{ borderRadius: 'var(--ed-r-3, 16px)', boxShadow: '0 12px 32px -12px rgba(20, 18, 14, 0.28)' }}
++        role="region"
++        aria-label={t('consent.message')}
++      >
++        <div
++          className="dt-editorial px-3 py-2.5 sm:px-4 sm:py-3"
++          style={{
++            background: 'var(--ed-surface)',
++            border: '1px solid var(--ed-rule)',
++            borderRadius: 'inherit',
++          }}
++        >
++          <div className="flex items-center gap-3 sm:flex-col sm:items-stretch">
++            <p
++              className="flex-1 text-[13px] leading-[1.4] sm:text-sm sm:leading-6"
++              style={{ color: 'var(--ed-ink-2)' }}
++            >
++              {t('consent.message')}{' '}
++              <Link
++                href="/privacy"
++                className="underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-sm"
++                style={{ color: 'var(--ed-ink)' }}
++              >
++                {t('consent.learnMore')}
++              </Link>
++            </p>
++            <div className="flex shrink-0 gap-2 sm:justify-end">
++              <button
++                onClick={handleDecline}
++                className="min-h-[44px] rounded-full px-3 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:text-sm"
++                style={{ color: 'var(--ed-ink)', border: '1px solid var(--ed-control-border)', background: 'transparent' }}
++              >
++                {t('consent.decline')}
++              </button>
++              <button
++                onClick={handleAccept}
++                className="min-h-[44px] rounded-full px-3 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:text-sm"
++                style={{ color: 'var(--ed-paper)', background: 'var(--ed-ink)', border: '1px solid var(--ed-ink)' }}
++              >
++                {t('consent.accept')}
++              </button>
++            </div>
++          </div>
++        </div>
++      </div>
++    );
++  }
++
+   return (
+     <div
+       className={`fixed z-40 rounded-2xl border border-[var(--workbench-border)] bg-[var(--workbench-panel-solid)] px-4 py-3 text-[var(--workbench-ink)] shadow-2xl shadow-slate-900/10 backdrop-blur-2xl dark:shadow-black/35
+diff --git a/frontend/src/components/Footer.tsx b/frontend/src/components/Footer.tsx
+index 452c98d..d9ce33f 100644
+--- a/frontend/src/components/Footer.tsx
++++ b/frontend/src/components/Footer.tsx
+@@ -3,7 +3,6 @@
+ import React from 'react';
+ import Link from 'next/link';
+ import { useLocale } from '../i18n';
+-import ScrollReveal from './landing/ScrollReveal';
+ import DocTalkLogo from './DocTalkLogo';
+ import { getReleaseLabel, getShortBuildSha } from '../lib/version';
+ import { TextMarquee } from './spell';
+@@ -58,7 +57,7 @@ export default function Footer() {
+   return (
+     <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+       <div className="max-w-5xl mx-auto px-6 py-12">
+-        <ScrollReveal>
++        <div>
+           {/* Logo / brand anchor */}
+           <div className="mb-10">
+             <Link href="/" className="inline-flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+@@ -171,7 +170,7 @@ export default function Footer() {
+               <span>{t('footer.github.label')}</span>
+             </a>
+           </div>
+-        </ScrollReveal>
++        </div>
+       </div>
+     </footer>
+   );
+diff --git a/frontend/src/components/landing/EditorialHeader.tsx b/frontend/src/components/landing/EditorialHeader.tsx
+index 5f0e643..74f0787 100644
+--- a/frontend/src/components/landing/EditorialHeader.tsx
++++ b/frontend/src/components/landing/EditorialHeader.tsx
+@@ -3,10 +3,14 @@
+ import EditorialHeaderBase from "../marketing/EditorialHeaderBase";
+ 
+ /**
+- * Landing-page variant of the editorial masthead.
+- * Adds the two-line mono dateline block ("STUDIO Nº 01" / "DOCUMENT INTELLIGENCE").
+- * All shared markup lives in EditorialHeaderBase.
++ * Landing-page masthead.
++ *
++ * It used to pass `showDateline`, which added a two-line mono block beside the
++ * wordmark: a hardcoded "STUDIO Nº 01" and the tagline forced to uppercase.
++ * Retired with the hero collage (plan 2026-09-20 §5.6) — it was magazine
++ * set-dressing that told a visitor nothing. The prop and its markup remain in
++ * EditorialHeaderBase for now, unused; Phase 5 deletes them.
+  */
+ export default function EditorialHeader() {
+-  return <EditorialHeaderBase showDateline />;
++  return <EditorialHeaderBase />;
+ }
+diff --git a/frontend/src/components/landing/FAQ.tsx b/frontend/src/components/landing/FAQ.tsx
+index b29cc16..0246da9 100644
+--- a/frontend/src/components/landing/FAQ.tsx
++++ b/frontend/src/components/landing/FAQ.tsx
+@@ -2,7 +2,6 @@
+ 
+ import React, { useState } from 'react';
+ import { useLocale } from '../../i18n';
+-import ScrollReveal from './ScrollReveal';
+ import { FAQ_ITEMS } from './landingSchemaSources';
+ 
+ 
+@@ -17,20 +16,20 @@ export default function FAQ() {
+   return (
+     <section className="ed-section">
+       <div className="ed-shell">
+-        <ScrollReveal>
++        <div>
+           <div className="max-w-[760px]">
+             <p className="ed-label mb-3">{t('landing.faq.eyebrow')}</p>
+             <h2 className="ed-h2 mb-10">{t('landing.faq.title')}</h2>
+           </div>
+           <hr className="ed-rule" />
+-        </ScrollReveal>
++        </div>
+ 
+         <div className="max-w-[760px]">
+           {FAQ_ITEMS.map((item, idx) => {
+             const num = String(idx + 1).padStart(2, '0');
+             const isOpen = openIndex === idx;
+             return (
+-              <ScrollReveal key={idx} delay={idx * 60}>
++              <div key={idx}>
+                 <div>
+                   <button
+                     type="button"
+@@ -76,7 +75,7 @@ export default function FAQ() {
+ 
+                   <hr className="ed-rule" />
+                 </div>
+-              </ScrollReveal>
++              </div>
+             );
+           })}
+         </div>
+diff --git a/frontend/src/components/landing/FeatureGrid.tsx b/frontend/src/components/landing/FeatureGrid.tsx
+index b19eafc..227fe97 100644
+--- a/frontend/src/components/landing/FeatureGrid.tsx
++++ b/frontend/src/components/landing/FeatureGrid.tsx
+@@ -2,7 +2,6 @@
+ 
+ import React from 'react';
+ import { useLocale } from '../../i18n';
+-import ScrollReveal from './ScrollReveal';
+ 
+ /* ---------- Bespoke per-feature visuals — editorial neutrals ---------- */
+ /* All backgrounds → var(--ed-paper-2), borders → var(--ed-rule),
+@@ -244,14 +243,14 @@ export default function FeatureGrid() {
+     <section id="features" className="ed-section">
+       <div className="ed-shell">
+         {/* Section header */}
+-        <ScrollReveal>
++        <div>
+           <div className="mb-10">
+             <p className="ed-label mb-3">{t('landing.features.eyebrow')}</p>
+             <h2 className="ed-h2 max-w-xl">
+               {t('landing.features.title')}
+             </h2>
+           </div>
+-        </ScrollReveal>
++        </div>
+ 
+         <hr className="ed-rule mb-0" />
+ 
+@@ -265,7 +264,7 @@ export default function FeatureGrid() {
+ 
+             return (
+               <React.Fragment key={titleKey}>
+-                <ScrollReveal delay={Math.min((index % 2) * 80, 160)}>
++                <div>
+                   <div
+                     role="listitem"
+                     className={[
+@@ -296,7 +295,7 @@ export default function FeatureGrid() {
+                       </div>
+                     </div>
+                   </div>
+-                </ScrollReveal>
++                </div>
+               </React.Fragment>
+             );
+           })}
+diff --git a/frontend/src/components/landing/FinalCTA.tsx b/frontend/src/components/landing/FinalCTA.tsx
+index 965c797..5b00c48 100644
+--- a/frontend/src/components/landing/FinalCTA.tsx
++++ b/frontend/src/components/landing/FinalCTA.tsx
+@@ -2,9 +2,7 @@
+ 
+ import React from 'react';
+ import Link from 'next/link';
+-import { ArrowRight } from 'lucide-react';
+ import { useLocale } from '../../i18n';
+-import ScrollReveal from './ScrollReveal';
+ import { trackEvent } from '../../lib/analytics';
+ 
+ export default function FinalCTA() {
+@@ -13,11 +11,11 @@ export default function FinalCTA() {
+   return (
+     <section className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)' }}>
+       <div className="ed-shell">
+-        <ScrollReveal>
++        <div>
+           <div className="max-w-2xl">
+             <p className="ed-label mb-4">{t('landing.finalCta.eyebrow')}</p>
+             <hr className="ed-rule mb-10" />
+-            <h2 className="ed-display mb-6">{t('landing.finalCta.title')}</h2>
++            <h2 className="ed-h2 mb-6">{t('landing.finalCta.title')}</h2>
+             <p className="ed-lede mb-10">{t('landing.finalCta.subtitle')}</p>
+             <div className="flex items-center gap-6 flex-wrap">
+               <Link
+@@ -26,7 +24,6 @@ export default function FinalCTA() {
+                 className="ed-cta"
+               >
+                 {t('landing.finalCta.demo')}
+-                <ArrowRight aria-hidden="true" size={16} />
+               </Link>
+               {/* Plain <a> (not next/link): a native hash anchor fires the
+                   `hashchange` event AuthModal listens for, so the modal opens.
+@@ -41,7 +38,7 @@ export default function FinalCTA() {
+             </div>
+           </div>
+           <hr className="ed-rule mt-16" />
+-        </ScrollReveal>
++        </div>
+       </div>
+     </section>
+   );
+diff --git a/frontend/src/components/landing/HeroArtifact.tsx b/frontend/src/components/landing/HeroArtifact.tsx
+deleted file mode 100644
+index 392d750..0000000
+--- a/frontend/src/components/landing/HeroArtifact.tsx
++++ /dev/null
+@@ -1,116 +0,0 @@
+-"use client";
+-
+-import React from "react";
+-import { FileText, Globe2, ShieldCheck, Sparkles } from "lucide-react";
+-import { useLocale } from "../../i18n";
+-
+-export default function HeroArtifact() {
+-  const { t, tOr } = useLocale();
+-  const prompts = [
+-    t("chat.suggestedQ1"),
+-    t("chat.suggestedQ2"),
+-    tOr("chat.suggestedExtractTables", "Extract all tables as CSV"),
+-  ];
+-
+-  return (
+-    <div aria-hidden="true" className="w-full px-5 py-5 sm:px-7 sm:py-6">
+-      {/* Command text */}
+-      <p
+-        className="ed-body max-w-3xl text-[17px] leading-7 text-[var(--ed-ink)]"
+-        style={{ fontFamily: "var(--dt-body)" }}
+-      >
+-        {tOr(
+-          "workbench.heroArtifact.command",
+-          "Ask DocTalk to read a PDF, verify every claim, and show the exact source passage."
+-        )}
+-      </p>
+-
+-      {/* Input affordance row */}
+-      <div className="mt-5 flex flex-wrap items-center gap-2">
+-        {/* PDF tag */}
+-        <span
+-          className="inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-2)]"
+-          style={{
+-            fontFamily: "var(--dt-mono)",
+-            fontSize: "11px",
+-            letterSpacing: "0.04em",
+-          }}
+-        >
+-          <FileText
+-            aria-hidden="true"
+-            size={12}
+-            className="text-[var(--ed-ink-3)]"
+-          />
+-          PDF
+-        </span>
+-
+-        {/* URL tag */}
+-        <span
+-          className="inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-3)]"
+-          style={{
+-            fontFamily: "var(--dt-mono)",
+-            fontSize: "11px",
+-            letterSpacing: "0.04em",
+-          }}
+-        >
+-          <Globe2
+-            aria-hidden="true"
+-            size={12}
+-            className="text-[var(--ed-ink-3)]"
+-          />
+-          URL
+-        </span>
+-
+-        {/* Flash mode tag — signal accent */}
+-        <span
+-          className="ml-auto inline-flex items-center gap-1.5 rounded-[3px] border border-[var(--ed-signal)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-signal)]"
+-          style={{
+-            fontFamily: "var(--dt-mono)",
+-            fontSize: "11px",
+-            letterSpacing: "0.04em",
+-          }}
+-        >
+-          <Sparkles
+-            aria-hidden="true"
+-            size={12}
+-            className="text-[var(--ed-signal)]"
+-          />
+-          {tOr("modes.quick", "Flash")}
+-        </span>
+-
+-        {/* Shield icon */}
+-        <ShieldCheck
+-          aria-hidden="true"
+-          size={16}
+-          className="text-[var(--ed-ink-3)]"
+-        />
+-      </div>
+-
+-      {/* Hairline rule */}
+-      <div
+-        className="mt-5 border-t border-[var(--ed-rule)]"
+-        role="separator"
+-      />
+-
+-      {/* Suggested prompts */}
+-      <div className="mt-4 flex flex-wrap gap-2">
+-        {prompts.map((prompt) => (
+-          <span
+-            key={prompt}
+-            className="max-w-[22rem] truncate rounded-[3px] border border-[var(--ed-rule)] bg-[var(--ed-paper)] px-2.5 py-1.5 text-[var(--ed-ink-3)]"
+-            style={{
+-              fontFamily: "var(--dt-mono)",
+-              fontSize: "11px",
+-              letterSpacing: "0.04em",
+-            }}
+-          >
+-            {prompt}
+-          </span>
+-        ))}
+-      </div>
+-
+-      {/* Disclaimer */}
+-      <p className="ed-caption mt-4">{t("chat.disclaimer")}</p>
+-    </div>
+-  );
+-}
+diff --git a/frontend/src/components/landing/HeroCollage.tsx b/frontend/src/components/landing/HeroCollage.tsx
+deleted file mode 100644
+index 7c1a1db..0000000
+--- a/frontend/src/components/landing/HeroCollage.tsx
++++ /dev/null
+@@ -1,342 +0,0 @@
+-"use client";
+-
+-import { useLocale } from '../../i18n';
+-
+-/**
+- * HeroCollage — Art-directed editorial collage for the DocTalk landing hero.
+- * Pure HTML/CSS/SVG, warm editorial palette only. No external images, no
+- * gradient mesh, no UI mock. Aria-hidden decorative. The two stacked
+- * document plates use .ed-glass (spec §4.1 "hero cards") — this is the
+- * one deliberate glassmorphism use in this file.
+- */
+-export default function HeroCollage() {
+-  const { t } = useLocale();
+-  return (
+-    <figure aria-hidden="true" style={{ position: "relative" }}>
+-      {/* ─── Outer container — roughly 4:5 aspect ─── */}
+-      <div
+-        style={{
+-          position: "relative",
+-          width: "100%",
+-          aspectRatio: "4 / 5",
+-          maxWidth: "460px",
+-          overflow: "visible",
+-        }}
+-      >
+-        {/* ── Background slate rectangle — large vertical stripe ── */}
+-        <div
+-          style={{
+-            position: "absolute",
+-            top: "6%",
+-            right: "0",
+-            width: "58%",
+-            height: "82%",
+-            background: "var(--ed-slate)",
+-            opacity: 0.18,
+-          }}
+-        />
+-
+-        {/* ── Halftone dot block — bottom-left corner ── */}
+-        <div
+-          className="ed-halftone"
+-          style={{
+-            position: "absolute",
+-            bottom: "4%",
+-            left: "0",
+-            width: "36%",
+-            height: "28%",
+-            borderRadius: "1px",
+-          }}
+-        />
+-
+-        {/* ── Thin geometric square outline — top-left ── */}
+-        <div
+-          style={{
+-            position: "absolute",
+-            top: "2%",
+-            left: "4%",
+-            width: "80px",
+-            height: "80px",
+-            border: "1px solid var(--ed-rule)",
+-          }}
+-        />
+-
+-        {/* ── Signal shape — soft terracotta accent, low opacity ── */}
+-        <div
+-          style={{
+-            position: "absolute",
+-            top: "28%",
+-            left: "2%",
+-            width: "48px",
+-            height: "110px",
+-            background: "var(--ed-signal)",
+-            opacity: 0.12,
+-          }}
+-        />
+-
+-        {/* ── Oversized italic serif glyph (graphic element, behind plate) ── */}
+-        <div
+-          style={{
+-            position: "absolute",
+-            top: "8%",
+-            right: "6%",
+-            fontFamily: "var(--dt-serif)",
+-            fontStyle: "italic",
+-            fontWeight: 400,
+-            fontSize: "clamp(120px, 18vw, 180px)",
+-            lineHeight: 1,
+-            color: "var(--ed-slate)",
+-            opacity: 0.12,
+-            userSelect: "none",
+-            pointerEvents: "none",
+-            letterSpacing: "-0.05em",
+-          }}
+-        >
+-          §
+-        </div>
+-
+-        {/* ── Registration crosshair — top-right area ── */}
+-        <div
+-          className="ed-crosshair"
+-          style={{ position: "absolute", top: "10%", right: "8%" }}
+-        />
+-
+-        {/* ── Registration crosshair — bottom-left ── */}
+-        <div
+-          className="ed-crosshair"
+-          style={{ position: "absolute", bottom: "10%", left: "28%" }}
+-        />
+-
+-        {/* ── PRIMARY DOCUMENT PLATE ── */}
+-        {/* Rotated ~-3deg, offset slightly left-of-centre */}
+-        <div
+-          className="ed-glass"
+-          style={{
+-            position: "absolute",
+-            top: "14%",
+-            left: "8%",
+-            right: "6%",
+-            padding: "22px 20px 18px",
+-            transform: "rotate(-2.8deg)",
+-          }}
+-        >
+-          {/* Document header row */}
+-          <div
+-            style={{
+-              display: "flex",
+-              alignItems: "center",
+-              justifyContent: "space-between",
+-              marginBottom: "14px",
+-            }}
+-          >
+-            <span
+-              className="ed-caption"
+-              style={{ letterSpacing: "0.06em" }}
+-            >
+-              report.pdf &middot; p.&thinsp;4
+-            </span>
+-            {/* Small page indicator */}
+-            <span
+-              className="ed-caption"
+-              style={{
+-                background: "var(--ed-paper-2)",
+-                border: "1px solid var(--ed-rule)",
+-                padding: "1px 5px",
+-                borderRadius: "1px",
+-              }}
+-            >
+-              04
+-            </span>
+-          </div>
+-
+-          {/* Text lines — thin rule bars */}
+-          {/* Line 1 — plain */}
+-          <div
+-            style={{
+-              height: "7px",
+-              background: "var(--ed-rule)",
+-              borderRadius: "1px",
+-              marginBottom: "8px",
+-              opacity: 0.7,
+-              width: "92%",
+-            }}
+-          />
+-          {/* Line 2 — plain */}
+-          <div
+-            style={{
+-              height: "7px",
+-              background: "var(--ed-rule)",
+-              borderRadius: "1px",
+-              marginBottom: "8px",
+-              opacity: 0.55,
+-              width: "78%",
+-            }}
+-          />
+-
+-          {/* Line 3 — HIGHLIGHTED (citation band) */}
+-          <div
+-            style={{
+-              position: "relative",
+-              marginBottom: "8px",
+-            }}
+-          >
+-            {/* Slate highlight band — quote-highlight rule (structure) */}
+-            <div
+-              style={{
+-                position: "absolute",
+-                inset: "-2px -4px",
+-                background: "var(--ed-slate)",
+-                opacity: 0.18,
+-                borderRadius: "1px",
+-              }}
+-            />
+-            <div
+-              style={{
+-                height: "7px",
+-                background: "var(--ed-ink-2)",
+-                borderRadius: "1px",
+-                opacity: 0.55,
+-                width: "88%",
+-                position: "relative",
+-              }}
+-            />
+-            {/* Olive margin citation marker — verified badge */}
+-            <div
+-              style={{
+-                position: "absolute",
+-                right: "-14px",
+-                top: "50%",
+-                transform: "translateY(-50%)",
+-                width: "18px",
+-                height: "18px",
+-                background: "var(--ed-olive)",
+-                borderRadius: "50%",
+-                display: "flex",
+-                alignItems: "center",
+-                justifyContent: "center",
+-              }}
+-            >
+-              <span
+-                style={{
+-                  fontFamily: "var(--dt-mono)",
+-                  fontSize: "8px",
+-                  fontWeight: 700,
+-                  color: "#fff",
+-                  lineHeight: 1,
+-                }}
+-              >
+-                3
+-              </span>
+-            </div>
+-          </div>
+-
+-          {/* Line 4 — plain */}
+-          <div
+-            style={{
+-              height: "7px",
+-              background: "var(--ed-rule)",
+-              borderRadius: "1px",
+-              marginBottom: "8px",
+-              opacity: 0.5,
+-              width: "65%",
+-            }}
+-          />
+-          {/* Line 5 — plain */}
+-          <div
+-            style={{
+-              height: "7px",
+-              background: "var(--ed-rule)",
+-              borderRadius: "1px",
+-              marginBottom: "16px",
+-              opacity: 0.45,
+-              width: "83%",
+-            }}
+-          />
+-
+-          {/* Thin internal rule */}
+-          <hr
+-            style={{
+-              border: 0,
+-              borderTop: "1px solid var(--ed-rule)",
+-              marginBottom: "12px",
+-            }}
+-          />
+-
+-          {/* Citation annotation row */}
+-          <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+-            {/* Badge — verified citation, olive */}
+-            <span
+-              style={{
+-                display: "inline-flex",
+-                alignItems: "center",
+-                justifyContent: "center",
+-                width: "16px",
+-                height: "16px",
+-                background: "var(--ed-olive)",
+-                borderRadius: "50%",
+-                flexShrink: 0,
+-                marginTop: "1px",
+-              }}
+-            >
+-              <span
+-                style={{
+-                  fontFamily: "var(--dt-mono)",
+-                  fontSize: "7px",
+-                  fontWeight: 700,
+-                  color: "#fff",
+-                  lineHeight: 1,
+-                }}
+-              >
+-                3
+-              </span>
+-            </span>
+-            {/* Annotation text lines */}
+-            <div style={{ flex: 1 }}>
+-              <div
+-                style={{
+-                  height: "6px",
+-                  background: "var(--ed-rule)",
+-                  borderRadius: "1px",
+-                  marginBottom: "5px",
+-                  opacity: 0.65,
+-                  width: "90%",
+-                }}
+-              />
+-              <div
+-                style={{
+-                  height: "6px",
+-                  background: "var(--ed-rule)",
+-                  borderRadius: "1px",
+-                  opacity: 0.45,
+-                  width: "60%",
+-                }}
+-              />
+-            </div>
+-          </div>
+-        </div>
+-
+-        {/* ── Second document plate — stacked behind, peeking ── */}
+-        <div
+-          className="ed-glass"
+-          style={{
+-            position: "absolute",
+-            top: "12%",
+-            left: "14%",
+-            right: "2%",
+-            height: "60%",
+-            transform: "rotate(2.2deg)",
+-            zIndex: -1,
+-          }}
+-        />
+-      </div>
+-
+-      {/* ─── Caption below the collage ─── */}
+-      <figcaption
+-        className="ed-caption"
+-        style={{ marginTop: "12px", display: "block" }}
+-      >
+-        Fig.&thinsp;01 — {t('landing.heroCollage.caption')}
+-      </figcaption>
+-    </figure>
+-  );
+-}
+diff --git a/frontend/src/components/landing/HeroSection.tsx b/frontend/src/components/landing/HeroSection.tsx
+index 6382036..590be05 100644
+--- a/frontend/src/components/landing/HeroSection.tsx
++++ b/frontend/src/components/landing/HeroSection.tsx
+@@ -2,11 +2,28 @@
+ 
+ import React from 'react';
+ import Link from 'next/link';
+-import { ArrowRight } from 'lucide-react';
+ import { useLocale } from '../../i18n';
+-import HeroCollage from './HeroCollage';
++import ProductFrame from './ProductFrame';
+ import { trackEvent } from '../../lib/analytics';
+ 
++/**
++ * Landing hero, in the Apple order (plan 2026-09-20 §5.2): one claim, one
++ * sentence, one filled action, then the product. The landing is the one page
++ * where the claim and frame sit centred.
++ *
++ * Deliberately absent, and why:
++ *  - No eyebrow. It read "01 — Document intelligence": a numbered label on
++ *    content that is not a sequence.
++ *  - No stat band ("11 / 6 / 01"). "01 cited answers" read as a broken counter.
++ *    The `landing.heroStats.*` keys are left in the locale files, unused.
++ *  - No italic split. The last headline line used to be wrapped in <em>; the
++ *    type system now sets display type upright, so the wrapper only made the
++ *    markup misleading.
++ *  - No trailing arrows on the actions.
++ *
++ * `landing.headline` and `landing.description` are not edited: they are also
++ * the <title> and <meta description> keys for app/[locale]/page.tsx.
++ */
+ export default function HeroSection() {
+   const { t } = useLocale();
+   const headlineLines = t('landing.headline').split('\n');
+@@ -14,88 +31,42 @@ export default function HeroSection() {
+   return (
+     <section className="ed-section">
+       <div className="ed-shell">
+-        {/* Asymmetric 12-col grid: text 7 cols, figure 5 cols */}
+-        <div className="md:grid md:grid-cols-12 md:gap-12">
++        <div className="mx-auto max-w-[760px] text-center">
++          <h1 className="ed-display">
++            {headlineLines.map((line: string, i: number) => (
++              <React.Fragment key={i}>
++                {i > 0 && <br />}
++                {line}
++              </React.Fragment>
++            ))}
++          </h1>
+ 
+-          {/* ── Text column ── */}
+-          <div className="md:col-span-7 flex flex-col justify-center">
++          <p className="ed-lede mx-auto mt-6 max-w-[600px]">
++            {t('landing.description')}
++          </p>
+ 
+-            {/* Eyebrow label */}
+-            <p className="ed-label mb-6">
+-              <span className="ed-label-num">01</span>
+-              {' '}—{' '}{t('landing.heroEyebrow')}
+-            </p>
+-
+-            {/* Headline — heavy grotesque first line, italic-serif second line */}
+-            <h1 className="ed-display mb-6">
+-              {headlineLines.map((line: string, i: number) => (
+-                <React.Fragment key={i}>
+-                  {i > 0 && <br />}
+-                  {i === headlineLines.length - 1 && headlineLines.length > 1
+-                    ? <em>{line}</em>
+-                    : line}
+-                </React.Fragment>
+-              ))}
+-            </h1>
+-
+-            {/* Standfirst */}
+-            <p className="ed-lede mb-8">
+-              {t('landing.description')}
+-            </p>
+-
+-            {/* CTA row */}
+-            <div className="flex flex-wrap items-center gap-4 mb-10">
+-              <Link
+-                href="/demo"
+-                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
+-                className="ed-cta"
+-              >
+-                {t('landing.cta.demo')}
+-                <ArrowRight aria-hidden="true" size={16} />
+-              </Link>
+-              {/* Plain <a> (not next/link): a native hash anchor fires the
+-                  `hashchange` event AuthModal listens for, so the modal opens.
+-                  next/link updates the hash via history API without firing it. */}
+-              <a
+-                href="#auth"
+-                onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
+-                className="ed-link"
+-              >
+-                {t('hero.signUpFree')}
+-                <ArrowRight aria-hidden="true" size={14} />
+-              </a>
+-            </div>
+-
+-            {/* Metrics — editorial stat band. The hairline rule is constrained
+-                to the stat group's width (max-w) so it caps the three figures
+-                instead of running across the empty right half; an even 3-col
+-                grid gives 11 / 6 / 01 a consistent rhythm regardless of digit
+-                count; the rule sits close above so the band reads as one unit. */}
+-            <div className="mt-2 max-w-[460px]">
+-              <hr className="ed-rule mb-5" />
+-              <div className="grid grid-cols-3 gap-4">
+-                <div>
+-                  <p className="ed-num">11</p>
+-                  <p className="ed-label mt-1.5">{t('landing.heroStats.languages')}</p>
+-                </div>
+-                <div>
+-                  <p className="ed-num">6</p>
+-                  <p className="ed-label mt-1.5">{t('landing.heroStats.formats')}</p>
+-                </div>
+-                <div>
+-                  <p className="ed-num">01</p>
+-                  <p className="ed-label mt-1.5">{t('landing.heroStats.citedAnswers')}</p>
+-                </div>
+-              </div>
+-            </div>
++          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
++            <Link
++              href="/demo"
++              onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'demo' })}
++              className="ed-cta"
++            >
++              {t('landing.cta.demo')}
++            </Link>
++            {/* Plain <a> (not next/link): a native hash anchor fires the
++                `hashchange` event AuthModal listens for, so the modal opens.
++                next/link updates the hash via history API without firing it. */}
++            <a
++              href="#auth"
++              onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
++              className="ed-link"
++            >
++              {t('hero.signUpFree')}
++            </a>
+           </div>
+-
+-          {/* ── Figure column ── */}
+-          <div className="md:col-span-5 mt-12 md:mt-0 flex flex-col justify-center">
+-            <HeroCollage />
+-          </div>
+-
+         </div>
++
++        <ProductFrame />
+       </div>
+     </section>
+   );
+diff --git a/frontend/src/components/landing/HowItWorks.tsx b/frontend/src/components/landing/HowItWorks.tsx
+index b1b113f..2add4a1 100644
+--- a/frontend/src/components/landing/HowItWorks.tsx
++++ b/frontend/src/components/landing/HowItWorks.tsx
+@@ -2,7 +2,6 @@
+ 
+ import React from 'react';
+ import { useLocale } from '../../i18n';
+-import ScrollReveal from './ScrollReveal';
+ import { HOW_IT_WORKS_STEPS as steps } from './landingSchemaSources';
+ 
+ 
+@@ -10,7 +9,7 @@ export default function HowItWorks() {
+   const { t, tOr } = useLocale();
+ 
+   return (
+-    <ScrollReveal>
++    <div>
+       <section id="how-it-works" className="ed-section">
+         <div className="ed-shell">
+           {/* Section header */}
+@@ -42,6 +41,6 @@ export default function HowItWorks() {
+           <hr className="ed-rule mt-0" />
+         </div>
+       </section>
+-    </ScrollReveal>
++    </div>
+   );
+ }
+diff --git a/frontend/src/components/landing/LandingPageContent.tsx b/frontend/src/components/landing/LandingPageContent.tsx
+index 0136ee2..96d2047 100644
+--- a/frontend/src/components/landing/LandingPageContent.tsx
++++ b/frontend/src/components/landing/LandingPageContent.tsx
+@@ -6,7 +6,6 @@ import EditorialFooter from './EditorialFooter';
+ import HeroSection from './HeroSection';
+ import FeatureGrid from './FeatureGrid';
+ import HowItWorks from './HowItWorks';
+-import SocialProof from './SocialProof';
+ import SecuritySection from './SecuritySection';
+ import FAQ from './FAQ';
+ import FinalCTA from './FinalCTA';
+@@ -29,7 +28,6 @@ export default function LandingPageContent() {
+         <HeroSection />
+         <FeatureGrid />
+         <HowItWorks />
+-        <SocialProof />
+         <SecuritySection />
+         <FAQ />
+         <FinalCTA />
+diff --git a/frontend/src/components/landing/ProductFrame.tsx b/frontend/src/components/landing/ProductFrame.tsx
+new file mode 100644
+index 0000000..90bd4d2
+--- /dev/null
++++ b/frontend/src/components/landing/ProductFrame.tsx
+@@ -0,0 +1,129 @@
++"use client";
++
++import { useLocale } from "../../i18n";
++
++/**
++ * The landing hero's product frame: a static depiction of the DocTalk reader
++ * answering one question about one real document.
++ *
++ * Plan: .collab/plans/2026-09-20-apple-design-direction.md §7 Phase 1, owner
++ * decision A2 (§10 Q1) — the frame shows the full reader and is the visual
++ * spec for the Phase 4 reader redesign. Its three regions map one-to-one onto
++ * real reader regions (header strip, chat column, document pane) so Phase 4
++ * can swap in the real components; nothing here is a feature the reader lacks.
++ *
++ * HONESTY CONSTRAINTS — read before editing:
++ *  - PAGE_TEXT is copied verbatim from page 1 of
++ *    backend/seed_data/alphabet-earnings.pdf (the finance demo document).
++ *    The highlighted sentence is the one the live product cites for this
++ *    question. Do not edit it; do not translate it — it is a quotation from an
++ *    English document, and the reader never translates source text.
++ *  - The answer paraphrases only that sentence. It must not assert anything the
++ *    source does not.
++ *  - The caption must not claim quotes are word-for-word. Word-for-word is only
++ *    guaranteed for `page_text` results (see .claude/rules/frontend.md, Quote
++ *    Finder UI). "Taken straight from the document" and "checked against the
++ *    source text" are both backed by the verified-quote pipeline.
++ *
++ * The visual is aria-hidden; screen readers get the sr-only description and
++ * the visible caption, which are real text.
++ */
++
++const DOC_NAME = "2025q4-alphabet-earnings-release.pdf";
++
++// Verbatim, page 1. Split so the cited sentence can be highlighted.
++const PAGE_TITLE = "Alphabet Announces Fourth Quarter and Fiscal Year 2025 Results";
++const PAGE_DATELINE =
++  "MOUNTAIN VIEW, Calif. – February 4, 2026 – Alphabet Inc. (NASDAQ: GOOG, GOOGL) today announced financial results for the quarter ended December 31, 2025.";
++// The paragraph opens with no quotation mark in the source (it is the third
++// paragraph of a quotation that began two paragraphs earlier); only the
++// closing ” after "billion." is present, and it is rendered below.
++const PAGE_LEAD_IN =
++  "We’re seeing our AI investments and infrastructure drive revenue and growth across the board. ";
++const PAGE_CITED =
++  "To meet customer demand and capitalize on the growing opportunities we have ahead of us, our 2026 CapEx investments are anticipated to be in the range of $175 to $185 billion.";
++const PAGE_AFTER = "Q4 2025 Financial Highlights";
++
++export default function ProductFrame() {
++  const { tOr } = useLocale();
++
++  const question = tOr(
++    "landing.frame.question",
++    "How much does Alphabet plan to spend on capital in 2026?",
++  );
++  const answer = tOr(
++    "landing.frame.answer",
++    "Alphabet expects its 2026 capital expenditure to be between $175 and $185 billion, to meet customer demand and the growing opportunities ahead.",
++  );
++
++  return (
++    <figure className="ed-frame-figure">
++      <div className="ed-frame" aria-hidden="true">
++        {/* (a) header strip — the reader's own chrome, not a fake browser */}
++        <div className="ed-frame-bar">
++          <span className="ed-frame-mark" />
++          <span className="ed-frame-doc" dir="ltr">{DOC_NAME}</span>
++          <span className="ed-frame-pageno">p. 1</span>
++        </div>
++
++        <div className="ed-frame-body">
++          {/* (b) chat column */}
++          <div className="ed-frame-chat">
++            <p className="ed-frame-q">{question}</p>
++            <p className="ed-frame-a">
++              {answer}
++              <span className="ed-frame-cite">1</span>
++            </p>
++            <div className="ed-frame-source">
++              <span className="ed-frame-cite">1</span>
++              <span className="ed-frame-source-page">p. 1</span>
++              <span className="ed-frame-source-doc" dir="ltr">{DOC_NAME}</span>
++            </div>
++          </div>
++
++          {/* (c) document pane — a light "paper island" in both themes, the way
++              a real PDF page renders. dir="ltr" because it IS an English
++              document: in the Arabic UI it must not inherit right-to-left, just as
++              a real English PDF does not reflow when the interface language changes. */}
++          <div className="ed-frame-pane">
++            <div className="ed-frame-page" dir="ltr" lang="en">
++              <p className="ed-frame-page-title">{PAGE_TITLE}</p>
++              <p className="ed-frame-page-text ed-frame-page-muted">{PAGE_DATELINE}</p>
++              <p className="ed-frame-page-text">
++                {PAGE_LEAD_IN}
++                <mark className="ed-frame-mark-cited">
++                  <span className="ed-frame-badge">1</span>
++                  {PAGE_CITED}
++                </mark>
++                ”
++              </p>
++              <p className="ed-frame-page-sub">{PAGE_AFTER}</p>
++            </div>
++          </div>
++        </div>
++      </div>
++
++      <p className="sr-only">
++        {tOr(
++          "landing.frame.description",
++          "An example of DocTalk answering a question about Alphabet's fourth-quarter 2025 earnings release. The answer cites page 1, and the cited sentence is highlighted on that page.",
++        )}
++      </p>
++
++      <figcaption className="ed-frame-caption">
++        <span>
++          {tOr(
++            "landing.frame.caption",
++            "Every answer links to the sentence it came from, on its page.",
++          )}
++        </span>{" "}
++        <span>
++          {tOr(
++            "landing.frame.quoteFinder",
++            "Writing something that needs quotes? Quote Finder pulls them straight from your document, each checked against the source text.",
++          )}
++        </span>
++      </figcaption>
++    </figure>
++  );
++}
+diff --git a/frontend/src/components/landing/ProductShowcase.tsx b/frontend/src/components/landing/ProductShowcase.tsx
+deleted file mode 100644
+index 8346361..0000000
+--- a/frontend/src/components/landing/ProductShowcase.tsx
++++ /dev/null
+@@ -1,621 +0,0 @@
+-"use client";
+-
+-import React from "react";
+-import {
+-  useCurrentFrame,
+-  useVideoConfig,
+-  interpolate,
+-  spring,
+-  Sequence,
+-  AbsoluteFill,
+-} from "remotion";
+-import {
+-  FPS,
+-  TOTAL_FRAMES,
+-  FRAMES,
+-  USER_QUESTION,
+-  AI_RESPONSE,
+-  CITATIONS,
+-  PDF_TITLE,
+-  PDF_SUBTITLE,
+-  PDF_HEADING,
+-  PDF_LINES,
+-  COLORS,
+-} from "./showcaseData";
+-
+-// ────────────────────────────────────────
+-// Sub-components
+-// ────────────────────────────────────────
+-
+-function UserBubble({ isDark }: { isDark: boolean }) {
+-  const frame = useCurrentFrame();
+-  const { fps } = useVideoConfig();
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  const progress = spring({ frame, fps, config: { damping: 20, stiffness: 200 } });
+-  const translateY = interpolate(progress, [0, 1], [30, 0], {
+-    extrapolateRight: "clamp",
+-    extrapolateLeft: "clamp",
+-  });
+-  const opacity = interpolate(progress, [0, 1], [0, 1], {
+-    extrapolateRight: "clamp",
+-    extrapolateLeft: "clamp",
+-  });
+-
+-  return (
+-    <div
+-      style={{
+-        opacity,
+-        transform: `translateY(${translateY}px)`,
+-        display: "flex",
+-        justifyContent: "flex-end",
+-        marginBottom: 12,
+-      }}
+-    >
+-      <div
+-        style={{
+-          background: c.userBubble,
+-          color: c.userBubbleText,
+-          padding: "10px 14px",
+-          borderRadius: 16,
+-          borderBottomRightRadius: 4,
+-          maxWidth: "85%",
+-          fontSize: 12,
+-          lineHeight: 1.5,
+-          fontFamily: "Inter, system-ui, sans-serif",
+-        }}
+-      >
+-        {USER_QUESTION}
+-      </div>
+-    </div>
+-  );
+-}
+-
+-function TypingDots({ isDark }: { isDark: boolean }) {
+-  const frame = useCurrentFrame();
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  return (
+-    <div style={{ display: "flex", gap: 4, padding: "10px 14px" }}>
+-      {[0, 1, 2].map((i) => {
+-        const bounce = interpolate(
+-          (frame + i * 3) % 12,
+-          [0, 6, 12],
+-          [0, -4, 0],
+-          { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
+-        );
+-        return (
+-          <div
+-            key={i}
+-            style={{
+-              width: 6,
+-              height: 6,
+-              borderRadius: 3,
+-              background: c.textMuted,
+-              transform: `translateY(${bounce}px)`,
+-            }}
+-          />
+-        );
+-      })}
+-    </div>
+-  );
+-}
+-
+-function AssistantBubble({ isDark }: { isDark: boolean }) {
+-  const frame = useCurrentFrame();
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  const charsVisible = Math.floor(frame * 2);
+-  const visibleText = AI_RESPONSE.slice(0, charsVisible);
+-
+-  // Blinking cursor
+-  const cursorOpacity = interpolate(
+-    frame % 16,
+-    [0, 8, 16],
+-    [1, 0, 1],
+-    { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
+-  );
+-
+-  const showCursor = charsVisible < AI_RESPONSE.length;
+-
+-  // Parse citation markers in visible text
+-  const renderText = () => {
+-    const parts: React.ReactNode[] = [];
+-    const regex = /\[(\d+)\]/g;
+-    let lastIndex = 0;
+-    let match: RegExpExecArray | null;
+-
+-    while ((match = regex.exec(visibleText)) !== null) {
+-      if (match.index > lastIndex) {
+-        parts.push(visibleText.slice(lastIndex, match.index));
+-      }
+-      parts.push(
+-        <span
+-          key={`cite-${match.index}`}
+-          style={{
+-            color: isDark ? "#a1a1aa" : "#71717a",
+-            fontWeight: 600,
+-            fontSize: 11,
+-          }}
+-        >
+-          [{match[1]}]
+-        </span>
+-      );
+-      lastIndex = match.index + match[0].length;
+-    }
+-    if (lastIndex < visibleText.length) {
+-      parts.push(visibleText.slice(lastIndex));
+-    }
+-    return parts;
+-  };
+-
+-  return (
+-    <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
+-      <div
+-        style={{
+-          background: c.assistantBubble,
+-          color: c.assistantBubbleText,
+-          padding: "10px 14px",
+-          borderRadius: 16,
+-          borderBottomLeftRadius: 4,
+-          maxWidth: "90%",
+-          fontSize: 12,
+-          lineHeight: 1.6,
+-          fontFamily: "Inter, system-ui, sans-serif",
+-          border: `1px solid ${c.borderLight}`,
+-        }}
+-      >
+-        {renderText()}
+-        {showCursor && (
+-          <span
+-            style={{
+-              opacity: cursorOpacity,
+-              color: c.textSecondary,
+-              marginLeft: 1,
+-            }}
+-          >
+-            |
+-          </span>
+-        )}
+-      </div>
+-    </div>
+-  );
+-}
+-
+-function CitationCards({ isDark }: { isDark: boolean }) {
+-  const frame = useCurrentFrame();
+-  const { fps } = useVideoConfig();
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  return (
+-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+-      {CITATIONS.map((cite, i) => {
+-        const delay = i * FRAMES.citationStagger;
+-        const progress = spring({
+-          frame: frame - delay,
+-          fps,
+-          config: { damping: 20, stiffness: 200 },
+-        });
+-        const translateY = interpolate(progress, [0, 1], [20, 0], {
+-          extrapolateRight: "clamp",
+-          extrapolateLeft: "clamp",
+-        });
+-        const opacity = interpolate(progress, [0, 1], [0, 1], {
+-          extrapolateRight: "clamp",
+-          extrapolateLeft: "clamp",
+-        });
+-
+-        return (
+-          <div
+-            key={cite.refIndex}
+-            style={{
+-              opacity,
+-              transform: `translateY(${translateY}px)`,
+-              display: "flex",
+-              alignItems: "flex-start",
+-              gap: 8,
+-              padding: "8px 10px",
+-              borderRadius: 10,
+-              border: `1px solid ${c.borderLight}`,
+-              background: c.cardBg,
+-              fontSize: 11,
+-              fontFamily: "Inter, system-ui, sans-serif",
+-            }}
+-          >
+-            <span style={{ color: c.textSecondary, fontWeight: 600, flexShrink: 0 }}>
+-              [{cite.refIndex}]
+-            </span>
+-            <div style={{ flex: 1, minWidth: 0 }}>
+-              <div
+-                style={{
+-                  color: c.assistantBubbleText,
+-                  lineHeight: 1.4,
+-                  overflow: "hidden",
+-                  textOverflow: "ellipsis",
+-                  whiteSpace: "nowrap",
+-                }}
+-              >
+-                {cite.snippet}
+-              </div>
+-              <div style={{ color: c.textMuted, fontSize: 10, marginTop: 2 }}>
+-                Page {cite.page}
+-              </div>
+-            </div>
+-          </div>
+-        );
+-      })}
+-    </div>
+-  );
+-}
+-
+-function MockChatPanel({ isDark }: { isDark: boolean }) {
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  return (
+-    <div
+-      style={{
+-        width: "50%",
+-        display: "flex",
+-        flexDirection: "column",
+-        height: "100%",
+-        overflow: "hidden",
+-      }}
+-    >
+-      {/* Chat header */}
+-      <div
+-        style={{
+-          padding: "8px 14px",
+-          borderBottom: `1px solid ${c.border}`,
+-          display: "flex",
+-          alignItems: "center",
+-          gap: 6,
+-          flexShrink: 0,
+-        }}
+-      >
+-        <div
+-          style={{
+-            width: 6,
+-            height: 6,
+-            borderRadius: 3,
+-            background: "#22c55e",
+-          }}
+-        />
+-        <span
+-          style={{
+-            fontSize: 11,
+-            color: c.textSecondary,
+-            fontFamily: "Inter, system-ui, sans-serif",
+-          }}
+-        >
+-          Claude Sonnet 4.5
+-        </span>
+-      </div>
+-
+-      {/* Messages area */}
+-      <div
+-        style={{
+-          flex: 1,
+-          padding: "12px 14px",
+-          display: "flex",
+-          flexDirection: "column",
+-          justifyContent: "flex-end",
+-          overflow: "hidden",
+-        }}
+-      >
+-        <Sequence from={FRAMES.userMsg} layout="none">
+-          <UserBubble isDark={isDark} />
+-        </Sequence>
+-
+-        <Sequence
+-          from={FRAMES.dotsStart}
+-          durationInFrames={FRAMES.dotsEnd - FRAMES.dotsStart}
+-          layout="none"
+-        >
+-          <TypingDots isDark={isDark} />
+-        </Sequence>
+-
+-        <Sequence from={FRAMES.streamStart} layout="none">
+-          <AssistantBubble isDark={isDark} />
+-        </Sequence>
+-
+-        <Sequence from={FRAMES.citationCards} layout="none">
+-          <CitationCards isDark={isDark} />
+-        </Sequence>
+-      </div>
+-
+-      {/* Input bar mock */}
+-      <div
+-        style={{
+-          padding: "8px 14px",
+-          borderTop: `1px solid ${c.border}`,
+-          flexShrink: 0,
+-        }}
+-      >
+-        <div
+-          style={{
+-            background: c.inputBg,
+-            border: `1px solid ${c.border}`,
+-            borderRadius: 10,
+-            padding: "8px 12px",
+-            fontSize: 11,
+-            color: c.textMuted,
+-            fontFamily: "Inter, system-ui, sans-serif",
+-          }}
+-        >
+-          Ask a question about this document...
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-function HighlightOverlay({
+-  isDark,
+-  bbox,
+-  delayFrame,
+-}: {
+-  isDark: boolean;
+-  bbox: { x: number; y: number; w: number; h: number };
+-  delayFrame: number;
+-}) {
+-  const frame = useCurrentFrame();
+-  const { fps } = useVideoConfig();
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  const progress = spring({
+-    frame: frame - delayFrame,
+-    fps,
+-    config: { damping: 200 },
+-  });
+-
+-  const scaleX = interpolate(progress, [0, 1], [0, 1], {
+-    extrapolateRight: "clamp",
+-    extrapolateLeft: "clamp",
+-  });
+-
+-  const opacity = interpolate(progress, [0, 1], [0, 1], {
+-    extrapolateRight: "clamp",
+-    extrapolateLeft: "clamp",
+-  });
+-
+-  return (
+-    <div
+-      style={{
+-        position: "absolute",
+-        left: `${bbox.x * 100}%`,
+-        top: `${bbox.y * 100}%`,
+-        width: `${bbox.w * 100}%`,
+-        height: `${bbox.h * 100}%`,
+-        background: c.highlightBg,
+-        borderRadius: 3,
+-        transformOrigin: "left center",
+-        transform: `scaleX(${scaleX})`,
+-        opacity,
+-      }}
+-    />
+-  );
+-}
+-
+-function MockPdfPanel({ isDark }: { isDark: boolean }) {
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  return (
+-    <div
+-      style={{
+-        width: "50%",
+-        display: "flex",
+-        flexDirection: "column",
+-        height: "100%",
+-        overflow: "hidden",
+-      }}
+-    >
+-      {/* PDF toolbar */}
+-      <div
+-        style={{
+-          padding: "8px 14px",
+-          borderBottom: `1px solid ${c.border}`,
+-          display: "flex",
+-          alignItems: "center",
+-          justifyContent: "space-between",
+-          background: c.toolbarBg,
+-          flexShrink: 0,
+-        }}
+-      >
+-        <span
+-          style={{
+-            fontSize: 11,
+-            color: c.textSecondary,
+-            fontFamily: "Inter, system-ui, sans-serif",
+-          }}
+-        >
+-          Page 42 / 96
+-        </span>
+-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+-          <span
+-            style={{
+-              fontSize: 10,
+-              color: c.textMuted,
+-              fontFamily: "Inter, system-ui, sans-serif",
+-            }}
+-          >
+-            100%
+-          </span>
+-        </div>
+-      </div>
+-
+-      {/* PDF content area */}
+-      <div
+-        style={{
+-          flex: 1,
+-          padding: "20px 24px",
+-          position: "relative",
+-          background: c.panelBg,
+-          overflow: "hidden",
+-        }}
+-      >
+-        {/* PDF page frame */}
+-        <div
+-          style={{
+-            background: isDark ? "#1c1c1e" : "#ffffff",
+-            borderRadius: 4,
+-            padding: "20px 20px",
+-            height: "100%",
+-            position: "relative",
+-            boxShadow: isDark
+-              ? "0 1px 3px rgba(0,0,0,0.4)"
+-              : "0 1px 3px rgba(0,0,0,0.1)",
+-            overflow: "hidden",
+-          }}
+-        >
+-          {/* Title */}
+-          <div
+-            style={{
+-              fontSize: 14,
+-              fontWeight: 700,
+-              color: c.textPrimary,
+-              textAlign: "center",
+-              marginBottom: 4,
+-              fontFamily: "Inter, system-ui, sans-serif",
+-            }}
+-          >
+-            {PDF_TITLE}
+-          </div>
+-          <div
+-            style={{
+-              fontSize: 9,
+-              color: c.textSecondary,
+-              textAlign: "center",
+-              marginBottom: 16,
+-              fontFamily: "Inter, system-ui, sans-serif",
+-            }}
+-          >
+-            {PDF_SUBTITLE}
+-          </div>
+-
+-          {/* Heading */}
+-          <div
+-            style={{
+-              fontSize: 12,
+-              fontWeight: 600,
+-              color: c.textPrimary,
+-              marginBottom: 10,
+-              fontFamily: "Inter, system-ui, sans-serif",
+-            }}
+-          >
+-            {PDF_HEADING}
+-          </div>
+-
+-          {/* Text lines */}
+-          {PDF_LINES.map((line, i) => (
+-            <div
+-              key={i}
+-              style={{
+-                fontSize: 10,
+-                lineHeight: 1.7,
+-                color: c.textPrimary,
+-                fontFamily: "Inter, system-ui, sans-serif",
+-                minHeight: line === "" ? 8 : undefined,
+-              }}
+-            >
+-              {line}
+-            </div>
+-          ))}
+-
+-          {/* Highlight overlays */}
+-          <Sequence from={FRAMES.highlight1} layout="none">
+-            <HighlightOverlay
+-              isDark={isDark}
+-              bbox={CITATIONS[0].bbox}
+-              delayFrame={0}
+-            />
+-          </Sequence>
+-          <Sequence from={FRAMES.highlight2} layout="none">
+-            <HighlightOverlay
+-              isDark={isDark}
+-              bbox={CITATIONS[1].bbox}
+-              delayFrame={0}
+-            />
+-          </Sequence>
+-          <Sequence from={FRAMES.highlight3} layout="none">
+-            <HighlightOverlay
+-              isDark={isDark}
+-              bbox={CITATIONS[2].bbox}
+-              delayFrame={0}
+-            />
+-          </Sequence>
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-function FadeOverlay({ isDark }: { isDark: boolean }) {
+-  const frame = useCurrentFrame();
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  const opacity = interpolate(frame, [0, 29], [0, 1], {
+-    extrapolateRight: "clamp",
+-    extrapolateLeft: "clamp",
+-  });
+-
+-  return (
+-    <AbsoluteFill
+-      style={{
+-        background: c.bg,
+-        opacity,
+-        zIndex: 10,
+-      }}
+-    />
+-  );
+-}
+-
+-// ────────────────────────────────────────
+-// Main Composition
+-// ────────────────────────────────────────
+-
+-export interface ProductShowcaseProps {
+-  isDark: boolean;
+-}
+-
+-const ProductShowcase: React.FC<ProductShowcaseProps> = ({ isDark }) => {
+-  const c = isDark ? COLORS.dark : COLORS.light;
+-
+-  return (
+-    <AbsoluteFill
+-      style={{
+-        background: c.bg,
+-        fontFamily: "Inter, system-ui, sans-serif",
+-      }}
+-    >
+-      {/* Base layout — always visible */}
+-      <div
+-        style={{
+-          display: "flex",
+-          width: "100%",
+-          height: "100%",
+-        }}
+-      >
+-        <MockChatPanel isDark={isDark} />
+-
+-        {/* Divider */}
+-        <div
+-          style={{
+-            width: 1.5,
+-            background: c.border,
+-            flexShrink: 0,
+-          }}
+-        />
+-
+-        <MockPdfPanel isDark={isDark} />
+-      </div>
+-
+-      {/* Crossfade overlay */}
+-      <Sequence from={FRAMES.fadeStart} layout="none">
+-        <FadeOverlay isDark={isDark} />
+-      </Sequence>
+-    </AbsoluteFill>
+-  );
+-};
+-
+-export { FPS, TOTAL_FRAMES };
+-export default ProductShowcase;
+diff --git a/frontend/src/components/landing/ScrollReveal.tsx b/frontend/src/components/landing/ScrollReveal.tsx
+deleted file mode 100644
+index 1a62874..0000000
+--- a/frontend/src/components/landing/ScrollReveal.tsx
++++ /dev/null
+@@ -1,61 +0,0 @@
+-"use client";
+-
+-import React, { useEffect, useRef, useState } from 'react';
+-
+-interface ScrollRevealProps {
+-  children: React.ReactNode;
+-  className?: string;
+-  delay?: number;
+-  direction?: 'up' | 'down' | 'left' | 'right';
+-  once?: boolean;
+-}
+-
+-export default function ScrollReveal({
+-  children,
+-  className = '',
+-  delay = 0,
+-  direction = 'up',
+-  once = true,
+-}: ScrollRevealProps) {
+-  const ref = useRef<HTMLDivElement>(null);
+-  const [isVisible, setIsVisible] = useState(false);
+-
+-  useEffect(() => {
+-    const el = ref.current;
+-    if (!el) return;
+-
+-    const observer = new IntersectionObserver(
+-      ([entry]) => {
+-        if (entry.isIntersecting) {
+-          setIsVisible(true);
+-          if (once) observer.unobserve(entry.target);
+-        }
+-      },
+-      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+-    );
+-
+-    observer.observe(el);
+-    return () => observer.disconnect();
+-  }, [once]);
+-
+-  const translate = {
+-    up: 'translate-y-6',
+-    down: '-translate-y-6',
+-    left: 'translate-x-6',
+-    right: '-translate-x-6',
+-  };
+-
+-  return (
+-    <div
+-      ref={ref}
+-      className={`transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none ${
+-        isVisible
+-          ? 'opacity-100 translate-y-0 translate-x-0'
+-          : `opacity-0 ${translate[direction]}`
+-      } ${className}`}
+-      style={{ transitionDelay: isVisible ? `${delay}ms` : '0ms' }}
+-    >
+-      {children}
+-    </div>
+-  );
+-}
+diff --git a/frontend/src/components/landing/SecuritySection.tsx b/frontend/src/components/landing/SecuritySection.tsx
+index ba1e9f3..843997d 100644
+--- a/frontend/src/components/landing/SecuritySection.tsx
++++ b/frontend/src/components/landing/SecuritySection.tsx
+@@ -2,7 +2,6 @@
+ 
+ import React from 'react';
+ import { useLocale } from '../../i18n';
+-import ScrollReveal from './ScrollReveal';
+ 
+ const cards = [
+   { titleKey: 'landing.security.noTraining.title', descKey: 'landing.security.noTraining.desc' },
+@@ -17,13 +16,13 @@ export default function SecuritySection() {
+   return (
+     <section className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)', borderBottom: '1px solid var(--ed-rule)', background: 'var(--ed-paper-2)' }}>
+       <div className="ed-shell">
+-        <ScrollReveal>
++        <div>
+           <div className="mb-10">
+             <p className="ed-label mb-3">{t('landing.security.eyebrow')}</p>
+             <h2 className="ed-h2 max-w-xl">{t('landing.security.title')}</h2>
+           </div>
+           <hr className="ed-rule" />
+-        </ScrollReveal>
++        </div>
+ 
+         <div className="grid grid-cols-1 md:grid-cols-2">
+           {cards.map(({ titleKey, descKey }, index) => {
+@@ -31,7 +30,7 @@ export default function SecuritySection() {
+             const isRight = index % 2 === 1;
+             const isLastRow = index >= cards.length - 2;
+             return (
+-              <ScrollReveal key={titleKey} delay={index * 80}>
++              <div key={titleKey}>
+                 <div
+                   className={[
+                     'py-10',
+@@ -50,7 +49,7 @@ export default function SecuritySection() {
+                   <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
+                   <p className="ed-body">{t(descKey)}</p>
+                 </div>
+-              </ScrollReveal>
++              </div>
+             );
+           })}
+         </div>
+diff --git a/frontend/src/components/landing/ShowcasePlayer.tsx b/frontend/src/components/landing/ShowcasePlayer.tsx
+deleted file mode 100644
+index 8677301..0000000
+--- a/frontend/src/components/landing/ShowcasePlayer.tsx
++++ /dev/null
+@@ -1,67 +0,0 @@
+-"use client";
+-
+-import React, { lazy, Suspense, useEffect, useState } from "react";
+-import { useTheme } from "next-themes";
+-import { useLocale } from "../../i18n";
+-
+-// Lazy load the entire player + composition wrapper
+-const LazyShowcase = lazy(() => import("./ShowcasePlayerInner"));
+-
+-function SkeletonFallback() {
+-  return (
+-    <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded-sm" />
+-  );
+-}
+-
+-function StaticFallback() {
+-  const { t } = useLocale();
+-  return (
+-    <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 rounded-sm flex items-center justify-center">
+-      <p className="text-sm text-zinc-400">{t('landing.demoUnavailable')}</p>
+-    </div>
+-  );
+-}
+-
+-class ShowcaseErrorBoundary extends React.Component<
+-  { children: React.ReactNode },
+-  { hasError: boolean }
+-> {
+-  constructor(props: { children: React.ReactNode }) {
+-    super(props);
+-    this.state = { hasError: false };
+-  }
+-
+-  static getDerivedStateFromError() {
+-    return { hasError: true };
+-  }
+-
+-  render() {
+-    if (this.state.hasError) {
+-      return <StaticFallback />;
+-    }
+-    return this.props.children;
+-  }
+-}
+-
+-export default function ShowcasePlayer() {
+-  const { resolvedTheme } = useTheme();
+-  const [mounted, setMounted] = useState(false);
+-
+-  useEffect(() => {
+-    setMounted(true);
+-  }, []);
+-
+-  const isDark = mounted ? resolvedTheme === "dark" : false;
+-
+-  if (!mounted) {
+-    return <SkeletonFallback />;
+-  }
+-
+-  return (
+-    <ShowcaseErrorBoundary>
+-      <Suspense fallback={<SkeletonFallback />}>
+-        <LazyShowcase isDark={isDark} />
+-      </Suspense>
+-    </ShowcaseErrorBoundary>
+-  );
+-}
+diff --git a/frontend/src/components/landing/ShowcasePlayerInner.tsx b/frontend/src/components/landing/ShowcasePlayerInner.tsx
+deleted file mode 100644
+index 7a58d3a..0000000
+--- a/frontend/src/components/landing/ShowcasePlayerInner.tsx
++++ /dev/null
+@@ -1,28 +0,0 @@
+-"use client";
+-
+-import React from "react";
+-import { Player } from "@remotion/player";
+-import ProductShowcase from "./ProductShowcase";
+-import { FPS, TOTAL_FRAMES } from "./showcaseData";
+-
+-interface ShowcasePlayerInnerProps {
+-  isDark: boolean;
+-}
+-
+-export default function ShowcasePlayerInner({ isDark }: ShowcasePlayerInnerProps) {
+-  return (
+-    <Player
+-      component={ProductShowcase}
+-      inputProps={{ isDark }}
+-      durationInFrames={TOTAL_FRAMES}
+-      compositionWidth={960}
+-      compositionHeight={540}
+-      fps={FPS}
+-      autoPlay
+-      loop
+-      style={{ width: "100%", height: "100%" }}
+-      controls={false}
+-      acknowledgeRemotionLicense
+-    />
+-  );
+-}
+diff --git a/frontend/src/components/landing/SocialProof.tsx b/frontend/src/components/landing/SocialProof.tsx
+deleted file mode 100644
+index 88468e6..0000000
+--- a/frontend/src/components/landing/SocialProof.tsx
++++ /dev/null
+@@ -1,52 +0,0 @@
+-"use client";
+-
+-import React from 'react';
+-import { useLocale } from '../../i18n';
+-import ScrollReveal from './ScrollReveal';
+-
+-const metrics = [
+-  { value: '6', labelKey: 'landing.social.metric1' },
+-  { value: '11', labelKey: 'landing.social.metric2' },
+-  { value: '2', labelKey: 'landing.social.metric3' },
+-  { value: 'URL', labelKey: 'landing.social.metric4' },
+-] as const;
+-
+-export default function SocialProof() {
+-  const { t, tOr } = useLocale();
+-
+-  return (
+-    <ScrollReveal>
+-      <section className="ed-section">
+-        <div className="ed-shell">
+-          <hr className="ed-rule mb-12" />
+-
+-          {/* Section header */}
+-          <div className="mb-12">
+-            <p className="ed-label mb-3">{tOr('landing.social.eyebrow', 'By the numbers')}</p>
+-            <h2 className="ed-h2">{t('landing.social.title')}</h2>
+-          </div>
+-
+-          {/* Metrics grid */}
+-          <div className="grid grid-cols-2 md:grid-cols-4">
+-            {metrics.map((metric, idx) => (
+-              <div
+-                key={metric.labelKey}
+-                className={
+-                  'py-8 pr-6' +
+-                  (idx > 0 ? ' md:pl-6 md:border-l md:border-[var(--ed-rule)]' : '')
+-                }
+-              >
+-                <div className="ed-num mb-2">
+-                  {metric.value}
+-                </div>
+-                <p className="ed-label">{t(metric.labelKey)}</p>
+-              </div>
+-            ))}
+-          </div>
+-
+-          <hr className="ed-rule mt-12" />
+-        </div>
+-      </section>
+-    </ScrollReveal>
+-  );
+-}
+diff --git a/frontend/src/components/landing/showcaseData.ts b/frontend/src/components/landing/showcaseData.ts
+deleted file mode 100644
+index 124c5d3..0000000
+--- a/frontend/src/components/landing/showcaseData.ts
++++ /dev/null
+@@ -1,110 +0,0 @@
+-// Mock data and frame timing constants for the ProductShowcase animation
+-
+-export const FPS = 30;
+-export const TOTAL_FRAMES = 300; // 10s loop
+-
+-// --- Frame timings ---
+-export const FRAMES = {
+-  userMsg: 15,
+-  dotsStart: 45,
+-  dotsEnd: 60,
+-  streamStart: 60,
+-  streamEnd: 180,
+-  citationCards: 180,
+-  citationStagger: 8,
+-  holdEnd: 270,
+-  fadeStart: 270,
+-  fadeEnd: 299,
+-  // Highlight appearance frames (during streaming)
+-  highlight1: 105,
+-  highlight2: 140,
+-  highlight3: 170,
+-} as const;
+-
+-// --- Chat content ---
+-export const USER_QUESTION =
+-  "What were NVIDIA's key revenue drivers in FY2024?";
+-
+-export const AI_RESPONSE =
+-  "NVIDIA's FY2024 revenue was primarily driven by its Data Center segment, which generated $47.5 billion [1], representing 78% of total revenue. The Gaming segment contributed $10.4 billion [2], while total revenue reached a record $60.9 billion [3], up 126% year-over-year.";
+-
+-export const CITATIONS = [
+-  {
+-    refIndex: 1,
+-    page: 42,
+-    snippet: "Data Center revenue was $47.5 billion, up 217% from the prior year...",
+-    // Highlight position on mock PDF (normalized 0-1)
+-    bbox: { x: 0.05, y: 0.38, w: 0.9, h: 0.06 },
+-  },
+-  {
+-    refIndex: 2,
+-    page: 42,
+-    snippet: "Gaming revenue was $10.4 billion, up 15% from a year ago...",
+-    bbox: { x: 0.05, y: 0.52, w: 0.9, h: 0.06 },
+-  },
+-  {
+-    refIndex: 3,
+-    page: 42,
+-    snippet: "Total revenue for fiscal 2024 was $60.9 billion, an increase of 126%...",
+-    bbox: { x: 0.05, y: 0.66, w: 0.9, h: 0.06 },
+-  },
+-] as const;
+-
+-// --- Mock PDF text lines ---
+-export const PDF_TITLE = "NVIDIA Corporation";
+-export const PDF_SUBTITLE = "Annual Report on Form 10-K — Fiscal Year 2024";
+-export const PDF_HEADING = "Revenue Discussion and Analysis";
+-
+-export const PDF_LINES = [
+-  "Total revenue for fiscal 2024 was $60.9 billion, an increase of 126%",
+-  "compared to the prior fiscal year, driven by strong demand across our",
+-  "accelerated computing platforms.",
+-  "",
+-  "Data Center revenue was $47.5 billion, up 217% from the prior year,",
+-  "reflecting broad adoption of the NVIDIA Hopper architecture and",
+-  "increased demand for AI training and inference workloads.",
+-  "",
+-  "Gaming revenue was $10.4 billion, up 15% from a year ago, driven",
+-  "by the GeForce RTX 40 Series GPUs based on the Ada Lovelace",
+-  "architecture and continued growth in gaming laptops.",
+-];
+-
+-// --- Color palettes ---
+-export const COLORS = {
+-  light: {
+-    bg: "#ffffff",
+-    panelBg: "#fafafa",       // zinc-50
+-    cardBg: "#ffffff",
+-    border: "#e4e4e7",        // zinc-200
+-    borderLight: "#f4f4f5",   // zinc-100
+-    textPrimary: "#09090b",   // zinc-950
+-    textSecondary: "#71717a", // zinc-500
+-    textMuted: "#a1a1aa",     // zinc-400
+-    userBubble: "#27272a",    // zinc-800
+-    userBubbleText: "#ffffff",
+-    assistantBubble: "#fafafa", // zinc-50
+-    assistantBubbleText: "#18181b", // zinc-900
+-    highlightBg: "rgba(251, 191, 36, 0.30)", // amber-400 @ 30%
+-    toolbarBg: "#f4f4f5",     // zinc-100
+-    inputBg: "#ffffff",
+-    chromeTop: "#f4f4f5",
+-  },
+-  dark: {
+-    bg: "#09090b",            // zinc-950
+-    panelBg: "#18181b",       // zinc-900
+-    cardBg: "#09090b",        // zinc-950
+-    border: "#27272a",        // zinc-800
+-    borderLight: "#3f3f46",   // zinc-700
+-    textPrimary: "#fafafa",   // zinc-50
+-    textSecondary: "#71717a", // zinc-500
+-    textMuted: "#a1a1aa",     // zinc-400
+-    userBubble: "#3f3f46",    // zinc-700
+-    userBubbleText: "#ffffff",
+-    assistantBubble: "#27272a", // zinc-800
+-    assistantBubbleText: "#e4e4e7", // zinc-200
+-    highlightBg: "rgba(251, 191, 36, 0.30)",
+-    toolbarBg: "#27272a",
+-    inputBg: "#18181b",
+-    chromeTop: "#27272a",
+-  },
+-} as const;
+diff --git a/frontend/src/components/marketing/EdCardGrid.tsx b/frontend/src/components/marketing/EdCardGrid.tsx
+index 97295d0..afa6e55 100644
+--- a/frontend/src/components/marketing/EdCardGrid.tsx
++++ b/frontend/src/components/marketing/EdCardGrid.tsx
+@@ -50,7 +50,7 @@ export default function EdCardGrid({ items, columns = 3 }: EdCardGridProps) {
+           <Link
+             key={`card-${index}`}
+             href={item.href}
+-            className="ed-card ed-glass h-full"
++            className="ed-card h-full"
+             style={{ display: "flex", flexDirection: "column" }}
+           >
+             {inner}
+@@ -58,7 +58,7 @@ export default function EdCardGrid({ items, columns = 3 }: EdCardGridProps) {
+         ) : (
+           <div
+             key={`card-${index}`}
+-            className="ed-card ed-glass h-full"
++            className="ed-card h-full"
+             style={{ display: "flex", flexDirection: "column" }}
+           >
+             {inner}
+diff --git a/frontend/src/components/marketing/EdComparisonTable.tsx b/frontend/src/components/marketing/EdComparisonTable.tsx
+index 7b44a5e..fcb38aa 100644
+--- a/frontend/src/components/marketing/EdComparisonTable.tsx
++++ b/frontend/src/components/marketing/EdComparisonTable.tsx
+@@ -104,7 +104,7 @@ export default function EdComparisonTable(props: EdComparisonTableProps) {
+   };
+ 
+   return (
+-    <div className="ed-glass" style={{ padding: "4px", overflow: "hidden" }}>
++    <div className="ed-panel" style={{ padding: "4px", overflow: "hidden" }}>
+       <div style={{ overflowX: "auto" }}>
+         <table
+           style={{
+diff --git a/frontend/src/components/marketing/EdCtaBanner.tsx b/frontend/src/components/marketing/EdCtaBanner.tsx
+index 7a46a9f..7a8103c 100644
+--- a/frontend/src/components/marketing/EdCtaBanner.tsx
++++ b/frontend/src/components/marketing/EdCtaBanner.tsx
+@@ -19,7 +19,7 @@ export default function EdCtaBanner({
+   secondary,
+ }: EdCtaBannerProps) {
+   return (
+-    <section className="ed-section ed-glass ed-glass--cta">
++    <section className="ed-section ed-band">
+       <div className="ed-shell">
+         <div
+           style={{
+diff --git a/frontend/src/components/marketing/EdFaqList.tsx b/frontend/src/components/marketing/EdFaqList.tsx
+index 513beea..9dc3eb2 100644
+--- a/frontend/src/components/marketing/EdFaqList.tsx
++++ b/frontend/src/components/marketing/EdFaqList.tsx
+@@ -26,7 +26,7 @@ export default function EdFaqList({ items }: EdFaqListProps) {
+   };
+ 
+   return (
+-    <div className="ed-glass" style={{ padding: "6px 28px" }}>
++    <div className="ed-panel" style={{ padding: "6px 28px" }}>
+       {items.map((item, index) => {
+         const isOpen = openIndex === index;
+         const questionNum = `Q${index + 1}`;
+diff --git a/frontend/src/components/marketing/EdPageHero.tsx b/frontend/src/components/marketing/EdPageHero.tsx
+index 24c32ae..98c0925 100644
+--- a/frontend/src/components/marketing/EdPageHero.tsx
++++ b/frontend/src/components/marketing/EdPageHero.tsx
+@@ -1,5 +1,22 @@
+ import Link from "next/link";
+ 
++/**
++ * Editorial page hero.
++ *
++ * `variant="product"` is the Apple-grammar arrangement from
++ * `.collab/plans/2026-09-20-apple-design-direction.md` §5.2: product label →
++ * one claim → ONE supporting sentence → ONE filled action (with an optional
++ * quiet text link) → the product itself. The product occupies the hero rather
++ * than sitting below several screens of prose.
++ *
++ * The rule the variant exists to enforce: exactly one `ed-cta` above the fold.
++ * A page that needs several actions (one per pricing plan, say) puts them in
++ * its `product` node and passes no `primaryCta`, so the count stays at one
++ * filled control per view either way.
++ *
++ * `variant="default"` is the legacy arrangement and is unchanged, so the 44
++ * routes that have not been migrated keep rendering exactly as before.
++ */
+ interface EdPageHeroProps {
+   eyebrow?: string;
+   title: React.ReactNode;
+@@ -8,6 +25,9 @@ interface EdPageHeroProps {
+   secondaryCta?: { label: string; href: string };
+   icon?: React.ComponentType<{ className?: string }>;
+   meta?: React.ReactNode;
++  variant?: "default" | "product";
++  /** Rendered full-width directly under the action row. Product variant only. */
++  product?: React.ReactNode;
+ }
+ 
+ export default function EdPageHero({
+@@ -18,9 +38,55 @@ export default function EdPageHero({
+   secondaryCta,
+   icon: Icon,
+   meta,
++  variant = "default",
++  product,
+ }: EdPageHeroProps) {
+   const hasCta = !!(primaryCta || secondaryCta);
+ 
++  if (variant === "product") {
++    return (
++      <section className="pt-16 pb-14">
++        <div className="ed-shell">
++          <div style={{ maxWidth: "820px" }}>
++            {eyebrow && <div className="ed-label">{eyebrow}</div>}
++            <h1
++              className="ed-h1"
++              style={eyebrow ? { marginTop: "8px" } : undefined}
++            >
++              {title}
++            </h1>
++            {lede && (
++              <p
++                className="ed-lede"
++                style={{ marginTop: "18px", maxWidth: "620px" }}
++              >
++                {lede}
++              </p>
++            )}
++            {hasCta && (
++              <div
++                className="flex items-center flex-wrap"
++                style={{ marginTop: "28px", gap: "16px" }}
++              >
++                {primaryCta && (
++                  <Link href={primaryCta.href} className="ed-cta">
++                    {primaryCta.label}
++                  </Link>
++                )}
++                {secondaryCta && (
++                  <Link href={secondaryCta.href} className="ed-link">
++                    {secondaryCta.label} <span aria-hidden="true">→</span>
++                  </Link>
++                )}
++              </div>
++            )}
++          </div>
++          {product && <div style={{ marginTop: "40px" }}>{product}</div>}
++        </div>
++      </section>
++    );
++  }
++
+   return (
+     <section className="pt-16 pb-14">
+       <div className="ed-shell">
+diff --git a/frontend/src/components/marketing/EditorialHeaderBase.tsx b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+index 63182b2..def63c5 100644
+--- a/frontend/src/components/marketing/EditorialHeaderBase.tsx
++++ b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+@@ -173,10 +173,13 @@ export default function EditorialHeaderBase({
+                   <Menu aria-hidden="true" size={20} color="var(--ed-ink-2)" />
+                 )}
+               </button>
++              {/* Quiet, not filled: the masthead is on every marketing page, and a
++                  filled terracotta Sign In here competed with each page's own
++                  primary action — two filled pills above the fold (plan §5.2). */}
+               <Link
+                 href="/auth"
+-                className="ed-cta"
+-                style={{ padding: "9px 18px", fontSize: "13px" }}
++                className="ed-cta-quiet"
++                style={{ padding: "8px 17px", fontSize: "13px" }}
+               >
+                 {labels.signIn}
+               </Link>
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index f57b86a..069243f 100644
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -215,6 +215,11 @@
+   "landing.cta.getStarted": "ابدأ الآن",
+   "landing.cta.howItWorks": "كيف يعمل",
+   "landing.description": "أفلت PDF أو DOCX أو رابطاً. احصل على إجابات مع تمييز الصفحة الدقيقة — نقرة واحدة للتحقق.",
++  "landing.frame.question": "كم تخطط Alphabet لإنفاقه على النفقات الرأسمالية في عام 2026؟",
++  "landing.frame.answer": "تتوقع Alphabet أن تتراوح نفقاتها الرأسمالية في عام 2026 بين 175 و185 مليار دولار، لتلبية طلب العملاء واغتنام الفرص المتنامية.",
++  "landing.frame.description": "مثال على إجابة DocTalk عن سؤال حول تقرير أرباح Alphabet للربع الرابع من عام 2025. تستشهد الإجابة بالصفحة 1، والجملة المستشهد بها مظللة في تلك الصفحة.",
++  "landing.frame.caption": "كل إجابة ترتبط بالجملة التي جاءت منها، في صفحتها.",
++  "landing.frame.quoteFinder": "هل تكتب شيئًا يحتاج إلى اقتباسات؟ يستخرجها الباحث عن الاقتباسات مباشرةً من مستندك، مع التحقق من كل منها مقابل النص المصدر.",
+   "landing.proof.citations": "تستشهد الإجابات بمقاطع المصدر الدقيقة",
+   "landing.proof.private": "المستندات خاصة وقابلة للحذف",
+   "landing.proof.locales": "يعمل عبر 11 لغة للواجهة",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "الأسعار",
+   "pricing.headline": "أسعار مصممة حول العمل الفعلي على المستندات، وليس حدود الذكاء الاصطناعي الغامضة.",
+   "pricing.description": "تم تصميم DocTalk للأشخاص الذين يحتاجون إجابات موثقة من ملفات PDF وDOCX والشرائح وجداول البيانات والروابط. تشمل كل خطة استشهادات بالمصادر ودعم OCR. توسع المستويات الأعلى بشكل رئيسي حدود الاستخدام، وتفتح وضع Pro غير المقيد، وتضيف تصدير أو سير عمل مطالبات مخصصة للاستخدامات البحثية والتشغيلية الأكبر.",
++  "pricing.heroLine": "كل خطة تجيب مع اقتباس يمكنك فتحه. الخطط المدفوعة ترفع الحدود.",
+   "pricing.startFree": "ابدأ مجانًا",
+   "pricing.tryDemo": "جرّب العرض التجريبي العام",
+   "pricing.mostPopular": "الأكثر رواجًا",
+diff --git a/frontend/src/i18n/locales/de.json b/frontend/src/i18n/locales/de.json
+index 63eed91..09c3c13 100644
+--- a/frontend/src/i18n/locales/de.json
++++ b/frontend/src/i18n/locales/de.json
+@@ -352,6 +352,11 @@
+   "landing.headline": "Jede Antwort zitiert\ndie genaue Seite.",
+   "landing.subtitle": "Laden Sie ein beliebiges Dokument hoch. Stellen Sie Fragen. Erhalten Sie Antworten mit seitengenauen Quellenangaben, die Sie mit einem Klick überprüfen können.",
+   "landing.description": "Lade PDF, DOCX oder URL hoch. Erhalte Antworten mit exakt markierter Seite — ein Klick zur Prüfung.",
++  "landing.frame.question": "Wie hoch sind die geplanten Investitionsausgaben von Alphabet für 2026?",
++  "landing.frame.answer": "Alphabet rechnet für 2026 mit Investitionsausgaben von 175 bis 185 Milliarden US-Dollar, um die Kundennachfrage zu bedienen und die wachsenden Chancen zu nutzen.",
++  "landing.frame.description": "Ein Beispiel dafür, wie DocTalk eine Frage zum Ergebnisbericht von Alphabet für das vierte Quartal 2025 beantwortet. Die Antwort zitiert Seite 1, und der zitierte Satz ist auf dieser Seite hervorgehoben.",
++  "landing.frame.caption": "Jede Antwort verweist auf den Satz, aus dem sie stammt – auf der richtigen Seite.",
++  "landing.frame.quoteFinder": "Sie schreiben etwas, das Zitate braucht? Die Zitatsuche holt sie direkt aus Ihrem Dokument und prüft jedes einzelne am Quelltext.",
+   "landing.proof.citations": "Antworten zitieren genaue Quellpassagen",
+   "landing.proof.private": "Dokumente sind privat und löschbar",
+   "landing.proof.locales": "Funktioniert in 11 Oberflächensprachen",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "PREISE",
+   "pricing.headline": "Preise, die sich an echter Dokumentenarbeit orientieren, nicht an vagen KI-Limits.",
+   "pricing.description": "DocTalk ist für Personen konzipiert, die fundierte Antworten aus PDFs, DOCX-Dateien, Präsentationen, Tabellenkalkulationen und URLs benötigen. Jeder Tarif umfasst Quellenangaben und OCR-Unterstützung. Höhere Tarife erweitern hauptsächlich die Nutzungslimits, schalten den uneingeschränkten Pro-Modus frei und fügen Export- oder benutzerdefinierte Prompt-Workflows für intensivere Recherchen und den operativen Einsatz hinzu.",
++  "pricing.heroLine": "Jeder Plan antwortet mit einem Zitat, das Sie öffnen können. Bezahlte Pläne erhöhen die Limits.",
+   "pricing.startFree": "Kostenlos starten",
+   "pricing.tryDemo": "Öffentliche Demo testen",
+   "pricing.mostPopular": "Am beliebtesten",
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index da0aa0d..6872122 100644
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -357,6 +357,11 @@
+   "landing.headline": "Every answer cites\nthe exact page.",
+   "landing.subtitle": "Upload any document. Ask questions. Get answers with page-level citations you can verify in one click.",
+   "landing.description": "Drop a PDF, DOCX, or URL. Get answers with the exact page highlighted — one click to verify.",
++  "landing.frame.question": "How much does Alphabet plan to spend on capital in 2026?",
++  "landing.frame.answer": "Alphabet expects its 2026 capital expenditure to be between $175 and $185 billion, to meet customer demand and the growing opportunities ahead.",
++  "landing.frame.description": "An example of DocTalk answering a question about Alphabet's fourth-quarter 2025 earnings release. The answer cites page 1, and the cited sentence is highlighted on that page.",
++  "landing.frame.caption": "Every answer links to the sentence it came from, on its page.",
++  "landing.frame.quoteFinder": "Writing something that needs quotes? Quote Finder pulls them straight from your document, each checked against the source text.",
+   "landing.proof.citations": "Answers cite exact source passages",
+   "landing.proof.private": "Documents are private and deletable",
+   "landing.proof.locales": "Works across 11 interface languages",
+@@ -693,6 +698,7 @@
+   "pricing.eyebrow": "PRICING",
+   "pricing.headline": "Pricing built around real document work, not vague AI limits.",
+   "pricing.description": "DocTalk is designed for people who need grounded answers from PDFs, DOCX files, slides, spreadsheets, and URLs. Every plan includes source citations and OCR support. Higher tiers mainly expand usage limits, unlock unrestricted Pro mode, and add export or custom prompt workflows for heavier research and operations use.",
++  "pricing.heroLine": "Every plan answers with a citation you can open. Paid tiers raise the limits.",
+   "pricing.startFree": "Start free",
+   "pricing.tryDemo": "Try the public demo",
+   "pricing.mostPopular": "Most popular",
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index bac6c49..b6c06ae 100644
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -215,6 +215,11 @@
+   "landing.cta.getStarted": "Empezar",
+   "landing.cta.howItWorks": "Cómo funciona",
+   "landing.description": "Suelta un PDF, DOCX o URL. Recibe respuestas con la página exacta resaltada — verifica con un clic.",
++  "landing.frame.question": "¿Cuánto planea invertir Alphabet en gasto de capital en 2026?",
++  "landing.frame.answer": "Alphabet prevé que su gasto de capital en 2026 se sitúe entre 175.000 y 185.000 millones de dólares, para atender la demanda de los clientes y las crecientes oportunidades.",
++  "landing.frame.description": "Un ejemplo de DocTalk respondiendo a una pregunta sobre el informe de resultados del cuarto trimestre de 2025 de Alphabet. La respuesta cita la página 1 y la frase citada aparece resaltada en esa página.",
++  "landing.frame.caption": "Cada respuesta enlaza con la frase de la que procede, en su página.",
++  "landing.frame.quoteFinder": "¿Escribes algo que necesita citas? El Buscador de citas las extrae directamente de tu documento y comprueba cada una con el texto original.",
+   "landing.proof.citations": "Las respuestas citan pasajes exactos",
+   "landing.proof.private": "Los documentos son privados y eliminables",
+   "landing.proof.locales": "Funciona en 11 idiomas de interfaz",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "PRECIOS",
+   "pricing.headline": "Precios basados en el trabajo real con documentos, no en límites vagos de IA.",
+   "pricing.description": "DocTalk está diseñado para personas que necesitan respuestas fundamentadas de PDFs, archivos DOCX, diapositivas, hojas de cálculo y URLs. Todos los planes incluyen citas de fuentes y soporte OCR. Los niveles superiores amplían principalmente los límites de uso, desbloquean el modo Pro sin restricciones y añaden flujos de trabajo de exportación o prompts personalizados para un uso más intensivo en investigación y operaciones.",
++  "pricing.heroLine": "Todos los planes responden con una cita que puedes abrir. Los planes de pago amplían los límites.",
+   "pricing.startFree": "Comenzar gratis",
+   "pricing.tryDemo": "Probar la demo pública",
+   "pricing.mostPopular": "Más popular",
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index f99e3fd..16ddde4 100644
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -352,6 +352,11 @@
+   "landing.headline": "Discutez avec n'importe quel PDF\nen quelques secondes",
+   "landing.subtitle": "Votre compagnon de lecture IA",
+   "landing.description": "Déposez un PDF, DOCX ou URL. Obtenez des réponses avec la page exacte surlignée — vérifiez en un clic.",
++  "landing.frame.question": "Combien Alphabet prévoit-il de consacrer aux investissements en 2026 ?",
++  "landing.frame.answer": "Alphabet prévoit des dépenses d’investissement comprises entre 175 et 185 milliards de dollars en 2026, pour répondre à la demande des clients et saisir les opportunités croissantes.",
++  "landing.frame.description": "Un exemple de DocTalk répondant à une question sur la publication des résultats du quatrième trimestre 2025 d’Alphabet. La réponse cite la page 1, et la phrase citée est surlignée sur cette page.",
++  "landing.frame.caption": "Chaque réponse renvoie à la phrase dont elle provient, sur sa page.",
++  "landing.frame.quoteFinder": "Vous rédigez un texte qui a besoin de citations ? La Recherche de citations les extrait directement de votre document, chacune vérifiée par rapport au texte source.",
+   "landing.proof.citations": "Les réponses citent les passages exacts",
+   "landing.proof.private": "Les documents sont privés et supprimables",
+   "landing.proof.locales": "Fonctionne dans 11 langues d’interface",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "TARIFS",
+   "pricing.headline": "Des tarifs construits autour du vrai travail documentaire, pas de limites IA vagues.",
+   "pricing.description": "DocTalk est conçu pour les personnes qui ont besoin de réponses fiables à partir de PDF, fichiers DOCX, diapositives, feuilles de calcul et URL. Chaque forfait inclut des citations de sources et la prise en charge de l'OCR. Les niveaux supérieurs étendent principalement les limites d'utilisation, débloquent le mode Pro illimité et ajoutent des flux de travail d'exportation ou de prompts personnalisés pour une utilisation intensive en recherche et en opérations.",
++  "pricing.heroLine": "Chaque plan répond avec une citation que vous pouvez ouvrir. Les plans payants relèvent les limites.",
+   "pricing.startFree": "Commencer gratuitement",
+   "pricing.tryDemo": "Essayer la démo publique",
+   "pricing.mostPopular": "Le plus populaire",
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 028c082..b72393d 100644
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -215,6 +215,11 @@
+   "landing.cta.getStarted": "शुरू करें",
+   "landing.cta.howItWorks": "कैसे काम करता है",
+   "landing.description": "PDF, DOCX या URL डालें। सटीक पृष्ठ हाइलाइट के साथ उत्तर पाएं — एक क्लिक में सत्यापित करें।",
++  "landing.frame.question": "Alphabet 2026 में पूंजीगत व्यय पर कितना खर्च करने की योजना बना रही है?",
++  "landing.frame.answer": "Alphabet को उम्मीद है कि 2026 में उसका पूंजीगत व्यय 175 से 185 अरब डॉलर के बीच रहेगा, ताकि ग्राहकों की मांग पूरी की जा सके और बढ़ते अवसरों का लाभ उठाया जा सके।",
++  "landing.frame.description": "Alphabet की 2025 की चौथी तिमाही की आय रिपोर्ट के बारे में एक प्रश्न का DocTalk द्वारा उत्तर देने का उदाहरण। उत्तर पृष्ठ 1 का हवाला देता है, और उद्धृत वाक्य उस पृष्ठ पर हाइलाइट किया गया है।",
++  "landing.frame.caption": "हर जवाब उस वाक्य से जुड़ता है जिससे वह आया है, उसी पृष्ठ पर।",
++  "landing.frame.quoteFinder": "कुछ ऐसा लिख रहे हैं जिसमें उद्धरण चाहिए? उद्धरण खोजक उन्हें सीधे आपके दस्तावेज़ से निकालता है, और हर एक को मूल पाठ से मिलाकर जाँचता है।",
+   "landing.proof.citations": "उत्तर सटीक स्रोत अंशों का हवाला देते हैं",
+   "landing.proof.private": "दस्तावेज़ निजी हैं और हटाए जा सकते हैं",
+   "landing.proof.locales": "11 इंटरफ़ेस भाषाओं में काम करता है",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "मूल्य निर्धारण",
+   "pricing.headline": "मूल्य निर्धारण वास्तविक दस्तावेज़ कार्य पर आधारित है, अस्पष्ट AI सीमाओं पर नहीं।",
+   "pricing.description": "DocTalk उन लोगों के लिए बनाया गया है जिन्हें PDF, DOCX फ़ाइलों, स्लाइड्स, स्प्रेडशीट्स और URL से प्रमाणिक उत्तर चाहिए। हर प्लान में स्रोत उद्धरण और OCR समर्थन शामिल है। उच्च स्तर मुख्य रूप से उपयोग सीमाओं का विस्तार करते हैं, अप्रतिबंधित Pro मोड अनलॉक करते हैं, और भारी शोध और संचालन उपयोग के लिए निर्यात या कस्टम प्रॉम्प्ट वर्कफ़्लो जोड़ते हैं।",
++  "pricing.heroLine": "हर प्लान में जवाब के साथ एक उद्धरण होता है जिसे आप खोलकर देख सकते हैं। सशुल्क प्लान में सीमाएँ बढ़ जाती हैं।",
+   "pricing.startFree": "मुफ़्त शुरू करें",
+   "pricing.tryDemo": "सार्वजनिक डेमो आज़माएं",
+   "pricing.mostPopular": "सबसे लोकप्रिय",
+diff --git a/frontend/src/i18n/locales/it.json b/frontend/src/i18n/locales/it.json
+index 1b18aff..4d59082 100644
+--- a/frontend/src/i18n/locales/it.json
++++ b/frontend/src/i18n/locales/it.json
+@@ -343,6 +343,11 @@
+   "landing.headline": "Chatta con qualsiasi PDF\nin pochi secondi",
+   "landing.subtitle": "Il tuo compagno di lettura basato sull'AI",
+   "landing.description": "Carica un PDF, DOCX o URL. Ottieni risposte con la pagina esatta evidenziata — verifica in un clic.",
++  "landing.frame.question": "Quanto prevede di investire Alphabet in spese in conto capitale nel 2026?",
++  "landing.frame.answer": "Alphabet prevede spese in conto capitale tra 175 e 185 miliardi di dollari nel 2026, per rispondere alla domanda dei clienti e alle crescenti opportunità.",
++  "landing.frame.description": "Un esempio di DocTalk che risponde a una domanda sul comunicato dei risultati del quarto trimestre 2025 di Alphabet. La risposta cita la pagina 1 e la frase citata è evidenziata su quella pagina.",
++  "landing.frame.caption": "Ogni risposta rimanda alla frase da cui proviene, nella sua pagina.",
++  "landing.frame.quoteFinder": "Stai scrivendo qualcosa che richiede citazioni? Ricerca citazioni le estrae direttamente dal tuo documento, ognuna verificata sul testo originale.",
+   "landing.proof.citations": "Le risposte citano passaggi esatti della fonte",
+   "landing.proof.private": "I documenti sono privati ed eliminabili",
+   "landing.proof.locales": "Funziona in 11 lingue dell’interfaccia",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "PREZZI",
+   "pricing.headline": "Prezzi costruiti attorno al lavoro reale sui documenti, non a vaghi limiti AI.",
+   "pricing.description": "DocTalk è progettato per chi ha bisogno di risposte fondate da PDF, file DOCX, presentazioni, fogli di calcolo e URL. Ogni piano include citazioni delle fonti e supporto OCR. I livelli superiori espandono principalmente i limiti di utilizzo, sbloccano la modalità Pro senza restrizioni e aggiungono esportazione o flussi di lavoro con prompt personalizzati per un uso più intenso nella ricerca e nelle operazioni.",
++  "pricing.heroLine": "Ogni piano risponde con una citazione che puoi aprire. I piani a pagamento alzano i limiti.",
+   "pricing.startFree": "Inizia gratis",
+   "pricing.tryDemo": "Prova la demo pubblica",
+   "pricing.mostPopular": "Più popolare",
+diff --git a/frontend/src/i18n/locales/ja.json b/frontend/src/i18n/locales/ja.json
+index db661a7..fae8a03 100644
+--- a/frontend/src/i18n/locales/ja.json
++++ b/frontend/src/i18n/locales/ja.json
+@@ -343,6 +343,11 @@
+   "landing.headline": "あらゆるPDFと\n瞬時にチャット",
+   "landing.subtitle": "AI搭載のリーディングコンパニオン",
+   "landing.description": "PDF、DOCX、URL をアップロード。該当ページを自動ハイライト — ワンクリックで検証。",
++  "landing.frame.question": "Alphabet は 2026 年にどれくらいの設備投資を計画していますか？",
++  "landing.frame.answer": "Alphabet は、顧客需要に応え、拡大する機会を捉えるため、2026 年の設備投資を 1,750 億〜1,850 億ドルと見込んでいます。",
++  "landing.frame.description": "Alphabet の 2025 年第 4 四半期決算発表に関する質問に DocTalk が答える例です。回答は 1 ページを引用しており、引用された文がそのページ上でハイライトされています。",
++  "landing.frame.caption": "すべての回答は、根拠となった文とそのページにリンクしています。",
++  "landing.frame.quoteFinder": "引用が必要な文章を書いていますか？引用ファインダーは文書から直接引用を抜き出し、それぞれを原文と照合します。",
+   "landing.proof.citations": "回答は正確な原文箇所を引用",
+   "landing.proof.private": "文書は非公開で削除可能",
+   "landing.proof.locales": "11種類のUI言語に対応",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "料金プラン",
+   "pricing.headline": "漠然としたAI制限ではなく、実際の文書作業に基づいた料金体系。",
+   "pricing.description": "DocTalkは、PDF、DOCXファイル、スライド、スプレッドシート、URLから根拠のある回答を求める方のために設計されています。すべてのプランにソース引用とOCRサポートが含まれています。上位プランでは主に使用制限が拡大され、無制限のProモードが解除され、さらに研究や業務での大量利用向けにエクスポートやカスタムプロンプトワークフローが追加されます。",
++  "pricing.heroLine": "どのプランでも、回答には開いて確認できる引用が付きます。有料プランでは上限が上がります。",
+   "pricing.startFree": "無料で始める",
+   "pricing.tryDemo": "公開デモを試す",
+   "pricing.mostPopular": "一番人気",
+diff --git a/frontend/src/i18n/locales/ko.json b/frontend/src/i18n/locales/ko.json
+index e7c4d83..18e33f2 100644
+--- a/frontend/src/i18n/locales/ko.json
++++ b/frontend/src/i18n/locales/ko.json
+@@ -343,6 +343,11 @@
+   "landing.headline": "모든 PDF와\n즉시 채팅",
+   "landing.subtitle": "AI 기반 리딩 도우미",
+   "landing.description": "PDF, DOCX, URL을 올리세요. 정확한 페이지가 하이라이트된 답변 — 원클릭 검증.",
++  "landing.frame.question": "Alphabet은 2026년에 자본 지출을 얼마나 계획하고 있나요?",
++  "landing.frame.answer": "Alphabet은 고객 수요에 대응하고 커지는 기회를 잡기 위해 2026년 자본 지출을 1,750억~1,850억 달러로 예상합니다.",
++  "landing.frame.description": "Alphabet의 2025년 4분기 실적 발표에 관한 질문에 DocTalk가 답하는 예시입니다. 답변은 1페이지를 인용하며, 인용된 문장이 해당 페이지에 강조 표시됩니다.",
++  "landing.frame.caption": "모든 답변은 근거가 된 문장과 그 페이지로 연결됩니다.",
++  "landing.frame.quoteFinder": "인용이 필요한 글을 쓰고 계신가요? 인용문 파인더가 문서에서 인용문을 바로 가져오고, 각각을 원문과 대조합니다.",
+   "landing.proof.citations": "답변은 정확한 원문 구절을 인용합니다",
+   "landing.proof.private": "문서는 비공개이며 삭제할 수 있습니다",
+   "landing.proof.locales": "11개 인터페이스 언어 지원",
+@@ -688,6 +693,7 @@
+   "pricing.eyebrow": "가격",
+   "pricing.headline": "모호한 AI 한계가 아닌 실제 문서 작업에 맞춘 가격.",
+   "pricing.description": "DocTalk은 PDF, DOCX 파일, 슬라이드, 스프레드시트, URL에서 근거 있는 답변이 필요한 사람들을 위해 설계되었습니다. 모든 요금제에는 출처 인용과 OCR 지원이 포함됩니다. 상위 티어는 주로 사용량 제한을 확장하고, 제한 없는 Pro 모드를 제공하며, 더 많은 연구 및 운영 사용을 위해 내보내기 또는 사용자 지정 프롬프트 워크플로를 추가합니다.",
++  "pricing.heroLine": "모든 플랜의 답변에는 열어서 확인할 수 있는 인용이 붙습니다. 유료 플랜은 한도가 높아집니다.",
+   "pricing.startFree": "무료로 시작하기",
+   "pricing.tryDemo": "공개 데모 체험하기",
+   "pricing.mostPopular": "가장 인기",
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index 7e37e64..aae9b9d 100644
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -1589,6 +1589,11 @@
+   "landing.cta.howItWorks": "Saiba mais",
+   "landing.demoUnavailable": "Demonstração do produto indisponível",
+   "landing.description": "Solte um PDF, DOCX ou URL. Receba respostas com a página exata destacada — verifique com um clique.",
++  "landing.frame.question": "Quanto a Alphabet planeja investir em despesas de capital em 2026?",
++  "landing.frame.answer": "A Alphabet espera que suas despesas de capital em 2026 fiquem entre US$ 175 bilhões e US$ 185 bilhões, para atender à demanda dos clientes e às oportunidades crescentes.",
++  "landing.frame.description": "Um exemplo do DocTalk respondendo a uma pergunta sobre o relatório de resultados do quarto trimestre de 2025 da Alphabet. A resposta cita a página 1, e a frase citada aparece destacada nessa página.",
++  "landing.frame.caption": "Cada resposta leva à frase de onde veio, na página certa.",
++  "landing.frame.quoteFinder": "Escrevendo algo que precisa de citações? O Localizador de citações as extrai diretamente do seu documento, cada uma conferida com o texto original.",
+   "landing.proof.citations": "As respostas citam trechos exatos da fonte",
+   "landing.proof.private": "Documentos são privados e podem ser excluídos",
+   "landing.proof.locales": "Funciona em 11 idiomas de interface",
+@@ -1692,6 +1697,7 @@
+   "pricing.comparison.upload50": "50 MB",
+   "pricing.comparison.uploadLimit": "Limite de upload",
+   "pricing.description": "O DocTalk foi projetado para pessoas que precisam de respostas embasadas a partir de PDFs, arquivos DOCX, slides, planilhas e URLs. Todos os planos incluem citações de fontes e suporte a OCR. Os planos superiores ampliam os limites de uso, liberam o modo Pro sem restrições e adicionam fluxos de exportação ou prompts personalizados para pesquisas e operações mais intensas.",
++  "pricing.heroLine": "Todos os planos respondem com uma citação que você pode abrir. Os planos pagos aumentam os limites.",
+   "pricing.eyebrow": "PREÇOS",
+   "pricing.free.cadence": "/mês",
+   "pricing.free.cta": "Comece grátis",
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index 4adef03..34cc373 100644
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -357,6 +357,11 @@
+   "landing.headline": "与任何 PDF\n即时对话",
+   "landing.subtitle": "你的 AI 阅读伙伴",
+   "landing.description": "上传 PDF、DOCX 或粘贴 URL，获得答案并高亮原文页 — 一键核对。",
++  "landing.frame.question": "Alphabet 计划在 2026 年投入多少资本支出？",
++  "landing.frame.answer": "Alphabet 预计 2026 年的资本支出将在 1750 亿至 1850 亿美元之间，以满足客户需求并把握未来不断增长的机会。",
++  "landing.frame.description": "DocTalk 回答一个关于 Alphabet 2025 年第四季度财报问题的示例。回答引用了第 1 页，被引用的句子在该页上高亮显示。",
++  "landing.frame.caption": "每个回答都链接到它所依据的原句，并定位到所在页面。",
++  "landing.frame.quoteFinder": "写作需要引文？引用查找器直接从您的文档中提取引文，每一条都与原文核对过。",
+   "landing.proof.citations": "每个回答都引用确切原文",
+   "landing.proof.private": "文档私密且可删除",
+   "landing.proof.locales": "支持 11 种界面语言",
+@@ -693,6 +698,7 @@
+   "pricing.eyebrow": "定价",
+   "pricing.headline": "围绕真实文档工作设计的定价，而非模糊的 AI 限制。",
+   "pricing.description": "DocTalk 专为需要从 PDF、DOCX、幻灯片、电子表格和 URL 获取可靠答案的用户而设计。每个计划都包含来源引用和 OCR 支持。更高级别主要扩展使用限制，解锁无限制的 Pro 模式，并增加导出或自定义提示工作流，以满足更深入的研究和运营使用。",
++  "pricing.heroLine": "每个方案的回答都附带可点开查看的引用。付费方案会提高使用上限。",
+   "pricing.startFree": "免费开始",
+   "pricing.tryDemo": "试用公开演示",
+   "pricing.mostPopular": "最受欢迎",

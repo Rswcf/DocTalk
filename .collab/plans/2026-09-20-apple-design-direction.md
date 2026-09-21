@@ -297,6 +297,24 @@ Recorded 2026-09-21 after the token layer landed. Each of these is a place where
 8. **Known, accepted dark-mode gaps**: `HeroCollage.tsx` (retired by Layer 3 anyway) and `FeatureGrid.tsx:40` carry hardcoded white on coloured fills; the cookie banner is app-palette (see below). Only 9 white hardcodes exist across marketing/landing/pricing and 6 are in files Layer 3 deletes.
 9. **Not verified: the non-Latin locales on a non-Apple OS** (§9 #8). The `:lang()` degradation rules ship untested — macOS cannot surface a missing Nirmala UI / Geeza Pro bold. This remains an open risk.
 
+#### Phase 1 adversarial review — outcome (2026-09-21)
+**Reviewer:** Codex was unavailable (account usage limit until 2026-09-23 05:17; it wrote no findings). Fable 5.1 stood in on the identical brief — a different model from the author, which is the point of the gate. First attempt stalled while ingesting the 150 KB diff in one read; the retry reviewed file by file. Full findings: `.collab/reviews/2026-09-21-phase1-codex/findings-fable.md`. **Verdict: SHIP-WITH-FIXES**, no blockers. Whether a stand-in review satisfies the CLAUDE.md gate is the owner's call; Codex can be re-run on the same brief after the 23rd.
+
+**Fixed** (each re-verified by the author before fixing, not taken on trust):
+- MAJOR-1 — the reduced-motion rule was unscoped and, via the global `editorial.css` import, turned 12 unguarded infinite app animations into 60 Hz strobing for reduce-motion users. Now scoped to `.dt-editorial` with `animation-iteration-count: 1`. Partly a plan defect: §5.5 asked for a global rule.
+- MAJOR-2 — `/shared/[token]` user questions were `#ffffff` on `--ed-ink`, which dark mode flips to `#ece9e2`: 1.21:1, invisible. Now `--ed-paper`: 13.22 / 14.91. Grep confirms it was the only such site.
+- MINOR-2 — `/pricing` outline skipped h1 → h3 once the plans moved into the hero. Plan names are now `h2` (visual class unchanged).
+- MINOR-9 — FeatureGrid's white-on-olive chip was 2.06:1 in dark. Now `--ed-paper`: 6.55 / 8.77.
+- MINOR-7 — the §8 rule-text rewrite had not shipped. `.claude/rules/frontend.md` lines 19–20 now describe what actually shipped. `CLAUDE.md` and `AGENTS.md` needed no change: they delegate to that file (§8 items 3–4 were wrong to name them).
+
+**Accepted, with reasons:**
+- MINOR-1 — the `pricing_hero` `upgrade_click` source is gone. Disclosed in commit `d507280`; the author's review brief wrongly claimed every event was preserved. Plan-sanctioned (§7). `backend/app/.../admin.py:101` still labels the dead source — harmless, left for a backend change. The "fill only Plus" CTA treatment is an execution-time deviation, recorded here.
+- MINOR-3 — the consent banner's editorial branch ignores `isWorkspaceRoute`, so on `/shared/[token]` and `/document-diff` (both editorial) it sits at the bottom rather than the top. The top placement existed to clear a bottom chat composer; neither page pins anything to the bottom (checked), so there is no user-visible failure.
+- MINOR-4 — surface detection adds one `querySelector` to the observer's rAF-coalesced callback. Bounded: it runs only while the banner is visible (the observer is removed once consent is given), at most 60 Hz, and the selector is anchored on an id.
+- MINOR-5 — the banner's one-row phone layout was arithmetic-checked for long-label locales, not rendered. It degrades to a taller banner, not a broken one.
+- MINOR-6 — **the Phase 1 gate "nothing below 12px" is NOT met on `/`**: FeatureGrid's decorative `Visual*` mini-graphics hold 13 sub-12px sites. They are removed by the FeatureGrid simplification, which is waiting on an owner decision (which three items to keep). Disclosed, not hidden.
+- MINOR-8 — root-level `theme-color`, already accepted in execution note 7.
+
 #### Phase 1 follow-up found during execution — the cookie banner now covers the price
 Discovered 2026-09-21 while verifying the `/pricing` restructure at 375×812. `CookieConsentBanner` is `fixed z-40` with `bottom-3 left-3 right-3` on phones — full-bleed across the bottom of the viewport — and on a first visit it **sits directly on top of the `$0` that Phase 1 just moved into the first screen**. The measured win (first price y=1877 → y=661) is real, but a first-time visitor does not see it until they dismiss the banner.
 

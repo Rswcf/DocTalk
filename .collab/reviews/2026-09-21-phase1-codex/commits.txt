@@ -1,0 +1,16 @@
+aba8208 Decide the consent banner's surface before its first paint
+2ebb48a Keep the frame's English document left-to-right in the Arabic interface
+0f092e3 Translate the new hero and frame copy into all eleven languages
+3ffb5e5 Remove the "by the numbers" stat band from the landing page
+b7ad9e6 Stop hiding landing sections until they are scrolled into view
+61fbccb Put each plan's button under its price, and fill only Plus
+f1781cd Make the masthead's Sign In a quiet button
+a71a00b Show the product on the landing page instead of a drawing of it
+b4b50e9 Put each plan's price directly under its name
+8970345 Let headline optical size follow the rendered size
+8875e43 Give the consent banner the marketing surface, and stop it covering the price
+a96149f Record where Phase 1 execution had to diverge from the plan
+13638de Put the editorial surface on the Apple-direction token system
+16ddb25 Note that the cookie banner covers the price Phase 1 just promoted
+d507280 Put the prices on the pricing page's first screen
+9578755 Delete the Remotion product showcase, which nothing renders
