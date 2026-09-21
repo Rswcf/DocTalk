@@ -4,7 +4,7 @@ import EditorialMarketingHeader from "./EditorialMarketingHeader";
 import type { Crumb } from "./EditorialMarketingHeader";
 import EditorialFooter from "../landing/EditorialFooter";
 import type { ChromeStrings } from "../../i18n/chrome";
-import { NIGHT_ROOT_CLASS, useNightThemeColor } from "./night";
+import { NIGHT_ROOT_CLASS, useNightDocument } from "./night";
 
 export default function MarketingShell({
   breadcrumb,
@@ -22,7 +22,7 @@ export default function MarketingShell({
 }) {
   // Night on every marketing page (owner, 2026-09-21), the same theme as the
   // landing: see ./night.ts.
-  useNightThemeColor();
+  useNightDocument();
   return (
     <div className={`${NIGHT_ROOT_CLASS} min-h-screen flex flex-col`}>
       <EditorialMarketingHeader breadcrumb={breadcrumb} chrome={chrome} />

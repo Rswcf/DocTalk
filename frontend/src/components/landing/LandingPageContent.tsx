@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { NIGHT_ROOT_CLASS, useNightThemeColor } from '../marketing/night';
+import { NIGHT_ROOT_CLASS, useNightDocument } from '../marketing/night';
 import EditorialHeader from './EditorialHeader';
 import EditorialFooter from './EditorialFooter';
 import HeroSection from './HeroSection';
@@ -35,7 +35,7 @@ import FinalCTA from './FinalCTA';
  * and `<DashboardPageClient />` based on session status.
  */
 export default function LandingPageContent() {
-  useNightThemeColor();
+  useNightDocument();
 
   return (
     <div className={NIGHT_ROOT_CLASS}>

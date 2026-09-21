@@ -65,6 +65,12 @@ export interface CitationFieldSettings {
   occurrence: number;
   /** 0..1: slide the text so the citation sits at this fraction of the height. */
   focusY: number;
+  /**
+   * If set, overrides focusY: the top of the first highlighted line sits this
+   * many px from the canvas top. HeroSection derives it from the claim's
+   * measured bottom, so the passage follows the claim at every viewport.
+   */
+  anchorTop?: number;
   dimAlpha: number;
   litAlpha: number;
   lampRadius: number;
@@ -107,6 +113,13 @@ interface Span {
 
 const ease = (t: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 const rgba = ([r, g, b]: Rgb, a: number) => `rgba(${r}, ${g}, ${b}, ${a})`;
+
+/** Begin a rounded-rect path; square corners where roundRect is missing (Safari < 16). */
+function roundedRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  c.beginPath();
+  if (typeof c.roundRect === 'function') c.roundRect(x, y, w, h, r);
+  else c.rect(x, y, w, h);
+}
 
 /** A token's colour as rgb. Tokens are hex today; rgb()/rgba() also parse. */
 function readColour(style: CSSStyleDeclaration, name: string): Rgb {
@@ -245,7 +258,9 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
             first: spans[0],
           }
         : null;
-      offsetY = cited ? Math.round(s.focusY * H - cited.cy) : 0;
+      if (!cited) offsetY = 0;
+      else if (s.anchorTop != null) offsetY = Math.round(s.anchorTop - (cited.first.y - s.lineHeight * 0.72));
+      else offsetY = Math.round(s.focusY * H - cited.cy);
     }
 
     function paintInk() {
@@ -270,6 +285,8 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
       tctx!.clearRect(0, 0, tmp.width, tmp.height);
       tctx!.drawImage(ink, 0, 0);
       tctx!.globalCompositeOperation = 'destination-in';
+      // destination-in keeps only the alpha of these stops; their colour is
+      // discarded, so the black here is not a colour to tokenise.
       const g = tctx!.createRadialGradient(x * dpr, y * dpr, 0, x * dpr, y * dpr, radius * dpr);
       g.addColorStop(0, 'rgba(0, 0, 0, 1)');
       g.addColorStop(0.55, 'rgba(0, 0, 0, 0.55)');
@@ -325,8 +342,7 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
         const y = sp.y + offsetY - s.lineHeight * 0.72;
         // The soft evidence fill, warmed with the evidence colour itself: on
         // its own the dark-theme fill barely separates from the stage.
-        ctx!.beginPath();
-        ctx!.roundRect(sp.x1 - 3, y, (sp.x2 - sp.x1 + 6) * local, h, 3);
+        roundedRect(ctx!, sp.x1 - 3, y, (sp.x2 - sp.x1 + 6) * local, h, 3);
         ctx!.fillStyle = rgba(colours.soft, 1);
         ctx!.fill();
         ctx!.fillStyle = rgba(colours.evidence, 0.16);
@@ -363,8 +379,7 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
         ctx!.fillStyle = rgba(colours.soft, 1);
         ctx!.strokeStyle = rgba(colours.evidence, 1);
         ctx!.lineWidth = 1;
-        ctx!.beginPath();
-        ctx!.roundRect(-bw / 2, -bh / 2, bw, bh, 5);
+        roundedRect(ctx!, -bw / 2, -bh / 2, bw, bh, 5);
         ctx!.fill();
         ctx!.stroke();
         ctx!.fillStyle = rgba(colours.evidence, 1);
@@ -424,6 +439,17 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
       buildLayout();
       paintInk();
       reportLayout();
+      if (!cited) {
+        // The sentence is not in the laid-out text (a content edit, or an
+        // occurrence beyond the repeats): show the page, release the card,
+        // and never start a loop with nothing to animate.
+        draw(1e9);
+        if (!finished) {
+          finished = true;
+          onCitedRef.current?.();
+        }
+        return;
+      }
       if (still || finished) draw(1e9);
       else kick();
     }
@@ -437,6 +463,11 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
       layout();
     }
 
+    // The cursor lamp is lit only while the pointer moves. A pointer parked
+    // over the field would otherwise hold the loop at full frame rate
+    // forever (review 2026-09-21, MAJOR-2): after a short rest the lamp
+    // fades out and the loop stops with it.
+    let idle = 0;
     const onMove = (e: PointerEvent) => {
       cursor.tx = e.offsetX;
       cursor.ty = e.offsetY;
@@ -445,9 +476,15 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
         cursor.y = cursor.ty;
       }
       cursor.ta = 1;
+      window.clearTimeout(idle);
+      idle = window.setTimeout(() => {
+        cursor.ta = 0;
+        kick();
+      }, 1200);
       kick();
     };
     const onLeave = () => {
+      window.clearTimeout(idle);
       cursor.ta = 0;
     };
     if (finePointer && !still) {
@@ -485,6 +522,7 @@ export default function CitationField({ settings, onLayout, onCited }: Props) {
       alive = false;
       relayoutRef.current = null;
       window.clearTimeout(timer);
+      window.clearTimeout(idle);
       if (raf) cancelAnimationFrame(raf);
       resizeObserver.disconnect();
       visibilityObserver.disconnect();

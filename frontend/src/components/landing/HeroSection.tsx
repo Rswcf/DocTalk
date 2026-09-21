@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from '../../i18n';
 import { trackEvent } from '../../lib/analytics';
@@ -71,16 +71,51 @@ const CARD_WIDTH = 420;
 // passage (badge, passage, answer read down one edge). It stays clear of the
 // bottom-right corner, where the first-visit cookie banner sits.
 const CARD_EDGE = 24;
+// The passage starts this far under the claim: a share of the stage height,
+// never less than the claim's darkness pool reaches past it (editorial.css,
+// `.ed-night-claim::before`, bottom: -40px), never more than a comfortable gap.
+const passageGap = (stageHeight: number) => Math.min(64, Math.max(40, Math.round(stageHeight * 0.06)));
+// useLayoutEffect warns during SSR; the measurement only matters in the browser.
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export default function HeroSection() {
-  const { t, tOr } = useLocale();
+  const { t, tOr, locale } = useLocale();
   const headlineLines = t('landing.headline').split('\n');
+  // Where the authored break is hidden (phones), the lines need a space to
+  // stay separate words, except in scripts written without spaces.
+  const joiner = /^(zh|ja)/.test(locale) ? '' : ' ';
 
   const stageRef = useRef<HTMLElement>(null);
+  const claimRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLElement>(null);
   const [narrow, setNarrow] = useState(false);
   const [cited, setCited] = useState(false);
   const [cardPos, setCardPos] = useState<{ left: number; top: number } | null>(null);
+  const [anchorTop, setAnchorTop] = useState<number | undefined>(undefined);
+  const [stageMin, setStageMin] = useState<number | null>(null);
+
+  // The passage follows the claim: measure the claim's bottom (it moves with
+  // the locale, the viewport height and the web fonts arriving) and anchor
+  // the first highlighted line under it.
+  useIsoLayoutEffect(() => {
+    const stage = stageRef.current;
+    const claim = claimRef.current;
+    if (!stage || !claim) return;
+    const measure = () => {
+      const bottom = claim.offsetTop + claim.offsetHeight;
+      setAnchorTop(bottom + passageGap(stage.clientHeight));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(claim);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  const settings = useMemo<CitationFieldSettings>(
+    () => (narrow ? NARROW : { ...WIDE, anchorTop }),
+    [narrow, anchorTop],
+  );
 
   useEffect(() => {
     const mq = window.matchMedia(NARROW_QUERY);
@@ -101,19 +136,26 @@ export default function HeroSection() {
     const card = cardRef.current;
     if (!stage || !card || window.matchMedia(NARROW_QUERY).matches) {
       setCardPos(null);
+      setStageMin(null);
       return;
     }
     const stageWidth = stage.clientWidth;
-    const stageHeight = stage.clientHeight;
     // The field is centred in the stage, so stage x = canvas x + inset.
     const inset = (stageWidth - layout.width) / 2;
     const left = Math.max(CARD_EDGE, inset + layout.textLeft);
     const cardFrom = left - inset - 8;
     const cardTo = left - inset + CARD_WIDTH + 8;
     const covered = layout.spans.filter((s) => s.x2 > cardFrom && s.x1 < cardTo);
-    const below = covered.length ? Math.max(...covered.map((s) => s.bottom)) + 16 : layout.citedY + 24;
-    const top = Math.min(below, stageHeight - card.offsetHeight - CARD_EDGE);
+    const top = covered.length ? Math.max(...covered.map((s) => s.bottom)) + 16 : layout.citedY + 24;
     setCardPos({ left: Math.round(left), top: Math.round(top) });
+    // Never pull the card up over the passage to make it fit: grow the stage
+    // instead. The claim, the passage and the card fit a laptop's first
+    // screen at the svh-scaled sizes; where they cannot, the card continues
+    // below the fold rather than covering the citation.
+    // `floor` mirrors the stage's CSS min-height, max(640px, 100svh - 64px).
+    const needed = Math.ceil(top + card.offsetHeight + CARD_EDGE);
+    const floor = Math.max(640, window.innerHeight - 64);
+    setStageMin(needed > floor ? needed : null);
   }, []);
 
   const onCited = useCallback(() => setCited(true), []);
@@ -123,19 +165,20 @@ export default function HeroSection() {
       <section
         ref={stageRef}
         className={`ed-night-stage${cited ? ' is-cited' : ''}`}
+        style={stageMin ? { minHeight: stageMin } : undefined}
         aria-labelledby="landing-hero-title"
       >
         <div className="ed-night-field" dir="ltr" lang="en" aria-hidden="true">
-          <CitationField settings={narrow ? NARROW : WIDE} onLayout={onLayout} onCited={onCited} />
+          <CitationField settings={settings} onLayout={onLayout} onCited={onCited} />
         </div>
 
-        <div className="ed-night-claim">
+        <div ref={claimRef} className="ed-night-claim">
           <h1 id="landing-hero-title" className="ed-display">
             {headlineLines.map((line: string, i: number) => (
               <React.Fragment key={i}>
                 {/* The space keeps the words apart where the break is hidden
                     (phones balance the whole headline instead). */}
-                {i > 0 && <>{' '}<br /></>}
+                {i > 0 && <>{joiner}<br /></>}
                 {line}
               </React.Fragment>
             ))}

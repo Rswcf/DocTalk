@@ -20,23 +20,40 @@ export const NIGHT_ROOT_CLASS = `dt-editorial dt-night ${GeistSans.variable}`;
 export const NIGHT_THEME_COLOR = '#0a0908';
 
 /**
- * Tint the browser chrome to the night stage while a marketing root is
- * mounted. layout.tsx declares theme-color per OS scheme (paper for light),
- * which would paint a pale toolbar over a dark page. A page-level `viewport`
- * export can't do this: the signed-in dashboard renders at `/` too and keeps
- * the app's colours, so the tags are swapped on mount and restored on unmount.
+ * Dress the document for Night while a marketing root is mounted, and undo it
+ * on unmount (the signed-in dashboard renders at `/` too and keeps the app's
+ * colours, so none of this can be a static page export):
+ *  - theme-color: layout.tsx declares it per OS scheme (paper for light),
+ *    which would paint a pale toolbar over a dark page;
+ *  - `dt-night-doc` on <html>: editorial.css paints <html>/<body> the night
+ *    stage and sets `color-scheme: dark`, so overscroll bands and the page
+ *    scrollbar are dark too.
  */
-export function useNightThemeColor() {
+// Reference-counted across roots: two marketing pages can overlap during a
+// client navigation (the next one mounted before the last one unmounts), so
+// the ORIGINAL values are captured by the first mount and restored only by
+// the last unmount, whatever the order.
+let mountedRoots = 0;
+let originalThemeColors: string[] | null = null;
+
+export function useNightDocument() {
   useEffect(() => {
+    const root = document.documentElement;
     const metas = Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'));
-    const previous = metas.map((m) => m.content);
+    if (mountedRoots === 0) originalThemeColors = metas.map((m) => m.content);
+    mountedRoots += 1;
     metas.forEach((m) => {
       m.content = NIGHT_THEME_COLOR;
     });
+    root.classList.add('dt-night-doc');
     return () => {
+      mountedRoots -= 1;
+      if (mountedRoots > 0) return;
       metas.forEach((m, i) => {
-        m.content = previous[i];
+        if (originalThemeColors) m.content = originalThemeColors[i];
       });
+      originalThemeColors = null;
+      root.classList.remove('dt-night-doc');
     };
   }, []);
 }

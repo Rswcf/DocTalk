@@ -453,6 +453,21 @@
   color: var(--ed-ink);
 }
 
+/* Night pages paint the document itself dark. components/marketing/night.ts
+   puts `dt-night-doc` on <html> while a marketing root is mounted; without
+   it, rubber-band overscroll shows the app's light body above and below the
+   page, and the scrollbar stays light (review 2026-09-21, MINOR-4). This is
+   the one editorial rule outside .dt-editorial, gated by a class only Night
+   sets. The colour is the night stage (the token is not defined up here);
+   !important because next-themes writes color-scheme inline on <html>. */
+html.dt-night-doc,
+html.dt-night-doc body {
+  background-color: #0a0908;
+}
+html.dt-night-doc {
+  color-scheme: dark !important;
+}
+
 /* ─── Night display type (owner, 2026-09-21) ───────────────────────────
    Every marketing page is Night, and Night sets its display steps in Geist
    (prototype B's sans) through --ed-display-family above. These rules only
@@ -469,6 +484,9 @@
 }
 .dt-editorial.dt-night .ed-display {
   font-size: clamp(44px, 6vw, 84px);
+  /* ...and with the viewport height, so a laptop's first screen keeps the
+     passage and the answer under the claim (MAJOR-3). */
+  font-size: clamp(44px, min(6vw, 9.5svh), 84px);
   line-height: 1;
   letter-spacing: -0.045em;
 }
@@ -744,11 +762,15 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: 800px;
+  min-height: 640px;
   /* svh, not vh: collapsing mobile toolbars must not move the passage. 64px
-     is the sticky header above the stage. */
-  min-height: max(800px, calc(100svh - 64px));
+     is the sticky header above the stage. The floor is low on purpose: the
+     claim, the passage and the answer have to share a laptop's first screen
+     (review 2026-09-21, MAJOR-3). HeroSection grows the stage when the
+     answer would not fit. */
+  min-height: max(640px, calc(100svh - 64px));
   padding: 88px 24px 0;
+  padding-top: clamp(40px, 7svh, 88px);
 }
 
 /* The document, full-bleed behind the claim: faint at the top, where the
@@ -784,6 +806,11 @@
   text-align: center;
 }
 /* Darkness pooled behind the claim, so the document never competes with it.
+   Sized to the claim (top and bottom insets), not a fixed height: a fixed
+   660px box reached down over the passage on every laptop viewport and put
+   it under ~94% darkness (review 2026-09-21, MAJOR-1). The passage starts at
+   least 40px below the claim (HeroSection), so it is always outside this box.
+   No pointer events: the cursor lamp lives on the document underneath.
    Browsers without color-mix() get no pool; the field's top fade still keeps
    the claim legible. */
 .dt-editorial .ed-night-claim::before {
@@ -791,10 +818,11 @@
   position: absolute;
   z-index: -1;
   top: -80px;
+  bottom: -40px;
   left: 50%;
   width: 1560px;
-  height: 660px;
   transform: translateX(-50%);
+  pointer-events: none;
   background: radial-gradient(
     closest-side,
     color-mix(in srgb, var(--ed-paper) 97%, transparent) 0%,
@@ -806,6 +834,7 @@
 .dt-editorial .ed-night-claim .ed-lede {
   max-width: 600px;
   margin: 24px auto 0;
+  margin-top: clamp(16px, 2.6svh, 24px);
   text-wrap: pretty;
 }
 .dt-editorial .ed-night-actions {
@@ -815,6 +844,7 @@
   justify-content: center;
   gap: 12px 28px;
   margin-top: 34px;
+  margin-top: clamp(24px, 3.8svh, 34px);
 }
 
 /* The answer. Physical `left`, not inline-start: it annotates the document,
@@ -839,7 +869,10 @@
     transform var(--ed-dur-3) var(--ed-ease);
 }
 /* With scripting, the card waits for the highlighter (HeroSection shows it
-   after at most 6s regardless). Without it, it is simply there. */
+   after at most 6s regardless). Without it, it is simply there. Browsers
+   without the `scripting` feature (Safari < 17, Chrome < 120, Firefox < 113)
+   show it from first paint at the CSS position, then see it move to the
+   computed one: accepted degradation, not a regression. */
 @media (scripting: enabled) {
   .dt-editorial .ed-night-stage:not(.is-cited) .ed-night-card {
     opacity: 0;
@@ -926,6 +959,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--ed-ink-3);
+}
+
+/* Short desktop viewports (a 768px laptop screen leaves ~650px under the
+   browser's own chrome; 1280x720 windows too): the claim, the passage and the answer still share
+   the first screen. Tighter spacing, and the card drops its source row — the
+   margin badge on the page and the answer's chip already carry the "1". */
+@media (min-width: 768px) and (max-height: 740px) {
+  .dt-editorial .ed-night-stage { padding-top: clamp(32px, 6svh, 88px); }
+  .dt-editorial.dt-night .ed-night-claim .ed-display { font-size: clamp(44px, min(6vw, 9svh), 84px); }
+  .dt-editorial .ed-night-card { padding: 14px 18px; }
+  .dt-editorial .ed-night-card .ed-frame-a { margin-top: 6px; }
+  .dt-editorial .ed-night-card .ed-frame-source { display: none; }
 }
 
 /* Phones: the claim, then the document as its own band, then the answer

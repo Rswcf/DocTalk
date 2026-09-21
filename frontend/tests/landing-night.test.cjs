@@ -19,13 +19,27 @@ test('every .dark .dt-editorial selector has a .dt-editorial.dt-night twin in th
   for (const prelude of preludes) {
     const list = prelude.split(',').map((s) => s.trim().replace(/\s+/g, ' '));
     for (const selector of list) {
-      if (!selector.startsWith('.dark .dt-editorial')) continue;
+      if (!/\.dark\b/.test(selector)) continue;
+      // Any other spelling (html.dark …, .dark :is(…), .dark > …) would slip
+      // past the twin rule; the editorial layer only ever writes this one.
+      assert.ok(selector.startsWith('.dark .dt-editorial'), `"${selector}": write dark editorial rules as ".dark .dt-editorial …"`);
       darkSelectors += 1;
       const twin = selector.replace('.dark .dt-editorial', '.dt-editorial.dt-night');
       assert.ok(list.includes(twin), `"${selector}" has no "${twin}" twin in the same selector list`);
     }
   }
   assert.ok(darkSelectors >= 2, 'expected the dark token set and the dark grain at least');
+});
+
+test('the app stylesheet never styles the editorial layer through .dark', () => {
+  // A .dark rule for editorial classes in globals.css would reach dark-OS
+  // marketing pages but never Night in a light OS, silently splitting them.
+  const css = stripCssComments(read('app/globals.css'));
+  const offenders = [...css.matchAll(/([^{}]+)\{/g)]
+    .flatMap((m) => m[1].split(','))
+    .map((s) => s.trim().replace(/\s+/g, ' '))
+    .filter((s) => /\.dark\b/.test(s) && /\.(dt-editorial|ed-[\w-]+)\b/.test(s));
+  assert.deepEqual(offenders, []);
 });
 
 // Night-only rules are an explicit, closed list. The owner asked for
@@ -92,7 +106,7 @@ test('every marketing root is Night', () => {
   assert.match(read('components/landing/LandingPageContent.tsx'), /className=\{NIGHT_ROOT_CLASS\}/);
   assert.match(read('components/marketing/MarketingShell.tsx'), /className=\{`\$\{NIGHT_ROOT_CLASS\} /);
   for (const root of ['components/landing/LandingPageContent.tsx', 'components/marketing/MarketingShell.tsx']) {
-    assert.match(read(root), /useNightThemeColor\(\)/, `${root} does not tint theme-color`);
+    assert.match(read(root), /useNightDocument\(\)/, `${root} does not dress the document for Night`);
   }
 });
 
@@ -143,6 +157,9 @@ test('the hero document is verbatim page 1 of the finance seed PDF, and CITED is
   const pdf = path.join(repoRoot, 'backend/seed_data/alphabet-earnings.pdf');
   const out = spawnSync('pdftotext', ['-f', '1', '-l', '1', pdf, '-'], { encoding: 'utf8' });
   if (out.error || out.status !== 0) {
+    // CI installs poppler, so a missing pdftotext there is a broken job, not a
+    // reason to skip the one check that the hero quotes its source exactly.
+    assert.ok(!process.env.CI, 'pdftotext is missing in CI; install poppler-utils');
     t.skip('pdftotext is not installed; the verbatim check needs it (brew install poppler)');
     return;
   }
@@ -182,5 +199,21 @@ test('the answer card copy exists in all 11 locales', () => {
     for (const key of keys) {
       assert.ok(typeof messages[key] === 'string' && messages[key].trim(), `${key} missing or empty in ${locale}.json`);
     }
+  }
+});
+
+test('both field settings place the citation inside the laid-out repeats', () => {
+  // With occurrence >= repeat the sentence is never laid out: no highlight,
+  // and (before the guard in CitationField) a loop with nothing to animate.
+  const hero = read('components/landing/HeroSection.tsx');
+  const block = (name) => hero.slice(hero.indexOf(`const ${name}: CitationFieldSettings = {`), hero.indexOf('};', hero.indexOf(`const ${name}: CitationFieldSettings = {`)));
+  const num = (text, key) => { const m = text.match(new RegExp(`\\b${key}: (\\d+)`)); return m ? Number(m[1]) : undefined; };
+  const wide = block('WIDE');
+  const narrow = block('NARROW');
+  for (const [name, text] of [['WIDE', wide], ['NARROW', narrow]]) {
+    const repeat = num(text, 'repeat') ?? num(wide, 'repeat');
+    const occurrence = num(text, 'occurrence') ?? num(wide, 'occurrence');
+    assert.ok(Number.isInteger(repeat) && Number.isInteger(occurrence), `${name}: repeat/occurrence not found`);
+    assert.ok(occurrence < repeat, `${name}: occurrence ${occurrence} must be < repeat ${repeat}`);
   }
 });
