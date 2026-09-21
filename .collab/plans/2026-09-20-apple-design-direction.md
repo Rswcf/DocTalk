@@ -1,7 +1,7 @@
 # DocTalk — Apple design direction, Option A (structure adopted, identity kept)
 
 **Date:** 2026-09-20
-**Status:** Plan for owner approval. No code has been written.
+**Status:** Phase 0 and Phase 1 **shipped to production as v0.31.0** (2026-09-21T08:17:55Z, tag `v0.31.0` -> `bc39484`). Phase 2a (metadata decoupling) in progress; Phases 2b-5 not started.
 **Owner decision already taken:** Option A — adopt Apple's compositional grammar (one dominant action per view, product UI as the hero, huge tight-tracked headlines, generous negative space, a real controls-vs-content material split, system-following dark mode) while keeping warm paper + terracotta as DocTalk's brand.
 **Independent verification pass (2026-09-20, by the coordinating agent, after the plan was written):**
 - **All 13 proposed contrast ratios re-computed from the hexes and confirmed to the second decimal** (`scratchpad/check_palette.py`): new terracotta `#843c28` 6.45 on paper / 7.90 white-on; dark accent `#e0957a` 7.53 on `#171614`, 6.85 on `#211f1c`; `--ink-2` `#4a4943` 7.38; `--ink-3` `#5f5e56` 5.32; olive `#35592c` 6.55; signal-hover `#6d3120` 8.13; dark ink `#ece9e2` 14.91; reader evidence `#7a4b00` 6.57; workbench-muted `#57606c` 5.72 light / `#c2c5cf` 10.87 dark; `.pdf-evidence-number` `#6b4400` 7.82. Zero pairs below 4.5. No colour claim in §5.3 or Phase 0 is estimated.
@@ -277,7 +277,11 @@ Three layers, deliberately separable:
 - **Judge:** `/` and `/pricing` in light and dark, at 375 and 1440, in `en`, `de` (longest Latin headline, 20 chars/line), `ja` (sans display, weight 600, tracking 0) and `ar` (RTL, no negative tracking). Measured: first price on `/pricing` ≤ 1 screen at 375×812; zero text below 12px; zero `.ed-glass` outside header/popover; contrast audit clean; `npm run build` green; a spot-check of five untouched kit routes confirms tokens applied and nothing broke.
 - **Codex:** **required** — SSR/metadata-adjacent (`EdPageHero` is the h1 of 46 routes), `/pricing` carries the `upgrade_click` CTAs and `billingHref()` targets, and the diff is well over 30 lines of logic. Also the moment to rewrite the rule text (§8) — same commit series.
 
-### Phase 2 — The other 43 kit routes, the hubs, aux pages, and copy grammar (2–3 weeks; after the disavow window if the owner wants rankings measurable — Open Question 3)
+### Phase 2 — The other 43 kit routes, the hubs, aux pages, and copy grammar (2–3 weeks; owner chose Q3 = decouple first, then rewrite — no wait for the disavow window)
+
+> **Sliced 2026-09-21.** **2a** = metadata decoupling only (below), proved by an empty before/after diff of every page's title, meta description and Open Graph text; held for Codex review (usage limit lifts 2026-09-23) before deploy. **2b** = hero migration family by family in Jev order (hubs first), the `landing.headline` drift fix as its own disclosed commit, then copy grammar.
+>
+> **Correction to the bullet below:** the coupling is half of what it says. English pages hardcode their `<title>`/description in each `page.tsx` and are already independent of the h1. Only the ten `[locale]` variants (32 routes via `createMarketingLocalePage`, plus `[locale]/page.tsx`) derive metadata from the hero keys.
 - Order inside the phase follows the Jev table: the five hubs first (one dominant action each: "Compare with ChatPDF" etc. on `/compare`, the demo on `/features`, a single document picker on `/tools`), then `/compare/*` and `/alternatives/*` (headlines rewritten from titles into claims; each gets the product frame with the competitor-relevant highlight), then `/use-cases/*`, then `/features/*`, `/trust`, `/about`, `/contact`, legal, `blog/*`, `shared/[token]` (all onto `MarketingShell`; `PublicHeader` retired).
 - **Before any headline changes:** decouple `titleKey` from the h1 key in `lib/marketingLocalePage.ts` and `[locale]/page.tsx` (§9 #3) so `<title>` tags stay put while h1s change, or change both deliberately with GSC watching.
 - Every copy change ships in all 11 locales (`tOr()` fallback first, translation batch second). Plex Mono and Sora unload at the end of this phase once `grep -r "dt-mono\|font-logo\|font-mono"` is clean on the marketing surface.
@@ -406,7 +410,9 @@ Delete unused tokens, `HeroCollage` remnants, `components/design/SectionKicker`,
 > 6. **Wordmark → Sora replaced by Plex Sans 600**, −0.02em.
 > 7. **Marketing dark mode → ships in Phase 1**, with the tokens. Deep QA on the two judged routes; the other 44 get the tokens and a spot-check.
 
-> **8. NEW, still open — raised 2026-09-20 by the user-needs test, needs an owner answer before Phase 2.**
+> **8. DECIDED 2026-09-21 (owner delegated the call): KEEP all four; revisit after the disavow window.** Chosen because it is the reversible option. Retiring or consolidating means redirects, sitemap and locale-URL removals and test changes that are hard to undo; the disavow window makes any ranking effect unreadable, and removing pages during it would confound that further; and the evidence is one run of one English-only rubric while the user-needs session is still producing data. In Phase 2b the four pages get the new hero structure with no copy investment. Revisit with the user-needs results and post-window Search Console data. Original question:
+>
+> 8. (original) NEW, still open — raised 2026-09-20 by the user-needs test, needs an owner answer before Phase 2.**
 > Four `/use-cases/*` pages address no measured persona and have no measured users: `teachers` (0.25), `consultants` (0.52), `healthcare` (0.55), `compliance` (0.57). Options: (a) retire them and redirect to the nearest page that works — fewer, better pages, but loses whatever long-tail SEO they hold; (b) consolidate the four into one or two pages aimed at jobs that *are* measured; (c) rewrite them against a real persona; (d) leave them, restyle only. My recommendation is **(b)**, and to spend the freed effort on the two measured cohorts that currently have no page at all (whole-book coverage; cross-lingual reading). This does not block Phase 1.
 
 ### Original question text (superseded, kept for audit)
