@@ -2,14 +2,26 @@ import { getServerT } from '../../i18n/server';
 import MarketingPageJsonLd from '../../components/marketing/MarketingPageJsonLd';
 
 export default async function PricingJsonLd({ locale }: { locale: string }) {
-  const { t } = await getServerT(locale);
+  const { t, tOr } = await getServerT(locale);
+  // One source for the hero line, so the hero and both schema blocks cannot drift.
+  const heroLine = tOr(
+    'pricing.heroLine',
+    'Every plan answers with a citation you can open. Paid tiers raise the limits.',
+  );
 
   return (
     <MarketingPageJsonLd
       locale={locale}
       path="/pricing"
       title={t('pricing.headline')}
-      description={t('pricing.description')}
+      // Structured data must describe what the hero visibly says:
+      // tests/marketing-jsonld asserts BOTH Article.description and
+      // SoftwareApplication.description === EdPageHero.lede. The hero's one line
+      // is pricing.heroLine since the 2026-09-20 restructure, so both follow it
+      // (HERO_LINE below). Only the <meta description> -- descKey
+      // 'pricing.description' in app/[locale]/pricing/page.tsx -- is
+      // deliberately unchanged, so this page's search snippet does not move.
+      description={heroLine}
       breadcrumbs={[
         { label: t('useCasesHub.breadcrumb.home'), path: '/' },
         { label: t('pricing.eyebrow') },
@@ -19,7 +31,7 @@ export default async function PricingJsonLd({ locale }: { locale: string }) {
         applicationCategory: 'ProductivityApplication',
         operatingSystem: 'Web',
         path: '/pricing',
-        description: t('pricing.description'),
+        description: heroLine,
         offers: {
           '@type': 'AggregateOffer',
           priceCurrency: 'USD',
