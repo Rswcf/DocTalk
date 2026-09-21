@@ -537,6 +537,14 @@ html.dt-night-doc {
   letter-spacing: 0;
   line-height: 1.2;
 }
+/* Japanese breaks between any two characters, so a balanced headline can
+   split a word ("ペ / ージ"); phrase-aware breaking keeps words whole where
+   the browser supports it (Chrome 119+), and is ignored elsewhere. */
+.dt-editorial:lang(ja) .ed-display,
+.dt-editorial:lang(ja) .ed-h1,
+.dt-editorial:lang(ja) .ed-h2 {
+  word-break: auto-phrase;
+}
 .dt-editorial:lang(ar) .ed-display,
 .dt-editorial:lang(ar) .ed-h1,
 .dt-editorial:lang(ar) .ed-h2 {
@@ -784,12 +792,17 @@ html.dt-night-doc {
   width: min(1080px, 100%);
   transform: translateX(-50%);
   font-family: var(--dt-body);
+  /* The top fade ends just above the passage, wherever it sits: HeroSection
+     sets --passage-top to the measured anchor. Fixed percentages dimmed the
+     cited sentence once the passage followed the claim (review 2026-09-21,
+     MAJOR-1b). 64% is the pre-measurement stand-in. */
+  --passage-top: 64%;
   -webkit-mask-image:
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) 44%, #000 64%, #000 86%, transparent 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) calc(var(--passage-top) - 180px), #000 calc(var(--passage-top) - 24px), #000 86%, transparent 100%),
     linear-gradient(to right, transparent 0%, #000 6%, #000 94%, transparent 100%);
   -webkit-mask-composite: source-in;
   mask-image:
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) 44%, #000 64%, #000 86%, transparent 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.2) calc(var(--passage-top) - 180px), #000 calc(var(--passage-top) - 24px), #000 86%, transparent 100%),
     linear-gradient(to right, transparent 0%, #000 6%, #000 94%, transparent 100%);
   mask-composite: intersect;
 }
@@ -809,7 +822,8 @@ html.dt-night-doc {
    Sized to the claim (top and bottom insets), not a fixed height: a fixed
    660px box reached down over the passage on every laptop viewport and put
    it under ~94% darkness (review 2026-09-21, MAJOR-1). The passage starts at
-   least 40px below the claim (HeroSection), so it is always outside this box.
+   least 32px below the claim (HeroSection, pinned by a test against this
+   32px), so it is always outside this box.
    No pointer events: the cursor lamp lives on the document underneath.
    Browsers without color-mix() get no pool; the field's top fade still keeps
    the claim legible. */
@@ -818,7 +832,7 @@ html.dt-night-doc {
   position: absolute;
   z-index: -1;
   top: -80px;
-  bottom: -40px;
+  bottom: -32px;
   left: 50%;
   width: 1560px;
   transform: translateX(-50%);
@@ -961,17 +975,34 @@ html.dt-night-doc {
   color: var(--ed-ink-3);
 }
 
-/* Short desktop viewports (a 768px laptop screen leaves ~650px under the
-   browser's own chrome; 1280x720 windows too): the claim, the passage and the answer still share
+/* Short desktop viewports (up to a 1366x768 window; a 768px laptop screen
+   leaves ~650px under the browser's own chrome), in every locale — the long
+   German, Korean and Japanese answers need the room: the claim, the passage and the answer still share
    the first screen. Tighter spacing, and the card drops its source row — the
    margin badge on the page and the answer's chip already carry the "1". */
-@media (min-width: 768px) and (max-height: 740px) {
+@media (min-width: 768px) and (max-height: 820px) {
   .dt-editorial .ed-night-stage { padding-top: clamp(32px, 6svh, 88px); }
   .dt-editorial.dt-night .ed-night-claim .ed-display { font-size: clamp(44px, min(6vw, 9svh), 84px); }
   .dt-editorial .ed-night-card { padding: 14px 18px; }
   .dt-editorial .ed-night-card .ed-frame-a { margin-top: 6px; }
   .dt-editorial .ed-night-card .ed-frame-source { display: none; }
 }
+/* The shortest laptop windows (~650px under the browser's chrome), where
+   the three-line German, French, Portuguese and Japanese claims need a few
+   more pixels. */
+@media (min-width: 768px) and (max-height: 700px) {
+  .dt-editorial .ed-night-stage { padding-top: clamp(28px, 5svh, 88px); }
+  .dt-editorial.dt-night .ed-night-claim .ed-display { font-size: clamp(40px, min(6vw, 8.5svh), 84px); }
+  .dt-editorial .ed-night-claim .ed-lede { font-size: 18px; }
+  .dt-editorial .ed-night-actions { margin-top: 20px; }
+  .dt-editorial .ed-night-card .ed-frame-a { font-size: 14px; line-height: 1.45; }
+}
+/* The same compact card wherever HeroSection measures that the full one
+   would end below the first screen (the three-line ja/hi headlines at
+   1440x900), at any viewport height. */
+.dt-editorial .ed-night-stage.is-compact .ed-night-card { padding: 14px 18px; }
+.dt-editorial .ed-night-stage.is-compact .ed-night-card .ed-frame-a { margin-top: 6px; }
+.dt-editorial .ed-night-stage.is-compact .ed-night-card .ed-frame-source { display: none; }
 
 /* Phones: the claim, then the document as its own band, then the answer
    overlapping the band's faded foot. */

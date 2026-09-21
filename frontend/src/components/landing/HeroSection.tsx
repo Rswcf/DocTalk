@@ -73,8 +73,8 @@ const CARD_WIDTH = 420;
 const CARD_EDGE = 24;
 // The passage starts this far under the claim: a share of the stage height,
 // never less than the claim's darkness pool reaches past it (editorial.css,
-// `.ed-night-claim::before`, bottom: -40px), never more than a comfortable gap.
-const passageGap = (stageHeight: number) => Math.min(64, Math.max(40, Math.round(stageHeight * 0.06)));
+// `.ed-night-claim::before`, bottom: -32px), never more than a comfortable gap.
+const passageGap = (stageHeight: number) => Math.min(64, Math.max(32, Math.round(stageHeight * 0.06)));
 // useLayoutEffect warns during SSR; the measurement only matters in the browser.
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -93,6 +93,33 @@ export default function HeroSection() {
   const [cardPos, setCardPos] = useState<{ left: number; top: number } | null>(null);
   const [anchorTop, setAnchorTop] = useState<number | undefined>(undefined);
   const [stageMin, setStageMin] = useState<number | null>(null);
+  // The card drops to its compact form (editorial.css `.is-compact`: no source
+  // row, tighter padding) only when the full card would end below the first
+  // screen, e.g. the three-line ja/hi headlines at 1440x900. The full height
+  // is remembered, so the decision does not flip once the card has shrunk.
+  const [compact, setCompact] = useState(false);
+  const compactRef = useRef(false);
+  const fullCardHeight = useRef(0);
+  const lastTop = useRef<number | null>(null);
+
+  // Grow the stage when the card (at its current, possibly compact, size)
+  // would run past it: never pull the card up over the passage instead.
+  // `floor` mirrors the stage's CSS min-height, max(640px, 100svh - 64px).
+  const sizeStage = useCallback(() => {
+    const card = cardRef.current;
+    if (!card || lastTop.current === null) return;
+    const needed = Math.ceil(lastTop.current + card.offsetHeight + CARD_EDGE);
+    const floor = Math.max(640, window.innerHeight - 64);
+    setStageMin(needed > floor ? needed : null);
+  }, []);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    const observer = new ResizeObserver(sizeStage);
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [sizeStage]);
 
   // The passage follows the claim: measure the claim's bottom (it moves with
   // the locale, the viewport height and the web fonts arriving) and anchor
@@ -135,6 +162,7 @@ export default function HeroSection() {
     const stage = stageRef.current;
     const card = cardRef.current;
     if (!stage || !card || window.matchMedia(NARROW_QUERY).matches) {
+      lastTop.current = null;
       setCardPos(null);
       setStageMin(null);
       return;
@@ -148,15 +176,14 @@ export default function HeroSection() {
     const covered = layout.spans.filter((s) => s.x2 > cardFrom && s.x1 < cardTo);
     const top = covered.length ? Math.max(...covered.map((s) => s.bottom)) + 16 : layout.citedY + 24;
     setCardPos({ left: Math.round(left), top: Math.round(top) });
-    // Never pull the card up over the passage to make it fit: grow the stage
-    // instead. The claim, the passage and the card fit a laptop's first
-    // screen at the svh-scaled sizes; where they cannot, the card continues
-    // below the fold rather than covering the citation.
-    // `floor` mirrors the stage's CSS min-height, max(640px, 100svh - 64px).
-    const needed = Math.ceil(top + card.offsetHeight + CARD_EDGE);
-    const floor = Math.max(640, window.innerHeight - 64);
-    setStageMin(needed > floor ? needed : null);
-  }, []);
+    lastTop.current = top;
+    if (!compactRef.current) fullCardHeight.current = card.offsetHeight;
+    const stageTop = stage.getBoundingClientRect().top + window.scrollY;
+    const wantCompact = stageTop + top + fullCardHeight.current + CARD_EDGE > window.innerHeight;
+    compactRef.current = wantCompact;
+    setCompact(wantCompact);
+    sizeStage();
+  }, [sizeStage]);
 
   const onCited = useCallback(() => setCited(true), []);
 
@@ -164,11 +191,18 @@ export default function HeroSection() {
     <>
       <section
         ref={stageRef}
-        className={`ed-night-stage${cited ? ' is-cited' : ''}`}
+        className={`ed-night-stage${cited ? ' is-cited' : ''}${compact ? ' is-compact' : ''}`}
         style={stageMin ? { minHeight: stageMin } : undefined}
         aria-labelledby="landing-hero-title"
       >
-        <div className="ed-night-field" dir="ltr" lang="en" aria-hidden="true">
+        <div
+          className="ed-night-field"
+          dir="ltr"
+          lang="en"
+          aria-hidden="true"
+          // The field's top fade ends at the passage (editorial.css).
+          style={anchorTop !== undefined && !narrow ? ({ '--passage-top': `${anchorTop}px` } as React.CSSProperties) : undefined}
+        >
           <CitationField settings={settings} onLayout={onLayout} onCited={onCited} />
         </div>
 

@@ -1,6 +1,8 @@
 # Landing Night, slices 1–2 — adversarial review (Fable, 2026-09-21)
 
-**Verdict: BLOCK (short).** The slice fails its own §5 acceptance gate at the viewports most visitors have: under the committed CSS the claim's darkness pool sits on top of the cited passage — 95 %/94 %/75 % over its three lines at 1440×900 (measured live), ≈95 % over the whole passage on the 800 px stages of 1280×720, 1366×768 and 1024×768 (computed from measured geometry, consistent with their screenshots) — so the final frame shows no lit passage. The evidence PNGs in this folder show a render the committed CSS does not produce at those sizes, so the owner milestone review cannot proceed on them. The fix is one declaration plus a re-derivation of the pool box, but it changes the hero's composition, so the four desktop viewports must be re-verified and re-captured before the owner and Codex judge it. Everything else below is small and local; nothing needs redesign.
+**Verdict: SHIP-WITH-FIXES (re-verified 2026-09-21 after `725f66e`, tree `4adf43e`, production build).** The two facts that blocked are gone — the pool no longer touches the passage (pixel diff 0 over the highlighted rows at six viewports) and the evidence is now by measurement — but two local residuals must land and be re-measured before any 1920×1080 capture reaches the owner or the 09-23 gate: the field's top-fade mask (`editorial.css:795-801`) still dims the cited sentence to 39–62 % at 1920×1080, where the un-cited text under it is brighter (MAJOR-1b), and the answer card overhangs the fold in 7 of 11 locales at 1366×768 (MAJOR-3, open for de/fr/pt/ja/ko/hi/es). Everything else is closed; see "Re-verification" at the end. No redesign.
+
+*Original verdict (2026-09-21, before `725f66e`): BLOCK (short).* The slice fails its own §5 acceptance gate at the viewports most visitors have: under the committed CSS the claim's darkness pool sits on top of the cited passage — 95 %/94 %/75 % over its three lines at 1440×900 (measured live), ≈95 % over the whole passage on the 800 px stages of 1280×720, 1366×768 and 1024×768 (computed from measured geometry, consistent with their screenshots) — so the final frame shows no lit passage. The evidence PNGs in this folder show a render the committed CSS does not produce at those sizes, so the owner milestone review cannot proceed on them. The fix is one declaration plus a re-derivation of the pool box, but it changes the hero's composition, so the four desktop viewports must be re-verified and re-captured before the owner and Codex judge it. Everything else below is small and local; nothing needs redesign.
 
 Reviewed: `git diff 3320009..cab3bd8 -- frontend/` (the file at `slices-1-2.diff`), read against the plan `.collab/plans/2026-09-21-landing-night.md`, `.claude/rules/frontend.md` and `CLAUDE.md`. Line numbers are cited `@cab3bd8`; the working tree moved during the review (slice 3 landed as `c26a2e8`, and there are further uncommitted edits — see "Out of scope" at the end), so I checked every live measurement against the committed rule text. Live checks ran on the author's dev server (port 3100, Chrome 152 in the Browser pane), with `?still` unless stated.
 
@@ -145,3 +147,63 @@ Also: the theme-color / document dressing is now reference-counted (first mount 
 last unmount restores), so overlapping night→night navigations cannot leave app pages night-coloured (Codex
 brief item 5). Contrast audit after all fixes: 54 marketing pages, light OS and dark OS, **0** below AA (the audit
 now skips `.sr-only` text, which it had wrongly counted once `<body>` turned dark).
+
+---
+
+## Re-verification (Fable, 2026-09-21, after `725f66e`; tree `4adf43e`, `next start` on :3200)
+
+**Method.** I re-measured rather than reading the Resolution table. The served bundle carries the fix (CSS: `bottom:-40px` and `pointer-events:none` on the pool, `html.dt-night-doc`, `max-height:740px`, `9.5svh`, no `height:660px`; JS chunks: `anchorTop` ×3, `roundRect` guard ×2, `dt-night-doc` ×2). Geometry: `herocheck.mjs` on `/` at the six viewports and on all ten locale roots at 1366×768 / 1366×650 / 1280×720 (de/fr/pt also 1024×768 and 1440×900). Pixels: pool-on vs pool-off diff over the highlighted rows *located by colour in the off image*, not by the computed `passageTop`; per-line p99 luminance of the cited words against the un-cited ink just below them; near-neutral ink beside the lede and the actions row. rAF: `rafcheck.mjs` as committed, plus a variant parked over the document at (1065, 560). `npm run test:unit`: 177 pass, 0 skipped (pdftotext present). Phones: `/zh`, `/ja` at 375×812. Light-OS document probe on `/`, `/pricing`, `/de`, `/tools` and across client navigations.
+
+| Finding | Status | Evidence |
+|---|---|---|
+| MAJOR-1 pool covers the passage | **Closed as stated — residual MAJOR-1b below** | pool influence ends 30–60 rows above the first highlight band at all six viewports; diff over the highlight rows 0 (0 px differ) everywhere |
+| MAJOR-2 parked pointer loop | Closed | idle 0 · moving 120 · parked 0 rAF/2 s on both pointer paths; canvas is topmost (`elementFromPoint`) |
+| MAJOR-3 card below the fold | **Closed for `en` only** | en: card bottom ≤ viewport at all six (1366×768: 745/768, 1280×720: 651/720, 1366×650: 630/650); 7/11 locales overhang at 1366×768 — see below |
+| MINOR-1 zh/ja stray space | Closed | 375 px: "每个回答都标出 / 原文所在页。", "すべての回答 / が、正確なペ / ージを引用。" |
+| MINOR-2 `!cited` loop | Closed | `CitationField.tsx:442-452` draws the dim page, sets `finished`, fires `onCited`, no `kick`; test `:205` |
+| MINOR-3 tests in CI | Closed | `ci.yml:84-85`; the verbatim test asserts (not skips) under `CI` (`landing-night.test.cjs:162`) |
+| MINOR-4 light overscroll / scrollbar | Closed | html/body `rgb(10,9,8)`, `color-scheme: dark` over next-themes' inline `light`, theme-color `#0a0908` ×2 on all four routes; `html.dt-night-doc body` (0,1,2) beats globals' `.dark body` (0,1,1). The last-unmount restore (`night.ts:50-56`) is code-reviewed only: every marketing route is Night now, so a marketing→app client navigation needs a signed-in session |
+| NIT-1 `roundRect` | Closed | `CitationField.tsx:118-122` |
+| NIT-2 twin parser | Closed | any `.dark` selector must be spelled `.dark .dt-editorial …` (`test.cjs:22-25`); globals guard (`:34-43`) |
+| NIT-3 mask literals | Closed | `CitationField.tsx:288-289` |
+| NIT-4 scripting fallback | Closed | `editorial.css:871-875` |
+
+### Still open
+
+**MAJOR-1b — the field's own top-fade mask now dims the passage (same root-cause class as MAJOR-1).** `editorial.css:795-801`: `.ed-night-field` mask `rgba(0,0,0,.12) 0% → .2 44% → #000 64%` of the stage. Those stops are percentages of the stage height and were derived for `focusY .64`, which put the passage exactly where the ramp ends. `anchorTop` (`HeroSection.tsx:77, 100-113`) now places it at 46–56 % of the stage, inside the ramp. Measured p99 luminance of the cited words per line (reference 236 = the same words where the mask is 1.0):
+
+| viewport | cited line 1 / 2 / 3 | un-cited ink 0–60 px below the passage, right of the card |
+|---|---|---|
+| 1920×1080 | 93 / 119 / 146 (39–62 %) | 144 — as bright as the brightest cited line |
+| 1440×900 | 155 / 190 / 223 | 158 — brighter than cited line 1 |
+| 1366×650 | 165 / 209 / 236 | 184 — brighter than cited line 1 |
+| 1024×768 | 159 / 200 / 236 | 158 |
+| 1366×768 | 186 / 229 / 236 | 158 |
+| 1280×720 | 180 / 227 / 236 | 158 |
+
+Lines 2–3 match the mask model to ±0.02 (`maskprofile.py`), so it is the mask — not the pool (diff 0) and not the lamp. At 1920×1080 the un-cited text under the passage (inside the lamp, where the mask is already 1.0) is brighter than the cited sentence; the 1920 frame shows it plainly, and the "cited words are the brightest thing" criterion I accepted under deviation #2 fails there. **Fix:** tie the mask's full-strength stop to the passage the way the pool now follows the claim — HeroSection already knows `anchorTop`; expose it on the stage as a custom property (e.g. `--ed-night-passage`) and end the ramp at `calc(var(--ed-night-passage) - Npx)`, or otherwise guarantee the field reaches 1.0 no lower than the first cited line. Pre-empt the side effect: pulling the ramp up raises the mask at the actions row from ≈0.2 to ≈0.7, where the pool is only ≈30 % — document ink beside the buttons is ≤ 12 % today (max 38/255 at 1920 and 1440) and must stay there. **Acceptance, all six viewports:** (a) every cited line p99 ≥ 0.9 × 236; (b) cited ≥ the un-cited ink just below it; (c) ink beside the actions row ≤ 15 %. Note for the next reviewer: the Resolution's "pool-on vs pool-off diff = 0" is true but only measures the pool's delta — the off image is itself mask-dimmed — so an absolute-brightness check belongs next to `herocheck.mjs` (p99 of near-neutral pixels ≥ 70 per 30 px line band from `passageTop`, versus the band from `cardTop` to +60 px right of the card).
+
+**MAJOR-3 — open for 7 of 11 locales at 1366×768** (`HeroSection.tsx:149-158`, `editorial.css:976-982`). The localized answer wraps to four lines (the question to two), the card is ≈224 px, `stageMin` grows the stage and the card continues under the fold by design. Card bottom − viewport at 1366×768: de/fr/pt +21, ja +27, ko +46 (its headline wraps to three lines there; claim bottom 503), hi +8, es +1; it/zh/ar/en fit. At 1366×650: de/fr/pt +43, ja +23, hi +4, es +3 — the answer's last line is cut, the source row is already hidden. 1280×720 and 1024×768 fit in every locale measured. The `/de` 1366×768 frame shows the source row cut at the fold. Author's choice, checked not guessed: widening the tight query (`:976`) to `max-height: 800px` recovers ≈47 px (source row + padding), enough for all seven at 1366×768 but marginal for ko (+46 → fits by 1 px); 1366×650 needs the four-line answers handled (smaller card type, or the plan's beside-the-passage placement when the height budget fails). **Acceptance:** card bottom ≤ viewport at 1366×768 and 1366×650 for all 11 locale roots (`VIEWPORTS="1366x768 1366x650" node herocheck.mjs http://…/xx`).
+
+### Not findings, for the 09-23 pass
+- `about`, `contact`, `imprint`, `privacy`, `terms` now render through `MarketingShell` (`12a8565`), so `dt-night-doc` on `/about` is correct, not a leak; `.claude/rules/frontend.md` still lists those five as zinc/blue — update the rule with the code.
+- The 1440×900 and 1366×768 frames read as intended (passage lit, card under it, document ≤ 12 % behind the buttons, ≤ 27 % on the first line under the pool); the composition needs no redesign, only the two re-derivations above.
+
+---
+
+## Resolution 2 (Claude, 2026-09-21) — MAJOR-1b and MAJOR-3 (all locales)
+
+- **MAJOR-1b** — the field's top fade now ends at the passage, wherever it sits: `.ed-night-field` mask stops are
+  `rgba(.2) calc(var(--passage-top) - 180px)` → `#000 calc(var(--passage-top) - 24px)`, and HeroSection sets
+  `--passage-top` to the measured anchor (64 % before measurement).
+- **MAJOR-3 (all locales)** — the card goes compact (no source row, tighter padding) wherever the FULL card would end
+  below the first screen (`is-compact`, decided from the remembered full height, so it cannot flip), plus under
+  `max-height: 820px`; `max-height: 700px` tightens the claim further. The pool's reach and the passage gap floor
+  moved together from 40 to 32 px (the invariant test still pins them).
+- **Measured** with `frontend/scripts/design-audit/herocheck.mjs` + `herocompare.py`, production build, 11 locales ×
+  5 viewports (1366×768, 1440×900, 1920×1080, 1280×720, 1366×650) = 55 renders, each against a control with BOTH
+  the claim pool and the field mask removed: passage p99 difference **0** in all 55 (max 2); card overflow **none**;
+  passage top ≥ pool bottom + 6 px; topmost element at the passage is the canvas in all 55. `rafcheck.mjs`: 0 / 120 / 0.
+  Contrast audit, 54 pages, light OS: 0 below AA. 177/177 unit tests; lint and build pass.
+- The `frontend.md` zinc-pages sentence noted under "Not findings" was already removed in `12a8565`; the five pages
+  are listed in the editorial surface.
