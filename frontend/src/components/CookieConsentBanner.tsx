@@ -10,6 +10,10 @@ const CONSENT_KEY = 'doctalk_analytics_consent';
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Which visual system is on the page underneath. The banner is mounted once in
+  // app/layout.tsx as a SIBLING of #page-content, so no page can pass it a
+  // `surface` prop the way DocumentDiffPanel receives one — it has to look.
+  const [surface, setSurface] = useState<'app' | 'editorial'>('app');
   const { t } = useLocale();
   const pathname = usePathname();
 
@@ -25,6 +29,9 @@ export function CookieConsentBanner() {
 
     const syncDialogState = () => {
       setDialogOpen(Boolean(document.querySelector('[role="dialog"][aria-modal="true"]')));
+      // Scoped to #page-content so the banner's own .dt-editorial wrapper below
+      // can never make it detect itself.
+      setSurface(document.querySelector('#page-content .dt-editorial') ? 'editorial' : 'app');
     };
     syncDialogState();
 
@@ -72,6 +79,68 @@ export function CookieConsentBanner() {
     localStorage.setItem(CONSENT_KEY, 'declined');
     setVisible(false);
   };
+
+  if (surface === 'editorial') {
+    // Marketing surface (plan 2026-09-20 §5.3/§5.4). The inner .dt-editorial
+    // wrapper gives the banner the paper tokens, including the warm dark set,
+    // without the outer element inheriting .dt-editorial's position: relative.
+    //   - Opaque raised surface, no backdrop blur: the banner sits over busy
+    //     content (the pricing cards) and its own text must stay legible.
+    //   - Ink, not terracotta. The page already has its one filled terracotta
+    //     action above the fold; a consent control must not compete with it.
+    //   - One compact row on phones. The two-row card sat exactly on top of the
+    //     first price once /pricing moved its plans into the first screen.
+    //   - Buttons meet the HIG 44pt minimum hit target.
+    return (
+      <div
+        className="fixed z-40 bottom-2 left-2 right-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))] overflow-hidden animate-[slideUp_0.3s_ease-out] motion-reduce:animate-none"
+        style={{ borderRadius: 'var(--ed-r-3, 16px)', boxShadow: '0 12px 32px -12px rgba(20, 18, 14, 0.28)' }}
+        role="region"
+        aria-label={t('consent.message')}
+      >
+        <div
+          className="dt-editorial px-3 py-2.5 sm:px-4 sm:py-3"
+          style={{
+            background: 'var(--ed-surface)',
+            border: '1px solid var(--ed-rule)',
+            borderRadius: 'inherit',
+          }}
+        >
+          <div className="flex items-center gap-3 sm:flex-col sm:items-stretch">
+            <p
+              className="flex-1 text-[13px] leading-[1.4] sm:text-sm sm:leading-6"
+              style={{ color: 'var(--ed-ink-2)' }}
+            >
+              {t('consent.message')}{' '}
+              <Link
+                href="/privacy"
+                className="underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:rounded-sm"
+                style={{ color: 'var(--ed-ink)' }}
+              >
+                {t('consent.learnMore')}
+              </Link>
+            </p>
+            <div className="flex shrink-0 gap-2 sm:justify-end">
+              <button
+                onClick={handleDecline}
+                className="min-h-[44px] rounded-full px-3 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:text-sm"
+                style={{ color: 'var(--ed-ink)', border: '1px solid var(--ed-control-border)', background: 'transparent' }}
+              >
+                {t('consent.decline')}
+              </button>
+              <button
+                onClick={handleAccept}
+                className="min-h-[44px] rounded-full px-3 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:text-sm"
+                style={{ color: 'var(--ed-paper)', background: 'var(--ed-ink)', border: '1px solid var(--ed-ink)' }}
+              >
+                {t('consent.accept')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
