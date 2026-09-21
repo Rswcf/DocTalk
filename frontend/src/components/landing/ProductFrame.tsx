@@ -62,7 +62,7 @@ export default function ProductFrame() {
         {/* (a) header strip — the reader's own chrome, not a fake browser */}
         <div className="ed-frame-bar">
           <span className="ed-frame-mark" />
-          <span className="ed-frame-doc">{DOC_NAME}</span>
+          <span className="ed-frame-doc" dir="ltr">{DOC_NAME}</span>
           <span className="ed-frame-pageno">p. 1</span>
         </div>
 
@@ -77,14 +77,16 @@ export default function ProductFrame() {
             <div className="ed-frame-source">
               <span className="ed-frame-cite">1</span>
               <span className="ed-frame-source-page">p. 1</span>
-              <span className="ed-frame-source-doc">{DOC_NAME}</span>
+              <span className="ed-frame-source-doc" dir="ltr">{DOC_NAME}</span>
             </div>
           </div>
 
           {/* (c) document pane — a light "paper island" in both themes, the way
-              a real PDF page renders */}
+              a real PDF page renders. dir="ltr" because it IS an English
+              document: in the Arabic UI it must not inherit right-to-left, just as
+              a real English PDF does not reflow when the interface language changes. */}
           <div className="ed-frame-pane">
-            <div className="ed-frame-page">
+            <div className="ed-frame-page" dir="ltr" lang="en">
               <p className="ed-frame-page-title">{PAGE_TITLE}</p>
               <p className="ed-frame-page-text ed-frame-page-muted">{PAGE_DATELINE}</p>
               <p className="ed-frame-page-text">
