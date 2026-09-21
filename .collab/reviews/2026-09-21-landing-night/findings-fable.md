@@ -238,6 +238,8 @@ Lines 2–3 match the mask model to ±0.02 (`maskprofile.py`), so it is the mask
   is `loading` and the card is already placed and compact.
 - Its effect does not: `scripts/design-audit/fontdelay.mjs` (every `.woff2` delayed 4 s; afterwards it compares
   the card's actual state with the decision a real-face measurement gives — stage class off for one synchronous
-  read) found **0 wrong decisions in 33 cases** (11 locales × 1440×900, 1366×768, 1280×720), the same as with
-  no delay. next/font's metric-matched fallback faces keep the pre-font card height inside the decision margin.
+  read) found **0 wrong decisions in 55 cases** (11 locales × 1440×900, 1366×768, 1280×720, 1366×650,
+  1024×768), the same as with no delay. That includes the tightest cards on record: ja 1366×650 ends at 646/650
+  and fr/pt at 644/650, all correctly compact. next/font's metric-matched fallback faces keep the pre-font card
+  height inside the decision margin.
 - No code change; `fontdelay.mjs` stays as the check to re-run if the card's copy, its CSS or the fonts change.
