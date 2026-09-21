@@ -6,7 +6,6 @@ import EditorialFooter from './EditorialFooter';
 import HeroSection from './HeroSection';
 import FeatureGrid from './FeatureGrid';
 import HowItWorks from './HowItWorks';
-import SocialProof from './SocialProof';
 import SecuritySection from './SecuritySection';
 import FAQ from './FAQ';
 import FinalCTA from './FinalCTA';
@@ -29,7 +28,6 @@ export default function LandingPageContent() {
         <HeroSection />
         <FeatureGrid />
         <HowItWorks />
-        <SocialProof />
         <SecuritySection />
         <FAQ />
         <FinalCTA />
