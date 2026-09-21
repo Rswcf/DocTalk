@@ -8,6 +8,39 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-09-21
+
+The marketing site goes dark. Every marketing page now uses "Night": a warm
+near-black stage in both light and dark device settings, with DocTalk's
+terracotta, olive and amber roles unchanged. The app keeps its own colours.
+Plan: `.collab/plans/2026-09-21-landing-night.md`.
+
+### Changed
+- The landing page opens on the product in one moment: page 1 of Alphabet's Q4
+  2025 earnings release, quoted verbatim, sits in low light; a lamp finds the
+  cited sentence, a highlighter marks it, and the answer arrives with its
+  citation. It replaces the static reader frame.
+- Every marketing page (pricing, features, use cases, comparisons,
+  alternatives, tools, demo, about, contact, legal pages and the blog) uses the
+  Night theme, and headings are set in Geist.
+- The landing headline now says the same thing in all 11 languages.
+- Translated marketing pages take their search title and description from
+  dedicated keys, so a visible headline can change without moving the search
+  title. Every page's title, description and Open Graph text is unchanged by
+  this release.
+
+### Fixed
+- The cited sentence stays fully lit, and the answer stays on the first screen,
+  at common laptop sizes in all 11 languages.
+- Chinese and Japanese phone headlines no longer carry a stray space, and
+  Japanese headlines break between words.
+
+### Developer
+- CI runs the frontend unit tests, including the check that the landing's
+  document text is verbatim from the seed PDF.
+- `frontend/scripts/design-audit/`: screenshot, hero-geometry, animation-loop
+  and contrast-audit tools used to verify this release.
+
 ## [0.31.0] - 2026-09-21
 
 The marketing site moves to Apple's compositional grammar -- one claim, one
