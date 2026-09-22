@@ -2,15 +2,23 @@
 
 The owner's hypothesis: a user's need is met inside the free allowance in one to three uses, they leave, and so
 nobody ever needs to pay. "Nobody hits INSUFFICIENT_CREDITS" is consistent with that, so it cannot decide it.
-This script prints the reads that can:
+This script prints the reads that can (sections 1-6 Claude's; 7-13 added from Fable's plan §3.1, 01-plan-fable.md):
 
-  1. every non-owner user in one bucket at their last activity (paid > hit a wall > real work, no wall >
-     light use, no wall > uploaded, never chatted > never started);
-  2. which walls the wall bucket hit;
-  3. how episodic the real work is (first-to-last message span, active days);
-  4. a hard-trial counterfactual: how many users a wall at message N+1 would have stopped, how many had
-     clicked a citation before it, and how many would have met it on their first day;
-  5. documents per user, and the credits users actually spent against the ~800 of month one.
+   1. every non-owner user in one bucket at their last activity (paid > hit a wall > real work, no wall >
+      light use, no wall > uploaded, never chatted > never started), all time and since June;
+   2. which walls fired, by reason; `upload_limit` split into the 3-document cap and the rest;
+   3. how episodic real work is (first-to-last message span, active days);
+   4. a hard-trial counterfactual: a wall at user message N+1 — who it stops, who had clicked a citation first,
+      who would have met it on day one;
+   5. documents per user; 6. credits spent against the ~800 of month one;
+   7. wall timing and what followed: before or after the first message / first citation click, and whether the
+      user kept going after it; demo vs own for walls that record it;
+   8. counterfactuals by document (a 1- or 2-document trial) and by time (activity after day 7 / day 14);
+   9. the hypothesis cell as counts: real-work users by own vs demo-only x cited vs not x span < 1 day vs longer;
+  10. the other free caps: Pro-model answers (20 a month) and the 3-document cap;
+  11. job size: pages of own documents, real-work users vs everyone else;
+  12. first-session depth, and "one session, >= 3 messages, never again";
+  13. a sample of the owner's hypothesis population.
 
 READ-ONLY (the session sets default_transaction_read_only); prints counts, medians and 8-character user-id
 prefixes only; no filenames, no message text, no emails.
@@ -21,87 +29,80 @@ import asyncio
 import datetime as dt
 import os
 import re
+from collections import Counter, defaultdict
 
 import asyncpg
 
 OWNER = "c142f3af-6e6b-488d-ba57-d91aa3e57cc7"
-ERA = dt.datetime(2026, 6, 1, tzinfo=dt.timezone.utc)  # product changed a lot before June; both views print
-DSN = re.sub(r"^postgres(?:ql)?(?:\+\w+)?://", "postgresql://", os.environ["DATABASE_URL"])
+T_A = dt.datetime(2026, 9, 7, 0, 22, 30, tzinfo=dt.timezone.utc)  # v0.29.0: the 750-page cap exists from here
+ERA = dt.datetime(2026, 6, 1, tzinfo=dt.timezone.utc)  # the product changed a lot before June; both views print
+DAY = dt.timedelta(days=1)
+WALL_EVENTS = ("limit_hit", "paywall_opened")
 
-# One row per non-owner user with everything the buckets need. Demo documents are the seeded ones
-# (demo_slug set); a session on a collection has no document and counts as own work.
-PER_USER = """
-with u as (
-  select id, created_at, plan from users where id::text <> $1
-),
-own_docs as (
-  select user_id, count(*) n from documents where demo_slug is null and user_id is not null group by user_id
-),
-msgs as (
-  select s.user_id, m.created_at, coalesce(d.demo_slug is not null, false) is_demo
-  from messages m join sessions s on s.id = m.session_id left join documents d on d.id = s.document_id
-  where m.role = 'user' and s.user_id is not null
-),
-msg_agg as (
-  select user_id, count(*) n, count(*) filter (where is_demo) n_demo,
-         count(distinct (created_at at time zone 'UTC')::date) days, min(created_at) first_at, max(created_at) last_at
-  from msgs group by user_id
-),
-ev as (
-  select user_id,
-         count(*) filter (where event_name = 'citation_clicked') cites,
-         count(*) filter (where event_name in ('limit_hit', 'paywall_opened')) walls,
-         count(*) filter (where event_name = 'upgrade_click') upgrades,
-         count(*) filter (where event_name = 'checkout_created') checkouts,
-         array_remove(array_agg(distinct coalesce(reason, metadata_json->>'reason'))
-                      filter (where event_name in ('limit_hit', 'paywall_opened')), null) wall_reasons
-  from product_events where user_id is not null group by user_id
-),
-ledger as (
-  select user_id, coalesce(-sum(delta) filter (where delta < 0), 0) spent,
-         bool_or(reason in ('purchase', 'plan_upgrade_supplement') or ref_type like 'stripe%') paid_ledger
-  from credit_ledger group by user_id
-)
-select left(u.id::text, 8) uid, u.created_at signup, u.plan,
-       coalesce(o.n, 0) own_docs, coalesce(m.n, 0) msgs, coalesce(m.n_demo, 0) demo_msgs, coalesce(m.days, 0) days,
-       m.first_at, m.last_at, coalesce(e.cites, 0) cites, coalesce(e.walls, 0) walls, coalesce(e.upgrades, 0) upgrades,
-       coalesce(e.checkouts, 0) checkouts, coalesce(e.wall_reasons, '{}') wall_reasons,
-       coalesce(l.spent, 0) spent, coalesce(l.paid_ledger, false) or u.plan <> 'free' paid
-from u left join own_docs o on o.user_id = u.id left join msg_agg m on m.user_id = u.id
-       left join ev e on e.user_id = u.id left join ledger l on l.user_id = u.id
-"""
-
-# The (N+1)-th user message is the first one a hard trial of N messages would have refused.
-TRIAL = """
-with ranked as (
-  select s.user_id, m.created_at, row_number() over (partition by s.user_id order by m.created_at, m.id) rn
-  from messages m join sessions s on s.id = m.session_id
-  where m.role = 'user' and s.user_id is not null and s.user_id::text <> $1
-),
-blocked as (select user_id, created_at t_block from ranked where rn = $2 + 1),
-first_msg as (select user_id, min(created_at) t0 from ranked group by user_id)
-select count(*) stopped,
-       count(*) filter (where exists (select 1 from product_events e where e.user_id = b.user_id
-                                      and e.event_name = 'citation_clicked' and e.created_at < b.t_block)) cited_before,
-       count(*) filter (where (b.t_block at time zone 'UTC')::date = (f.t0 at time zone 'UTC')::date) on_day_one
-from blocked b join first_msg f using (user_id)
-"""
+Q_USERS = "select id, created_at, plan from users where id::text <> $1"
+# Demo documents are the seeded ones (demo_slug set); a session on a collection has no document = own work.
+Q_DOCS = """select user_id, created_at, page_count from documents
+            where demo_slug is null and user_id is not null and user_id::text <> $1"""
+Q_SESSIONS = "select user_id, id from sessions where user_id is not null and user_id::text <> $1"
+Q_MSGS = """select s.user_id, m.created_at, m.session_id, coalesce(d.demo_slug is not null, false) is_demo
+            from messages m join sessions s on s.id = m.session_id left join documents d on d.id = s.document_id
+            where m.role = 'user' and s.user_id is not null and s.user_id::text <> $1
+            order by m.created_at, m.id"""
+Q_EVENTS = """select user_id, event_name, created_at, coalesce(reason, metadata_json->>'reason') reason,
+                     metadata_json->>'is_demo' is_demo
+              from product_events
+              where user_id is not null and user_id::text <> $1
+                and event_name in ('limit_hit', 'paywall_opened', 'citation_clicked', 'upgrade_click', 'checkout_created')
+              order by created_at"""
+Q_LEDGER = "select user_id, created_at, delta, reason, ref_type, ref_id from credit_ledger where user_id::text <> $1"
 
 ORDER = ["paid", "hit a wall", "real work, no wall", "light use, no wall", "uploaded, never chatted", "never started"]
 
 
-def bucket(r):
-    if r["paid"]:
-        return "paid"
-    if r["walls"] > 0:
-        return "hit a wall"
-    if r["msgs"] >= 3 or r["cites"] > 0:
-        return "real work, no wall"
-    if r["msgs"] > 0:
-        return "light use, no wall"
-    if r["own_docs"] > 0:
-        return "uploaded, never chatted"
-    return "never started"
+class U:
+    def __init__(self, row):
+        self.id, self.signup, self.plan = row["id"], row["created_at"], row["plan"]
+        self.uid = str(self.id)[:8]
+        self.docs, self.sessions, self.msgs, self.cites, self.walls = [], set(), [], [], []
+        self.upgrades = self.checkouts = 0
+        self.spent, self.paid_ledger, self.balanced = 0, False, []
+
+    @property
+    def paid(self):
+        return self.paid_ledger or (self.plan or "free") != "free"
+
+    @property
+    def n_msgs(self):
+        return len(self.msgs)
+
+    @property
+    def n_demo(self):
+        return sum(1 for m in self.msgs if m[2])
+
+    @property
+    def days(self):
+        return len({m[0].date() for m in self.msgs})
+
+    @property
+    def span(self):
+        return self.msgs[-1][0] - self.msgs[0][0] if self.msgs else None
+
+    @property
+    def real_work(self):
+        return self.n_msgs >= 3 or bool(self.cites)
+
+    def bucket(self):
+        if self.paid:
+            return "paid"
+        if self.walls:
+            return "hit a wall"
+        if self.real_work:
+            return "real work, no wall"
+        if self.msgs:
+            return "light use, no wall"
+        if self.docs:
+            return "uploaded, never chatted"
+        return "never started"
 
 
 def median(values):
@@ -117,86 +118,218 @@ def pct(values, q):
     return values[min(len(values) - 1, int(q * len(values)))] if values else "-"
 
 
-def span_label(first, last):
-    if first is None:
-        return None
-    span = last - first
+def span_label(span):
+    if span is None:
+        return "no messages"
     for limit, label in ((dt.timedelta(minutes=10), "<10 min"), (dt.timedelta(hours=1), "<1 h"),
-                         (dt.timedelta(days=1), "<1 day"), (dt.timedelta(days=7), "<7 days")):
+                         (DAY, "<1 day"), (7 * DAY, "<7 days")):
         if span < limit:
             return label
     return ">=7 days"
 
 
-def print_buckets(title, rows):
-    print(f"\n{title}: {len(rows)} users")
+def wall_reason(user, wall):
+    """`upload_limit` is a catch-all (DashboardPageClient.tsx:334): before T_A only the document cap existed;
+    after it, >= 3 own documents created before the event marks the cap (a lower bound: deleted documents vanish)."""
+    _, reason, _ = wall
+    if reason != "upload_limit":
+        return reason or "(none)"
+    if wall[0] < T_A or sum(1 for d in user.docs if d[0] < wall[0]) >= 3:
+        return "upload_limit: 3-document cap"
+    return "upload_limit: page cap or unknown"
+
+
+def print_buckets(title, users):
+    print(f"\n{title}: {len(users)} users")
     print(f"  {'bucket':<26}{'users':>6}{'own docs':>9}{'med msgs':>9}{'med days':>9}{'med spent':>10}"
           f"{'demo-only':>10}{'upgrade clicks':>15}")
     for name in ORDER:
-        group = [r for r in rows if bucket(r) == name]
-        demo_only = sum(1 for r in group if r["msgs"] > 0 and r["msgs"] == r["demo_msgs"])
-        print(f"  {name:<26}{len(group):>6}{sum(1 for r in group if r['own_docs']):>9}"
-              f"{str(median([r['msgs'] for r in group])):>9}{str(median([r['days'] for r in group])):>9}"
-              f"{str(median([r['spent'] for r in group])):>10}{demo_only:>10}{sum(r['upgrades'] for r in group):>15}")
+        group = [u for u in users if u.bucket() == name]
+        demo_only = sum(1 for u in group if u.msgs and u.n_msgs == u.n_demo)
+        print(f"  {name:<26}{len(group):>6}{sum(1 for u in group if u.docs):>9}"
+              f"{str(median([u.n_msgs for u in group])):>9}{str(median([u.days for u in group])):>9}"
+              f"{str(median([u.spent for u in group])):>10}{demo_only:>10}{sum(u.upgrades for u in group):>15}")
+
+
+async def load(con):
+    users = {r["id"]: U(r) for r in await con.fetch(Q_USERS, OWNER)}
+    for r in await con.fetch(Q_DOCS, OWNER):
+        if r["user_id"] in users:
+            users[r["user_id"]].docs.append((r["created_at"], r["page_count"]))
+    for r in await con.fetch(Q_SESSIONS, OWNER):
+        if r["user_id"] in users:
+            users[r["user_id"]].sessions.add(r["id"])
+    for r in await con.fetch(Q_MSGS, OWNER):
+        if r["user_id"] in users:
+            users[r["user_id"]].msgs.append((r["created_at"], r["session_id"], r["is_demo"]))
+    for r in await con.fetch(Q_EVENTS, OWNER):
+        u = users.get(r["user_id"])
+        if u is None:
+            continue
+        if r["event_name"] in WALL_EVENTS:
+            u.walls.append((r["created_at"], r["reason"], r["is_demo"]))
+        elif r["event_name"] == "citation_clicked":
+            u.cites.append(r["created_at"])
+        elif r["event_name"] == "upgrade_click":
+            u.upgrades += 1
+        else:
+            u.checkouts += 1
+    for r in await con.fetch(Q_LEDGER, OWNER):
+        u = users.get(r["user_id"])
+        if u is None:
+            continue
+        if r["delta"] < 0:
+            u.spent -= r["delta"]
+        if r["reason"] in ("purchase", "plan_upgrade_supplement") or (r["ref_type"] or "").startswith("stripe"):
+            u.paid_ledger = True
+        if r["reason"] == "chat" and r["ref_type"] == "mode" and r["ref_id"] == "balanced":
+            u.balanced.append(r["created_at"])
+    for u in users.values():
+        u.docs.sort()
+        u.balanced.sort()
+    return list(users.values())
+
+
+def report(users):
+    print("Pricing research — free quota at churn (owner excluded; buckets are exclusive, first match wins)")
+    print_buckets("1a. All non-owner users", users)
+    print_buckets(f"1b. Signed up since {ERA:%Y-%m-%d}", [u for u in users if u.signup >= ERA])
+
+    print("\n2. Walls fired (users per reason; a user can have several)")
+    reasons = Counter()
+    for u in users:
+        for reason in {wall_reason(u, w) for w in u.walls}:
+            reasons[reason] += 1
+    for reason, n in reasons.most_common():
+        print(f"  {reason:<40}{n:>4}")
+    print(f"  users with an upgrade_click: {sum(1 for u in users if u.upgrades)}; with a checkout_created: "
+          f"{sum(1 for u in users if u.checkouts)}; paid: {sum(1 for u in users if u.paid)}")
+
+    worked = [u for u in users if u.real_work]
+    print(f"\n3. How episodic is real work? (users with >= 3 messages or a citation click: {len(worked)})")
+    spans = Counter(span_label(u.span) for u in worked)
+    for label in ("<10 min", "<1 h", "<1 day", "<7 days", ">=7 days", "no messages"):
+        print(f"  first-to-last message {label:<12}{spans.get(label, 0):>4}")
+    for days in (1, 2, 3):
+        print(f"  active on {days} day(s): {sum(1 for u in worked if u.days == days)}")
+    print(f"  active on >= 4 days: {sum(1 for u in worked if u.days >= 4)}")
+
+    print("\n4. Hard-trial counterfactual: a wall at user message N+1 (demo and own messages both count)")
+    print(f"  {'N':>4}{'stopped':>9}{'cited before the wall':>23}{'on day one':>12}")
+    for n in (3, 5, 10, 20, 50):
+        stopped = [u for u in users if u.n_msgs > n]
+        cited = sum(1 for u in stopped if any(c < u.msgs[n][0] for c in u.cites))
+        day_one = sum(1 for u in stopped if u.msgs[n][0].date() == u.msgs[0][0].date())
+        print(f"  {n:>4}{len(stopped):>9}{cited:>23}{day_one:>12}")
+
+    print("\n5. Own documents per user")
+    for n in (0, 1, 2):
+        print(f"  {n}: {sum(1 for u in users if len(u.docs) == n)}")
+    print(f"  >= 3 (the Free cap): {sum(1 for u in users if len(u.docs) >= 3)}")
+
+    chatted = [u.spent for u in users if u.msgs]
+    print(f"\n6. Credits spent, lifetime, users with >= 1 message (n = {len(chatted)}; month one grants ~800)")
+    print(f"  p50 {pct(chatted, .5)}  p75 {pct(chatted, .75)}  p90 {pct(chatted, .9)}  "
+          f"p95 {pct(chatted, .95)}  max {max(chatted) if chatted else '-'}")
+    for limit in (25, 50, 100, 200, 300, 500, 800):
+        print(f"  spent > {limit:<4}: {sum(1 for s in chatted if s > limit)}")
+
+    walled = [u for u in users if u.walls]
+    print(f"\n7. Wall timing and what followed (users with >= 1 wall event: {len(walled)})")
+    rows = Counter()
+    for u in walled:
+        first = u.walls[0][0]
+        rows["first wall before the first message, or no messages" if not u.msgs or first < u.msgs[0][0]
+                else "first wall after the first message"] += 1
+        rows["no citation click ever" if not u.cites else
+             ("first wall before first citation click" if first < u.cites[0] else "first wall after first citation click")] += 1
+        rows["kept going after the first wall (>= 1 later message)" if any(m[0] > first for m in u.msgs)
+             else "stopped at the first wall (0 later messages)"] += 1
+    for label, n in sorted(rows.items()):
+        print(f"  {label:<56}{n:>4}")
+    print("  walls by demo flag (events; the flag exists only where the client sends it):")
+    flags = Counter((wall_reason(u, w), {"true": "demo", "false": "own"}.get(w[2], "not recorded"))
+                    for u in walled for w in u.walls)
+    for (reason, flag), n in sorted(flags.items()):
+        print(f"    {reason:<40}{flag:<14}{n:>4}")
+
+    print("\n8a. Document-trial counterfactual (own documents)")
+    print(f"  a 1-document trial would have stopped: {sum(1 for u in users if len(u.docs) >= 2)}")
+    print(f"  a 2-document trial would have stopped: {sum(1 for u in users if len(u.docs) >= 3)}")
+    print("8b. Time-trial counterfactual (any user message or own upload after day N from first activity)")
+    for n in (7, 14):
+        late = 0
+        for u in users:
+            stamps = [m[0] for m in u.msgs] + [d[0] for d in u.docs]
+            if stamps and max(stamps) > min(stamps) + n * DAY:
+                late += 1
+        print(f"  active after day {n}: {late}")
+
+    print(f"\n9. The hypothesis cell: real-work users ({len(worked)}) by surface x citation x span, "
+          "count and median credits spent")
+    cells = defaultdict(list)
+    for u in worked:
+        surface = "own document" if u.n_msgs > u.n_demo else ("demo only" if u.msgs else "no messages")
+        cited = "cited" if u.cites else "never cited"
+        span = "span < 1 day" if u.span is not None and u.span < DAY else "span >= 1 day"
+        cells[(surface, cited, span)].append(u.spent)
+    for key in sorted(cells):
+        print(f"  {' · '.join(key):<48}{len(cells[key]):>4}   median spent {median(cells[key])}")
+    print("  (the owner's population is own document · cited · span < 1 day; activation failure is 'never cited')")
+
+    print("\n10. The other free caps")
+    for code in ("PRO_MODE_LIMIT_REACHED", "BALANCED_MODE_LIMIT_REACHED", "upload_limit: 3-document cap",
+                 "INSUFFICIENT_CREDITS", "DOMAIN_MODE_REQUIRES_PLUS"):
+        print(f"  users who met {code}: {sum(1 for u in users if any(wall_reason(u, w) == code for w in u.walls))}")
+    counts = [len(u.balanced) for u in users if u.balanced]
+    print(f"  users with >= 1 Pro-model answer: {len(counts)}; median {median(counts)}, max {max(counts) if counts else '-'}")
+    reached = 0
+    for u in users:
+        times = u.balanced
+        if any(sum(1 for t in times[i:] if t < times[i] + 30 * DAY) >= 20 for i in range(len(times))):
+            reached += 1
+    print(f"  users with >= 20 Pro-model answers inside any 30 days (the Free cap): {reached}")
+
+    print("\n11. Job size: pages of own documents")
+    worked_ids = {u.id for u in worked}
+    for label, group in (("real-work users", [u for u in users if u.id in worked_ids]),
+                         ("everyone else", [u for u in users if u.id not in worked_ids])):
+        pages = [d[1] for u in group for d in u.docs if d[1] is not None]
+        print(f"  {label:<16} documents {len(pages):>4}   p50 {pct(pages, .5)}   p90 {pct(pages, .9)}")
+    firsts = [u.docs[0][1] for u in worked if u.docs and u.docs[0][1] is not None]
+    print(f"  real-work users whose first own document is > 100 pages: {sum(1 for p in firsts if p > 100)} of {len(firsts)}")
+
+    print("\n12. First-session depth")
+    first_session = []
+    one_and_done = 0
+    for u in users:
+        if not u.msgs:
+            continue
+        first_sid = u.msgs[0][1]
+        first_session.append(sum(1 for m in u.msgs if m[1] == first_sid))
+        if len({m[1] for m in u.msgs}) == 1 and u.n_msgs >= 3:
+            one_and_done += 1
+    print(f"  user messages in the first session: median {median(first_session)}, p75 {pct(first_session, .75)}"
+          f" (n = {len(first_session)})")
+    print(f"  whole lifetime = one session with >= 3 messages ('one job, done' signature): {one_and_done}")
+
+    print("\n13. 'Real work, no wall' users (the owner's hypothesis population), newest first, max 15")
+    sample = sorted((u for u in users if u.bucket() == "real work, no wall"), key=lambda u: u.signup, reverse=True)
+    for u in sample[:15]:
+        largest = max((d[1] for d in u.docs if d[1] is not None), default="-")
+        print(f"  {u.uid}  signup {u.signup:%Y-%m-%d}  msgs {u.n_msgs} (demo {u.n_demo})  days {u.days}  "
+              f"cites {len(u.cites)}  own docs {len(u.docs)}  sessions {len(u.sessions)}  largest doc {largest} pages  "
+              f"spent {u.spent}  span {span_label(u.span)}")
 
 
 async def main():
-    con = await asyncpg.connect(DSN)
+    con = await asyncpg.connect(re.sub(r"^postgres(?:ql)?(?:\+\w+)?://", "postgresql://", os.environ["DATABASE_URL"]))
     try:
         await con.execute("set default_transaction_read_only = on")
-        rows = await con.fetch(PER_USER, OWNER)
-        print("Pricing research — free quota at churn (owner excluded; buckets are exclusive, first match wins)")
-        print_buckets("1a. All non-owner users", rows)
-        print_buckets(f"1b. Signed up since {ERA:%Y-%m-%d}", [r for r in rows if r["signup"] >= ERA])
-
-        print("\n2. Walls hit (users per reason, wall bucket and paid users; a user can have several)")
-        reasons = {}
-        for r in rows:
-            for reason in r["wall_reasons"]:
-                reasons[reason] = reasons.get(reason, 0) + 1
-        for reason, n in sorted(reasons.items(), key=lambda kv: -kv[1]):
-            print(f"  {reason:<32}{n:>4}")
-        print(f"  users with a checkout_created: {sum(1 for r in rows if r['checkouts'])}; paid: "
-              f"{sum(1 for r in rows if r['paid'])}")
-
-        print("\n3. How episodic is real work? (users with >= 3 messages or a citation click, any bucket)")
-        worked = [r for r in rows if r["msgs"] >= 3 or r["cites"] > 0]
-        spans = {}
-        for r in worked:
-            label = span_label(r["first_at"], r["last_at"]) or "no messages"
-            spans[label] = spans.get(label, 0) + 1
-        for label in ("<10 min", "<1 h", "<1 day", "<7 days", ">=7 days", "no messages"):
-            print(f"  first-to-last message {label:<12}{spans.get(label, 0):>4}")
-        for days, label in ((1, "1"), (2, "2"), (3, "3")):
-            print(f"  active on {label} day(s): {sum(1 for r in worked if r['days'] == days)}")
-        print(f"  active on >= 4 days: {sum(1 for r in worked if r['days'] >= 4)}")
-
-        print("\n4. Hard-trial counterfactual: a wall at user message N+1 (demo and own messages both count)")
-        print(f"  {'N':>4}{'stopped':>9}{'cited before the wall':>23}{'on day one':>12}")
-        for n in (3, 5, 10, 20, 50):
-            r = await con.fetchrow(TRIAL, OWNER, n)
-            print(f"  {n:>4}{r['stopped']:>9}{r['cited_before']:>23}{r['on_day_one']:>12}")
-
-        print("\n5a. Own documents per user")
-        for n, label in ((0, "0"), (1, "1"), (2, "2")):
-            print(f"  {label}: {sum(1 for r in rows if r['own_docs'] == n)}")
-        print(f"  >= 3 (the Free cap): {sum(1 for r in rows if r['own_docs'] >= 3)}")
-
-        chatted = [r["spent"] for r in rows if r["msgs"] > 0]
-        print(f"\n5b. Credits spent, lifetime, users with >= 1 message (n = {len(chatted)}; month one grants ~800)")
-        print(f"  p50 {pct(chatted, .5)}  p75 {pct(chatted, .75)}  p90 {pct(chatted, .9)}  "
-              f"p95 {pct(chatted, .95)}  max {max(chatted) if chatted else '-'}")
-        for limit in (25, 50, 100, 200, 300, 500, 800):
-            print(f"  spent > {limit:<4}: {sum(1 for s in chatted if s > limit)}")
-
-        print("\n6. 'Real work, no wall' users (the owner's hypothesis population), newest first, max 15")
-        sample = sorted((r for r in rows if bucket(r) == "real work, no wall"), key=lambda r: r["signup"], reverse=True)
-        for r in sample[:15]:
-            print(f"  {r['uid']}  signup {r['signup']:%Y-%m-%d}  msgs {r['msgs']} (demo {r['demo_msgs']})  "
-                  f"days {r['days']}  cites {r['cites']}  own docs {r['own_docs']}  spent {r['spent']}  "
-                  f"span {span_label(r['first_at'], r['last_at'])}")
+        report(await load(con))
     finally:
         await con.close()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
