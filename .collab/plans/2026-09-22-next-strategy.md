@@ -243,3 +243,16 @@ Acceptance criteria:
   intent rates; anonymous demo sessions/day; `share_created`; signups/day since T_A.
 - Owner-only: the GSC baseline export and Domain property (D2); Semrush positions for the five zh/es
   keywords; a re-pull of backlink anchors (is the spam still growing?).
+
+## 8. Owner's ruling (2026-09-22 ~09:20 CEST)
+
+The owner accepted every §4 recommendation: "按照 Fable 的推荐继续推进". What that means in practice:
+
+- **4.1** The readout runs today (owner). A read-only role is optional; setup is in `2026-09-22-owner-actions.md`.
+- **4.2** `stable` was pushed to `7478d1d` at 07:22:13Z, after Fable's SHIP review.
+- **4.3** The §9.18.7 amendment is ratified. The bridge is built now and ships after 09-28.
+- **4.4** Anonymous upload is decided on 09-28 with the readout; nothing is built before then.
+- **4.5 / 4.6** Web-filter categorization and the GSC Domain property with the D2 export are owner-only. The
+  checklist is in `2026-09-22-owner-actions.md`.
+- **4.7** The zh/es search titles of `/use-cases/students` are approved; §2.2 slice B is no longer gated.
+- **4.8** The 09-28 rule is ratified.
