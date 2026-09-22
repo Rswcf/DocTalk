@@ -1953,3 +1953,11 @@ This is also the instrument's own default: only the OWNER UUID is excluded. **Th
 correction is that the Purchase row reads I = C = 0 since T_A. Under that correction, §9.4's "no intent event
 by 09-28" branch fires. Its consequence, acquisition by default, is the one already standing, so 09-28 is
 unchanged either way.
+
+**What the assumption carries.** It is the only thing between the §9.25 2.3 gate and "open". If e8fed11b is
+the owner's account, §9.4's "no intent event by 09-28" branch fires. Its finding, that the walls cannot be
+measured at this arrival rate, argues for 2.3 rather than against it, so the decision does not flip, but the
+reasoning path does. Therefore:
+- the closure is re-read on 09-28 against the fresh listing;
+- **Fable ratifies it before 2.3 starts.** The closure rests on the owner's recall gap plus Claude's inference
+  from commit timing, a case §9.25's table did not anticipate.
