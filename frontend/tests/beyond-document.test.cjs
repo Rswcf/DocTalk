@@ -281,3 +281,45 @@ test('the public shared page labels a beyond answer and tags the question it re-
   // Night marketing surface: the label uses the muted ink, never the citation amber or the verified olive.
   assert.doesNotMatch(page.slice(Math.max(0, label - 400), label), /--ed-(evidence|olive|verified)/);
 });
+
+// ── Locales (slice 2) ──
+
+const LOCALES = ['en', 'zh', 'ja', 'ko', 'es', 'de', 'fr', 'pt', 'it', 'ar', 'hi'];
+const ERROR_KEYS = ['errors.BEYOND_DOCUMENT_REQUIRES_SIGN_IN.title', 'errors.BEYOND_DOCUMENT_REQUIRES_SIGN_IN.body'];
+// The action runs no search: its copy must not suggest web access in any language (design §6.9).
+const NO_WEB = {
+  en: /\b(web|internet|online|search)\b/i,
+  zh: /网络|联网|互联网|网页|搜索/,
+  ja: /ウェブ|ネット|検索/,
+  ko: /웹|인터넷|검색/,
+  es: /\b(web|internet|en línea|busca\w*|búsqueda)\b/i,
+  de: /\b(web|internet|online|such\w*)\b/i,
+  fr: /\b(web|internet|en ligne|recherch\w*)\b/i,
+  pt: /\b(web|internet|online|pesquis\w*|busca\w*)\b/i,
+  it: /\b(web|internet|online|ricerc\w*|cerca\w*)\b/i,
+  ar: /الويب|الإنترنت|الانترنت|بحث/,
+  hi: /वेब|इंटरनेट|खोज/,
+};
+
+test('all seven strings exist in all eleven locales, translated, and none suggests web access', () => {
+  const en = JSON.parse(read('i18n/locales/en.json'));
+  for (const locale of LOCALES) {
+    const messages = JSON.parse(read(`i18n/locales/${locale}.json`));
+    for (const key of [...Object.values(KEYS), ...ERROR_KEYS]) {
+      assert.ok(typeof messages[key] === 'string' && messages[key].trim(), `${locale}: ${key} is missing`);
+      if (locale !== 'en') assert.notEqual(messages[key], en[key], `${locale}: ${key} is still English`);
+    }
+    const copy = [KEYS.action, KEYS.actionHint, KEYS.label, KEYS.userTag, KEYS.signIn].map((k) => messages[k]).join(' ');
+    assert.doesNotMatch(copy, NO_WEB[locale], `${locale}: the copy must not suggest web access`);
+  }
+});
+
+test('the sign-in error copy falls back to the English strings', () => {
+  const en = JSON.parse(read('i18n/locales/en.json'));
+  const code = read('lib/errorCopy.ts');
+  for (const key of ERROR_KEYS) {
+    const m = code.match(new RegExp(`tOr\\('${key.replace(/\./g, '\\.')}', '((?:[^'\\\\]|\\\\.)*)'\\)`));
+    assert.ok(m, `${key} is not rendered with a tOr fallback`);
+    assert.equal(m[1], en[key], `${key}: the fallback drifted from en.json`);
+  }
+});
