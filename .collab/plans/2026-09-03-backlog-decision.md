@@ -1961,3 +1961,46 @@ reasoning path does. Therefore:
 - the closure is re-read on 09-28 against the fresh listing;
 - **Fable ratifies it before 2.3 starts.** The closure rests on the owner's recall gap plus Claude's inference
   from commit timing, a case §9.25's table did not anticipate.
+
+#### Fable 5.1, 2026-09-22 — §9.26 ratified, with one condition added to the 2.3 gate
+
+1. **Closure ratified, on grounds that do not need the assumption.** All 5 rows are OWNER by UUID (measured);
+   in the 8.7 days after 09-13 15:06Z there is no `checkout_failed` from anyone against 4 attempts that all
+   reached a Stripe session, the one non-owner included (measured); and `e7db76e` is in production now
+   (`version.json` 0.32.0, live 09-21). One emphasis corrected: no 0.30.3 backend deploy is recorded before
+   0.32.0 (0.30.2 is the last recorded production version, `.collab/plans/2026-09-13-deepseek-v41-api-hotfix.md`),
+   and 06:40Z is the commit time — so "fixed by `e7db76e`, proven 8 minutes later" stays `[inference]`; the
+   alternative, a state change on the owner's account under 0.30.2, leaves the closure intact, since both are
+   owner-account paths. Residual risk for real users, counted on 09-28: non-owner `users` with
+   `stripe_subscription_id` not null, split by `plan` and by `= 'pending'` / other — the risk cell is
+   `plan = 'free'` (a Plus/Pro user with a real subscription id gets the 400 correctly); 0 there means no one
+   can take the pre-attempt branch — beside the owner-excluded `checkout_failed` line.
+2. **The working assumption is accepted and is not load-bearing.** Under either identity of e8fed11b the 09-28
+   default is acquisition and 2.3 is not blocked (§9.26 shows both branches). Corroboration found: the
+   test-account Playwright audit the 09-20 plan specified (`fold_auth.py`, Appendix A) was never built —
+   `frontend/scripts/design-audit/` has no such file and Phase 3 was retired 09-21 — and the 09-20 Jev brief
+   (`2026-09-20-jev-seo-brief.md:65`) already listed the 09-16 `checkout_created` as in-window data (`[inference]`
+   that the owner read it then). Falsifiable in one look: the 09-16 signup's provider/e-mail in the admin user list —
+   owner-only, never in a transcript; record the answer as §9.27 whenever it comes.
+3. **Gate amended — one condition added.** Control (a) proves persistence, not product: a send the backend
+   rejects leaves no `messages` row by construction (`INSUFFICIENT_CREDITS` at `chat_service.py:1826` and the
+   API-layer 402/403s in `chat.py:253-304`, `:460` run before `_persist_user_message_and_title`, `:1838`),
+   while `chat_message_sent` (`useChatStream.ts:411`, authenticated, fired before the request) is recorded
+   regardless. 9 users → 0 exactly at T_A has a null tail of ~2 × 10⁻⁴; the owner's own Free-plan chat on
+   09-13 argues against a plan-wide break, but it is one account. **Before 2.3 starts** — it pours anonymous
+   evaluators into this same path — the owner runs, read-only: non-owner `chat_message_sent` count and distinct
+   users since T_A; non-owner `sessions` created since T_A (the reader creates one on first open) with and
+   without a user message; `limit_hit` / `paywall_opened` since T_A by reason; and the **door**: distinct
+   pre-T_A non-owner users (`users.created_at < T_A`) with any non-`PUBLIC_EVENTS` `product_event`, or any
+   `documents` / `sessions` / `checkout_attempts` row, since T_A (it also says whether the 3 uploads were new
+   or returning users). Reading: sends = 0 and door > 0 → returning users got in and did not type; the
+   zero-active read stands as behaviour, gate satisfied. sends = 0 and door = 0 → no pre-T_A user
+   authenticated in 15 days, which points at re-entry, not the reader: Claude reads the auth/cookie changes
+   at T_A and at the 09-21 deploy before anything else. sends > 0 with messages = 0 → rejected sends; matched
+   by `limit_hit` `INSUFFICIENT_CREDITS` → a wall, and the thing to check is the Free monthly grant (a reset
+   that did not run at 09-01 would hit every returning Free user and look exactly like this cliff); matched by
+   `SESSION_LIMIT` → the cap; unmatched → a P0 defect fixed before anything else, and the read is withdrawn as
+   behaviour. Claude adds the four queries to `defect_checkout_failed.py`; they run with the 09-28 re-run at
+   the latest.
+4. Everything else in §9.26 stands: the Purchase row is resolved (C = 1, the button works in the wild, 0
+   paid, n = 1 and undecidable); the §9.11 default is unchanged; the 09-28 kit changes as specified.
