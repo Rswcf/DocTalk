@@ -1,0 +1,160 @@
+########################################################################
+# PART 1 — observation_window.py as shipped (unchanged)
+########################################################################
+T_A = 2026-09-07T00:22:30Z   T_B = 2026-09-09T09:27:27Z
+
+========================================================================
+0. SAMPLE SIZE — read this before any conclusion
+========================================================================
+  non-owner signups since T_A: 5
+  >>> n < 10: EXTEND the window. Do not conclude 'no effect' from this data.
+
+========================================================================
+1. DEFECT TRIGGERS — act immediately, do not wait for the window to end
+========================================================================
+  in-app upgrade_click, AUTHENTICATED non-owner: 1   <- the trigger
+  checkout_attempts rows since T_A:              4
+  checkout_created (non-owner):                  1
+  checkout_failed (any):                         5
+  [not intent] anonymous upgrade_click:          1
+  [not intent] signup-affordance sources:        1  ['demo_share_attempt']
+  (no defect: anonymous and signup-affordance clicks cannot create a checkout)
+  *** DEFECT: checkout_failed fired. Read its metadata_json. ***
+
+========================================================================
+2. PURCHASE WALL (A1/A2) — existence check
+========================================================================
+  demo_share_attempt                   1   signup affordance (opens auth, NOT checkout)
+  upload_error                         1   IN-APP purchase intent
+  checkout_created                     4
+  checkout_completed                   0
+
+========================================================================
+3. DOMAIN MODE TRIAL (A3) — the #1 intent source, never once used
+========================================================================
+  non-owner trial claims since T_A: 0   (base over 263 sessions: 0)
+
+========================================================================
+4. QUOTE FINDER (C1/C2) — base is 0 real searches, ever
+========================================================================
+  quote_finder_chip_clicked            0
+  quote_finder_panel_opened            0
+  non-owner quote_search (ledger)      0   <- true adoption
+
+========================================================================
+5. FIRST SESSION (B1) — cleanest baseline, coarsest resolution
+========================================================================
+  before  n=21   zero-message docs=5  (23%)   <- halving is the readable threshold
+  after   n=3    zero-message docs=3  (100%)   <- halving is the readable threshold
+
+========================================================================
+6. PARSE FAILURES (B2)
+========================================================================
+  day-0 error docs: 15   now ready: 0   <- any recovery = a dead end removed
+  new error docs since T_A: 0
+
+========================================================================
+7. UPGRADE NUDGE (B4) — base since the lifetime cap: 0
+========================================================================
+  upgrade_nudge_shown: 0
+  upgrade_click @ dashboard_upgrade_reminder: 1
+  checkout_created @ dashboard_upgrade_reminder: 1
+
+========================================================================
+8. DAY-2 — a REPORTED RATE, not the decider (base 0.149 over active users)
+========================================================================
+  non-owner users active on a LATER day within 7: 0
+  base rate: 0.149 over ever-active users (10/67), 0.059 over signups (10/170).
+  >>> RETRACTED (§9.11/§9.12): a single day-2 return is NOT decisive — at p=0.149 it is
+      what ~1 active user in 7 does anyway, and a zero read at n=10 happens 35% of the
+      time when nothing changed. Deciding day-2 needs ~30 exposed users (~Feb 2027).
+
+========================================================================
+9. DAY-4 — THE DECIDER. True zero base: 0 of 67 users, ever
+========================================================================
+  users reaching a 4th distinct active day: 0
+  >>> >=1: read that user's whole history and decide immediately. This is the only
+      metric where one positive read is unambiguous (0/67 over seven months).
+      Caveat: 0/67 is compatible with a true rate up to ~4.5%, so a first read means
+      "the wall can be crossed, here is who and how", never "B worked".
+
+########################################################################
+# PART 2 — amendments run by hand   (readout at 2026-09-22T07:45Z)
+########################################################################
+
+========================================================================
+§9.8.1 refined defect trigger — authenticated in-app upgrade_click since T_A
+========================================================================
+  e8fed11b 2026-09-16 19:22 src=upload_error                 plan_now=free   attempted=True  fell_back=False -> works
+  deduped per user-hour: {'works': 1}
+
+========================================================================
+§9.8.2 active-user denominator since T_A
+========================================================================
+  active non-owner users since T_A: new=0  returning=0
+
+========================================================================
+§9.11/§9.13 day-2 anchored on the first active day (reported rate, not a decider)
+========================================================================
+  base   (first active 2026-02-01..2026-08-31): returned<=7d 10/66   uncapped 13/66
+  window (first active 2026-09-07..2026-09-15, >=7d exposure):   returned<=7d 0/0   uncapped 0/0
+
+========================================================================
+§9.11 day-4 decider, with §9.18 'ever capped'
+========================================================================
+  users whose 4th distinct active day is >= T_A: 0   (base: 0 of 67 over seven months)
+
+========================================================================
+§9.18.6 purchase — by limit (limit_hit -> click 10 min -> attempt -> created -> paid)
+========================================================================
+  reason                surface  T_copy  hits users click attempt created paid
+  file_size             no-doc   post       1     1     1       1       1    0
+  surface: demo = demo document (a checkout here is the demo wall routing to Stripe, not the purchase wall);
+           unknown = no is_demo and an unresolvable document_id -> treat as demo-contaminated (§9.18.5).
+  anonymous limit_hit since T_A (cannot chain to checkout): none
+
+========================================================================
+§9.18.6 Quote Finder among citation clickers
+========================================================================
+  non-owner citation_clicked users since T_A: 0   of them touched Quote Finder (chip/panel): 0   searched: 0
+
+========================================================================
+Fable 2026-09-22 (2.0 ii): anonymous demo sessions since T_A
+========================================================================
+  anonymous demo sessions since T_A: 34   by document: alphabet-earnings=13, attention-paper=12, court-filing=9
+  per day: 09-08=3, 09-09=13, 09-10=4, 09-12=1, 09-13=3, 09-14=3, 09-15=2, 09-16=1, 09-19=1, 09-21=3
+
+========================================================================
+Fable 2026-09-22 (2.0 ii): share_created, all time
+========================================================================
+  share_created all time: non-owner 1, owner 5   (first 2026-05-06, last 2026-08-21)
+
+========================================================================
+Fable 2026-09-22 (2.0 ii): non-owner signups per day since T_A
+========================================================================
+  non-owner signups since T_A: 5 over 16 days (0.31/day)
+  per day: 09-11=1, 09-13=1, 09-16=1, 09-19=1, 09-21=1
+
+========================================================================
+§9.8.4 refreshed intent rates
+========================================================================
+  last 90 days (2026-06-24..now), authenticated non-owners, distinct users:
+    in-app upgrade_click: 9  (~3.0/month; §9.4 holds 09-28 unless below ~2/month)
+    upgrade_click source=domain_mode_selector, pre-T_A: 8
+    citation_clicked: 10
+
+========================================================================
+§9.11 historical returner read (first active 2026-02-01..T_A, returned within 7 days)
+========================================================================
+  user     first       return       days retmsg samedoc cites quote docs limit paper
+  0c25a28a 2026-03-19  2026-03-22      2      1   False     0     0    3  True False
+  c6cce383 2026-04-06  2026-04-07      2      1    True     0     0    3 False False
+  09508131 2026-04-08  2026-04-09      2      7    True     0     0    1 False False
+  d3300664 2026-04-25  2026-04-26      2      4    True     0     0    3 False False
+  55dde629 2026-04-28  2026-05-01      2      4    True     0     0    1 False False
+  29280f00 2026-04-29  2026-05-03      2      2   False     0     0    2 False False
+  5c451f94 2026-05-02  2026-05-05      3      2    True     0     0    1 False  True
+  5954da3d 2026-07-26  2026-07-27      2      7    True     0     0    1 False False
+  040411e1 2026-08-21  2026-08-28      3      2   False    44     0    3  True False
+  5e03a844 2026-08-30  2026-09-01      2      1    True     0     0    1 False False
+  pre-T_A returners within 7 days of their first active day: 10
