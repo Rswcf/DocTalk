@@ -24,10 +24,15 @@ test('the verified-quotes section renders on the students page and exists in all
 
 test('the verified-quotes copy names the feature as the product does and never promises a word-for-word match', () => {
   // Trust copy is per kind (.claude/rules/frontend.md, Quote Finder UI): a word-for-word claim belongs only to
-  // page_text results, so marketing copy about every result must not make it.
+  // page_text results, so marketing copy about every result must not make it anywhere on this page.
   for (const locale of LOCALES) {
+    const page = Object.entries(messages[locale]).filter(([key]) => key.startsWith('useCasesStudents.'));
     const text = SECTION.map((key) => messages[locale][key]).join(' ');
-    assert.doesNotMatch(text, /word-for-word|verbatim|逐字|一字不差|wörtlich|mot pour mot|palabra por palabra/i, `${locale}: unconditional verbatim claim`);
+    assert.doesNotMatch(
+      page.map(([, value]) => value).join(' '),
+      /word-for-word|verbatim|逐字|一字不差|逐語|一字一句|そのまま|그대로|축어|wörtlich|Wort für Wort|mot pour mot|mot à mot|textuellement|palabra por palabra|palavra por palavra|parola per parola|حرفي|शब्दशः|हूबहू/i,
+      `${locale}: unconditional verbatim claim`,
+    );
     assert.ok(text.includes(messages[locale]['quoteFinder.toolbarLabel']), `${locale}: does not name the feature as the UI does`);
   }
 });
