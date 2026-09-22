@@ -5,8 +5,9 @@ event. This lists every checkout_failed, checkout_created and checkout_attempts 
 shows whether the user is the owner and what the nearest attempt looked like. It also runs Fable's two
 follow-ups from §9.25: (a) a control on the zero-active read — user-role messages by owner / non-owner /
 anonymous, the 16 days before T_A against since — and (b) the one purchase chain (the upload_error/file_size
-user): signup date, what the attempt offered, the limit_hit source, and whether they came back. READ-ONLY; prints
-8-character user-id prefixes and no PII.
+user): signup date, what the attempt offered, the limit_hit source, and whether they came back. Since Fable's
+ratification (§9.26) it also runs the four gate checks on the zero-active read, plus the residual pending-sentinel
+count and the monthly-allowance/balance reads. READ-ONLY; prints 8-character user-id prefixes and no PII.
 
     DATABASE_URL="$(railway variables --service Postgres --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["DATABASE_PUBLIC_URL"])')" python3.12 .collab/reviews/2026-09-22-checkpoint-readout/defect_checkout_failed.py | tee .collab/reviews/2026-09-22-checkpoint-readout/defect-checkout-failed.txt
 """
@@ -104,8 +105,78 @@ async def main():
             from product_events where event_name = 'checkout_created' and created_at >= $1 order by created_at""", T_A, OWNER):
             print(f"  {r['created_at']:%m-%d %H:%M:%S}  {'OWNER' if r['owner'] else r['uid']:<8}  src={r['src']}"
                   f"  reason={r['reason']}  kind={'subscription' if r['subscription'] else 'credit pack/other'}")
+        await gate_checks(con)
     finally:
         await con.close()
+
+
+async def gate_checks(con):
+    """Fable's amended 2.3 gate (§9.26, 2026-09-22): control (a) proves that messages persist, not that
+    nobody tried. A send the backend rejects leaves no `messages` row (the credit check and the API-layer
+    402/403 run before `_persist_user_message_and_title`), while `chat_message_sent` is recorded before the
+    request goes out."""
+    before = T_A - dt.timedelta(days=16)
+    print("\ngate 1: chat_message_sent (recorded before the request) — non-owner | owner | anonymous")
+    for label, lo, hi in (("16 d before T_A", before, T_A), ("since T_A", T_A, dt.datetime.now(dt.timezone.utc))):
+        r = await con.fetchrow("""select
+                count(*) filter (where user_id is not null and user_id::text <> $3) sends,
+                count(distinct user_id) filter (where user_id is not null and user_id::text <> $3) users,
+                count(*) filter (where user_id::text = $3) owner, count(*) filter (where user_id is null) anon
+            from product_events where event_name = 'chat_message_sent' and created_at >= $1 and created_at < $2""",
+                               lo, hi, OWNER)
+        print(f"  {label:<16} non-owner {r['sends']} sends from {r['users']} users | owner {r['owner']} | anonymous {r['anon']}")
+
+    r = await con.fetchrow("""select count(*) sessions, count(distinct s.user_id) users,
+            count(*) filter (where exists (select 1 from messages m where m.session_id = s.id and m.role = 'user')) with_msg
+        from sessions s where s.created_at >= $1 and s.user_id is not null and s.user_id::text <> $2""", T_A, OWNER)
+    print(f"gate 2: non-owner sessions since T_A: {r['sessions']} from {r['users']} users; {r['with_msg']} with a user message,"
+          f" {r['sessions'] - r['with_msg']} without")
+
+    print("gate 3: limit_hit / paywall_opened since T_A by reason — non-owner | anonymous")
+    rows = await con.fetch("""select event_name, coalesce(reason, metadata_json->>'reason', '?') reason,
+            count(*) filter (where user_id is not null and user_id::text <> $2) non_owner,
+            count(*) filter (where user_id is null) anon
+        from product_events where event_name in ('limit_hit', 'paywall_opened') and created_at >= $1
+        group by 1, 2 order by 1, 2""", T_A, OWNER)
+    for r in rows:
+        print(f"  {r['event_name']:<15} {r['reason']:<32} {r['non_owner']:>3} | {r['anon']:>3}")
+    if not rows:
+        print("  none")
+
+    r = await con.fetchrow("""with pre as (select id from users where created_at < $1 and id::text <> $2)
+        select (select count(*) from pre) pre_users,
+          (select count(distinct p.user_id) from product_events p join pre on pre.id = p.user_id where p.created_at >= $1) event,
+          (select count(distinct d.user_id) from documents d join pre on pre.id = d.user_id where d.created_at >= $1) document,
+          (select count(distinct s.user_id) from sessions s join pre on pre.id = s.user_id where s.created_at >= $1) session,
+          (select count(distinct a.user_id) from checkout_attempts a join pre on pre.id = a.user_id where a.started_at >= $1) attempt,
+          (select count(*) from pre where
+             exists (select 1 from product_events p where p.user_id = pre.id and p.created_at >= $1)
+             or exists (select 1 from documents d where d.user_id = pre.id and d.created_at >= $1)
+             or exists (select 1 from sessions s where s.user_id = pre.id and s.created_at >= $1)
+             or exists (select 1 from checkout_attempts a where a.user_id = pre.id and a.started_at >= $1)) door""", T_A, OWNER)
+    print(f"gate 4 (the door): of {r['pre_users']} non-owner users who signed up before T_A, {r['door']} left any authenticated"
+          f" trace since T_A (event {r['event']}, document {r['document']}, session {r['session']}, checkout attempt {r['attempt']})")
+
+    r = await con.fetchrow("""select count(*) filter (where stripe_subscription_id = 'pending') pending,
+            count(*) filter (where stripe_subscription_id is not null and stripe_subscription_id <> 'pending') other
+        from users where lower(coalesce(plan, 'free')) = 'free' and id::text <> $1""", OWNER)
+    print(f"residual (Fable, 09-28): free non-owner users with stripe_subscription_id = 'pending': {r['pending']}, other non-null: {r['other']}")
+
+    print("supporting: free monthly allowances granted since 2026-08-01 (non-owner), by month")
+    for r in await con.fetch("""select to_char(created_at, 'YYYY-MM') ym, count(*) n, min(delta) lo, max(delta) hi
+            from credit_ledger where reason = 'monthly_allowance' and created_at >= '2026-08-01' and user_id::text <> $1
+            group by 1 order by 1""", OWNER):
+        print(f"  {r['ym']}: {r['n']} grants of {r['lo']}..{r['hi']} credits")
+    r = await con.fetchrow("""select count(*) filter (where credits_balance <= 0) zero,
+            count(*) filter (where credits_balance between 1 and 14) low,
+            count(*) filter (where credits_balance between 15 and 99) mid,
+            count(*) filter (where credits_balance >= 100) high
+        from users where lower(coalesce(plan, 'free')) = 'free' and id::text <> $1""", OWNER)
+    print(f"supporting: free non-owner balances — 0: {r['zero']}, 1-14: {r['low']}, 15-99: {r['mid']}, >=100: {r['high']}")
+    print("reading (Fable §9.26): sends = 0 and door > 0 -> behaviour, gate satisfied; sends = 0 and door = 0 -> returning"
+          " users never authenticated: read the auth/cookie changes at T_A and 09-21 first; sends > 0 with no messages ->"
+          " rejected sends: INSUFFICIENT_CREDITS -> the Free monthly grant, SESSION_LIMIT -> the cap, anything unmatched = P0,"
+          " fixed before anything else.")
 
 
 asyncio.run(main())
