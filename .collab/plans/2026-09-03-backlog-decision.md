@@ -1868,3 +1868,74 @@ active users, day-4, Quote Finder and the purchase chain. §9.4's "do not extend
 **Record.** This section and the strategy plan's §9 are edited in the worktree on `feat/citation-save-bridge`
 and **uncommitted** — Fable makes no git writes; Claude commits them with the follow-up script change. Raw
 output and kit: `70153ff`. Nothing here touches a product surface or production.
+
+### 9.26 Defect trigger resolved against §9.25's table — the listing, run 2026-09-22 (Claude, applying Fable's table)
+
+Listing: `.collab/reviews/2026-09-22-checkpoint-readout/defect-checkout-failed.txt`. The owner ran
+`defect_checkout_failed.py` with control (a) and read (b) added.
+
+**Rows.**
+- **All 5 `checkout_failed` are OWNER.** They fall on 09-13 between 15:03:36Z and 15:06:03Z: three at
+  `limit`/`document_limit`, two at `profile_credits`, all `plus/monthly`. Each has `click_before=True` and
+  `nearest_attempt=None`.
+- **No non-owner `checkout_failed` exists.**
+- **Attempts since T_A:** OWNER 09-14 06:48:22Z (`profile_credits`, session created, now `expired`); OWNER
+  09-14 09:23:57Z (`billing`, session, `expired`); **e8fed11b 09-16 19:22:29Z** (`upload_error`/`file_size`,
+  session, `open`); OWNER 09-20 20:44:30Z (`dashboard_upgrade_reminder`, session, `open`).
+- **`checkout_created`:** 4, each 1 s after its attempt. Three are OWNER's; one is e8fed11b's. No
+  credit-pack rows.
+
+**Table row applied: row 1, "all 5 OWNER".** The rows also meet row 2's literal condition, since none has an
+attempt. Row 1 applies because the failures are explained:
+- `nearest_attempt=None` puts every failure in a pre-attempt mode (§9.25: 503/400/502 before the attempt
+  row).
+- The next billing commit, `e7db76e` "Recover orphaned subscription checkouts safely" (09-14 06:40Z, in
+  `stable`), rewrites exactly that pre-attempt path. It adds non-terminal subscription statuses so that a
+  legacy checkout sentinel cannot block or duplicate a subscription, and it paginates the customer's
+  subscriptions and subscription Checkout Sessions in full.
+- Eight minutes after that commit the owner's attempt succeeded, and so did every attempt afterwards,
+  including the only non-owner one.
+
+`[inference]` The owner's account carried legacy checkout/subscription state, which the recovery path before 0.30.3 could not reconcile. The owner's 09-13 verification exposed it; `e7db76e` fixed it. The failure responses
+themselves are only in the 09-13 Railway log, so the cause is inferred from the code and the timing, not
+measured. Any legacy user carrying the same state would have hit the same failure until 09-14; live Stripe has
+held very few historical sessions (08-25 memory).
+
+**Verdict.**
+- The trigger is **closed as owner verification traffic that exposed an already-fixed recovery bug**.
+- Closure is conditional on the owner's one-line confirmation, per row 1: (1) the 09-13 15:03–15:06Z clicks
+  were theirs; (2) no owner-controlled account other than the OWNER UUID has been used in production since
+  T_A. This matters most for **e8fed11b**, whose profile (below) also fits a fresh test account.
+- Spec for the 09-28 re-run, from row 1: Part 1's `checkout_failed (any)` becomes owner-excluded, with an owner
+  line beside it.
+
+**Purchase row (§9.25), no longer provisional apart from (2).** e8fed11b's click has no `checkout_failed`. Its
+session was created 1 s after the attempt, so the user reached Stripe: **C = 1 → the button works in the
+wild**, with 0 paid.
+
+**Control (a) — the zero-active read stands.**
+
+| | anonymous | owner | non-owner |
+|---|---|---|---|
+| 16 d before T_A | 18 msgs in 10 sessions | 0 | **52 msgs from 9 users** |
+| since T_A | 41 msgs in 34 sessions | 11 | **0 msgs from 0 users** |
+
+The pipeline records owner and anonymous messages normally in the same period, so the non-owner zero is
+behaviour, not instrument. The 34 anonymous demo sessions did carry messages (1.2 per session).
+
+**Read (b) — the only purchase chain.** e8fed11b:
+- signed up 09-16, after T_A; plan now `free`;
+- `limit_hit` at 19:17:55Z from `dashboard_upload_precheck`/`file_size`. The client-side precheck rejected a
+  file over the Free 50 MB cap, and its size is not recorded (the §9.25 gap);
+- clicked upgrade 4.5 min later, at 19:22:29Z; was offered `plus/monthly`; did not pay;
+- 0 documents before or after, 0 messages, last event 19:22Z. **Never returned.**
+
+The chain is an arrival whose first action was a file too big for Free. It is not a product user who hit a
+wall.
+
+**Consequences.**
+- **§9.25's 2.3 gate:** control (a) confirms zero-active. The trigger closes on the owner's line, and then the
+  gate is satisfied.
+- **Nothing selects a batch for 09-28;** the §9.11 default (acquisition) stands.
+- **Before the 09-28 re-run, Claude adds to the kit:** the owner-excluded `checkout_failed` line and §9.25's
+  four instrument notes.
