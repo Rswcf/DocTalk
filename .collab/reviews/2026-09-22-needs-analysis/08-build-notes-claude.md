@@ -33,10 +33,10 @@ Tests: backend 1091 passed + 1 strict xfail (below); frontend 231/231; ruff, tsc
    Flash decodes at 256–428 tokens/s, Pro at 122–146; first token within 1.7–4.6 s; the provider accepts up to
    393216. The budget (setup 7 s, focus 4 s only within 45 s, 1 s persistence, 2 s margin, slowest speed cut by a
    quarter) puts Flash at 6144 — the largest step at which even a near-max answer followed by its repair call
-   fits in 60 s. Pro stays at 4096. **Open risk, not caused here:** under provider load a near-max Pro answer
-   plus its repair call can already exceed the proxy. It is pinned as a strict xfail in
-   `tests/test_answer_length_budget.py` and needs a repair time guard like citation focus has — a decision for
-   Fable / Codex.
+   fits in 60 s. Pro stays at 4096. **Open risk, not caused here:** a near-max Pro answer plus its repair call
+   already exceeds the proxy — even at the median measured speed it takes about 62.9 s (35.3 s + 19.5 s +
+   setup). It is pinned as a strict xfail in `tests/test_answer_length_budget.py` and needs a repair time guard
+   like citation focus has — a decision for Fable / Codex.
 7. **Two more strings.** `errors.BEYOND_DOCUMENT_REQUIRES_SIGN_IN.{title,body}`, so slice 2 translated 7 keys,
    not 5.
 
@@ -73,3 +73,22 @@ Tests: backend 1091 passed + 1 strict xfail (below); frontend 231/231; ruff, tsc
   is kept outside the repo, beside the private export. Running the replay needs the production documents, so it
   joins the rest of the replay list after 09-28.
 - **Codex review** against 07 §6, plus items 1–7 above.
+
+## For the Codex brief (found after the first write-up; none blocks the branch)
+
+- **`sessions.domain_mode` on a beyond request.** The slot gate is skipped, correctly, but `chat_stream` still
+  syncs the session's display field to the request's `domain_mode`. So a Free user with no slot and "legal"
+  selected ends up with a session labelled legal without having claimed a slot. This is benign: ownership
+  lives only in `feature_trial_usages`. It is stated here because 07 §6.2 asks about every combination.
+- **Regenerating a beyond answer** is now covered (`32e3c3a`). The retry guard's strict-route check is
+  plan-based (`VERIFIED_QUOTE_SEARCH`), and the hand-built beyond plan never carries it, so a regenerate whose
+  question contains strict-quote words stays beyond and is not refused.
+- **Events.** `_safe_properties` keeps string values, so `document_kind` and `answer_scope` reach
+  `product_events.metadata_json`; the rates in 07 §3 can be computed from them.
+- **The Flash limit sits at the edge of its own model**: 59.9 s against 60 in the repair-path check. The
+  margins are already conservative (the slowest sample cut by a quarter, plus 2 s). If Codex wants more room,
+  the next step down is 5632 (57.3 s). The planner timeout in that test now reads the code default, so a
+  local `.env` cannot flip it.
+- **Accessible name.** The browser tool reported the action button by its `title`. It does the same for the
+  citation marker (`<button title="Jump to page 8">1</button>`), where accessible-name rules give "1". So this
+  is how the tool reads the tree: the button's name is its visible text, and the title is its description.
