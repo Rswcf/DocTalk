@@ -42,6 +42,14 @@ test('the zh and es search titles carry the academic long-tail terms', () => {
   assert.match(es['useCasesStudents.metaTitle'], /IA para investigar gratis/i);
 });
 
+test('the citations feature page links to the students page in the reader\'s locale', () => {
+  // Its use-case cards passed a bare path, so /zh/features/citations sent readers to the English students page.
+  const content = fs.readFileSync(path.join(src, 'app/features/citations/CitationsContent.tsx'), 'utf8');
+  const hrefs = [...content.matchAll(/\bhref:\s*([^,\n}]+)/g)].map((m) => m[1].trim());
+  assert.ok(hrefs.length > 0);
+  for (const value of hrefs) assert.match(value, /^href\(/, `link bypasses the locale helper: ${value}`);
+});
+
 test('the ranking academic blog post links to the students page', () => {
   const post = fs.readFileSync(path.resolve(__dirname, '../content/blog/ai-research-paper-summarizer.md'), 'utf8');
   assert.match(post, /\]\(\/use-cases\/students\)/);
