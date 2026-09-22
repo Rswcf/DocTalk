@@ -256,3 +256,48 @@ The owner accepted every §4 recommendation: "按照 Fable 的推荐继续推进
   checklist is in `2026-09-22-owner-actions.md`.
 - **4.7** The zh/es search titles of `/use-cases/students` are approved; §2.2 slice B is no longer gated.
 - **4.8** The 09-28 rule is ratified.
+
+## 9. Readout addendum (2026-09-22, after the 07:45Z run — Fable 5.1)
+
+The readout ran (owner, 07:45Z; raw output at
+`.collab/reviews/2026-09-22-checkpoint-readout/readout-0922.txt`). The record is §9.25 of
+`.collab/plans/2026-09-03-backlog-decision.md`; this lists only what it changes here.
+
+**Unchanged:** the ranking (2.0 → 2.1 → 2.2 → 2.3), the 09-28 default (acquisition unless a thread), the
+bridge's independence from the readout, and the stop list. No §9.11 thread exists: day-4 = 0, non-owner Quote
+Finder search = 0 with zero post-T_A citation clickers (C1's reach is untested, not failed), and the
+historical returner profile is the 09-08 read in table form — 7 of 10 same-document, shallow, never through
+Quote Finder, with 7 of 10 unreadable on `cites` because the instrumentation only persists from 05-07. That
+profile is already 2.1; it adds no second hook.
+
+**What moved:**
+
+1. **2.0 is done, with one open item.** Every §8.6 row has a value (§9.25 table). The defect trigger fired —
+   5 `checkout_failed` rows since T_A over any user; all authenticated, and at most one can be a non-owner
+   (only one authenticated non-owner `startCheckout` call exists since T_A, e8fed11b's). It is **open** until
+   the owner runs `defect_checkout_failed.py`; §9.25 holds a decision table keyed to that script's columns,
+   with Claude's same-day action per row. **New dated step, 09-22/23:** Claude adds control (a) and read (b)
+   from §9.25 to the script before the owner runs it (or as a second pass), then acts on the table that day
+   and records the outcome as §9.26. The Purchase row stays provisional until then — a server-side
+   `checkout_created` can coexist with a client-side failure for the same click.
+2. **§1's "what would change my mind" item 2 fired at the edge of its wording.** e8fed11b reached a checkout
+   from `upload_error`/`file_size` — in-app, own work, but the no-document surface — and did not pay.
+   Honoured narrowly: read (b) is the "packaging analysis" (what Stripe offered, whether they returned or
+   uploaded). No price or cap moves (§9.3 needs C ~ 5; §9.4); no batch. `file_size` is now the limit behind
+   both the only sale and the only post-A1 checkout — carried forward as a fact, n = 2 in five months. The
+   instrument cannot say how large the file was; recorded as a gap, not fixed during the window.
+3. **Zero active non-owner users since T_A** (§9.25 read 1): the 12-MAU base of 09-08 did not return and the
+   5 arrivals did not chat, while anonymous demo sessions (34), signups (5) and uploads (3) continued.
+   Measured and cross-checked (relation unchanged after 0.30.1; the owner's own 09-13 production chat
+   persisted); control (a) closes the residual doubt. Consequences: §1's diagnosis is stronger, not different;
+   every wall metric this window was measured on nobody; 2.3's case is stronger; and the bridge's own metric
+   has no readers until non-owner activity returns — recorded, not a reason to stop it (it runs on the
+   mechanism argument).
+4. **One gate on 2.3, consistent with §5's own logic:** it starts on the owner's 09-28 go only if the
+   follow-up run has closed the defect trigger and control (a) has not overturned the zero-active read. 2.3
+   changes the funnel's unit; it must not start on an open trigger or an unconfirmed baseline. 2.1 and 2.2
+   are not gated.
+5. **09-28 is still the decision day.** The owner re-runs `readout_0922.py` plus the follow-up that morning
+   (5 min); the rows that can move in six days are active users, day-4, Quote Finder and the purchase chain.
+   Four instrument caveats for that run are registered spec-only in §9.25 (recovered-attempt success
+   signature; owner-exclusion on four lines; `file_size` carries no size; per-user activation beside B1).

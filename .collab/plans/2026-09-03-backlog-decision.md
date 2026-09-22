@@ -1631,3 +1631,240 @@ the three hubs emit BreadcrumbList only, correctly.
 being wrong — stripping HTML tags leaves `<script>` **contents** in the text, so the JSON-LD matched
 itself. Removing script blocks before searching gave the real answer. A survey that can fool itself is
 worse than none.
+
+### 9.25 Checkpoint record — the overdue 09-21 readout, run 2026-09-22T07:45Z (Fable 5.1)
+
+The §8.6 checkpoint, due 09-21, ran on **2026-09-22 at 07:45Z**. The owner ran it: Claude is denied
+production reads by the auto-mode classifier (`.collab/reviews/2026-09-22-checkpoint-readout/README.md`).
+Raw output, unedited and committed at `70153ff`:
+`.collab/reviews/2026-09-22-checkpoint-readout/readout-0922.txt` (the README said "append to the DRAFT";
+the kit directory holds it instead, and the DRAFT stays the outline record). Part 1 is
+`backend/scripts/observation_window.py` unchanged; Part 2 (`readout_0922.py`) hand-runs the §9.8 / §9.11 /
+§9.13 / §9.15.6-with-§9.18.5 amendments and the strategy plan's §2.0 additions. Exposure at the readout:
+**15.31 d** after T_A (2026-09-07T00:22:30Z), 12.93 d after T_B, 11.87 d after T_copy. Everything below is
+**measured** unless marked `[inference]`; an "existence reading" is the §8.6 threshold applied to the value
+and nothing more.
+
+**Sample gate.** Non-owner signups since T_A: **5** over 16 days (09-11, 09-13, 09-16, 09-19, 09-21) =
+0.31/day. §8.6's n >= 10 gate is not met; per §9.0/§9.2 it governs day-2 only, which is demoted. The rate is
+noise against the 90-day 0.51/day (P(<= 5 | 8.2 expected) = 0.18) and low against the 30-day 0.67/day
+measured on 09-08 (P = 0.04). `[inference]` Neither the 09-20 disavow nor the 09-21 Night surface can have
+moved a 16-day count that ends on 09-22.
+
+#### The §8.6 rows
+
+| Area | Value at 09-22 | Existence reading |
+|---|---|---|
+| Purchase A1/A2 — in-app `upgrade_click` I, `checkout_created` C | I = **1** authenticated non-owner: `e8fed11b`, 09-16 19:22Z, `source=upload_error`, `reason=file_size`, `plan_now=free`, attempt row within 60 s → `works` (§9.8.1). C = **1** non-owner — a **subscription** checkout (the attempt row within 60 s proves the path). `checkout_completed` = 0. Any-user lines: `checkout_attempts` 4, `checkout_created` 4 → 3 rows that are not e8fed11b's: owner subscription tests or **credit-pack** checkouts (`billing.py:896` also emits `checkout_created`, `reason=credit_pack`, with no attempt row and no `upgrade_click`; it can never pair with a `checkout_failed`) — the listing separates them (instrument note 6). | **Provisional.** "C >= 1 → the button works in the wild" holds only if the pending listing shows no `checkout_failed` at e8fed11b's click: the server commits `checkout_created` before the response returns, so created-and-failed for one click is a possible state (decision table below). If it holds, the wall for this one user is price/value — §9.3 needs C ~ 5 to decide that; §9.4: C = 1 is confirmation, not a decision. §9.4's "no intent event of any kind by 09-28" branch does **not** fire: one arrived. |
+| Domain Mode A3 | non-owner `feature_trial_usages` since T_A: **0**. No `domain_mode_selector` `upgrade_click` since T_A, so §9.3's "selector click by a free user with no trial row = defect" cannot fire. | 0 — no read. The population that produces it (active free users opening the selector) is empty this window (read 1 below). |
+| Quote Finder C1/C2 | chip **0**, panel **0**, non-owner `quote_search` **0**. Non-owner `citation_clicked` users since T_A: **0**. | 0 — no read. §9.18.7's test ("0 with clicks > 0") did not run because clicks = 0. C1's reach is **untested**, not failed. |
+| First session B1 | before n = 21, zero-message 5 (23 %); after n = **3**, zero-message **3** (100 %). | **Unreadable at this n** (§8.6), recorded with its direction: P(3 of 3 \| 0.23) = 0.012 if the documents are independent, one observation if one user uploaded all three — the count cannot tell. Per-user activation (§9.13.4, the cleaner unit): 0 of the 2 signups with >= 7 d exposure (3 if 09-16 is counted at ~6 d), P = 0.37 (0.23) under the 0.39 base. It is the zero-active read below, seen at the document level. |
+| Parse failures B2 | day-0 error docs 15, now ready **0**; new error docs since T_A **0**. | Unread by construction (§9.3: their owners never returned). 0 new dead ends. |
+| Nudge B4 | `upgrade_nudge_shown` non-owner **0**. `upgrade_click` / `checkout_created` @ `dashboard_upgrade_reminder` = 1 / 1 — these two lines are not owner-filtered, and Section 2's exhaustive non-owner source list (`demo_share_attempt` 1, `upload_error` 1) does not contain `dashboard_upgrade_reminder`, so **both are the owner's** (deduced, not inferred). | The surface renders (the owner reached a checkout from it); no non-owner was eligible — eligibility needs >= 3 messages and no non-owner sent one this window. 0 is entailed, not informative. |
+| Day-2 (reported rate) | Signup-anchored (Part 1): 0. First-active-anchored (§9.11), window = first active 09-07..09-15 with >= 7 d exposure: **0 / 0 exposed — undefined, not zero**. Base (first active 02-01..08-31, right-censored per §9.13.2): 10/66 capped, 13/66 uncapped. | Nothing to report; decides nothing before ~Feb 2027 in any case (§9.13.1). |
+| **Day-4 (the decider)** | users whose 4th distinct active day is >= T_A: **0** (base 0 of 67). | 0 — no thread. The four watched users at 3 days (§9.13.3) did not return. |
+
+**Refreshed intent rates (§9.8.4).** Last 90 days (06-24..09-22), authenticated non-owners, distinct users:
+in-app `upgrade_click` **9** (~3.0/month; §9.4's floor is ~2/month → **09-28 holds**); `domain_mode_selector`
+pre-T_A 8; `citation_clicked` 10. Since T_A alone: 1 intent user in 15.3 d — P(<= 1 | 1.53 expected) = 0.55,
+consistent with the rate.
+
+**Purchase — by limit (§9.15.6 chain, §9.18.5 demo/own split; the kit labels it §9.18.6).** One chain since
+T_A: `file_size` / **no-doc** / post-T_copy: 1 hit → 1 click within 10 min → 1 attempt → 1 created → 0 paid
+— e8fed11b's story. No `session_limit` hit since T_A on any surface, authenticated or anonymous: the T_copy
+split has nothing to split and the honest-copy chain (§9.15.3) is unobserved. The `limit_hit` event carries
+`source/reason/plan` only (`DashboardPageClient.tsx:307`, `:334`): if `source=dashboard_upload_precheck` the
+rejection was client-side (`file.size` against the Free 50 MB cap) and no server trace exists; if
+`dashboard_upload`, the backend rejected it and the Railway access log has the response. Either way **the
+size of the file behind the only post-A1 checkout is not in the instrument** — recorded as a gap, not fixed
+(no new instrumentation during the window, §8.6); read (b) below prints the `source`.
+
+**Anonymous and other additions (strategy §2.0).** Anonymous demo sessions since T_A: **34** (2.1/day;
+alphabet-earnings 13, attention-paper 12, court-filing 9); 09-09 = 13 of them — `[inference]` the v0.30.0
+smoke, since anonymous sessions cannot be owner-excluded. `share_created`, all time: non-owner **1**, owner 5
+(first 05-06, last 08-21) — the share loop has been used once by a user, ever.
+
+#### Two reads the table does not contain
+
+**1. Zero active non-owner users since T_A — measured, cross-checked, one control still owed.** §9.8.2:
+`new = 0, returning = 0` (user-role messages via `sessions.user_id`, owner excluded, 15.3 days). The base this
+window was designed on was **12** distinct active non-owner users in the 30 days to 09-08 and 3 in the 7 days
+to 09-08 (§9.10 C); §9.11's "at 12 MAU … 'no intent event by 09-28' is ~4 % likely" rests on it. Under that
+base the null tail of a 15.3-day zero is **0.1–0.6 %** (Poisson at 0.33–0.43 distinct users/day; clustering
+widens it, not to 10 %). Internal consistency: every row that needs an active user reads 0 (day-2 window 0
+exposed, day-4 0, citation clickers 0, nudge 0, B1 3 of 3, trial 0), and the one intent user is consistent
+with it — a `file_size` rejection creates no document and therefore no message. Instrument cross-checks,
+both positive: the relation is unchanged at HEAD after 0.30.1's chat rewrite (`Message(session_id,
+role="user")`, `chat_service.py:1381`; 626 lines of that file changed since v0.29.0), and the owner's own
+production chat on 09-13, post-deploy, persisted and settled through the same path
+(`.collab/reviews/2026-09-13-production-release/RESULTS.md`: "Answer persisted after navigation/reload",
+"Court chat settled exactly 4 credits"). The site was not dark meanwhile: 34 anonymous demo sessions, 5
+signups, 3 ready uploads. **Reading:** the returning base did not return and the arrivals did not chat. It is
+the strongest form yet of §9.13.1's argument that acquisition binds learning, and it means every wall metric
+in this window was measured on nobody. One control query (a) closes the residual instrument doubt: user-role
+message counts by owner / non-owner / anonymous, 16 days before T_A against since — the anonymous column also
+says whether the 34 demo sessions carried messages.
+
+**2. The one purchase chain fired the strategy plan's second "what would change my mind" item — at the edge
+of its wording.** `.collab/plans/2026-09-22-next-strategy.md` §1: "`checkout_created` >= 1 from an
+own-document in-app source → the wall is price/value and packaging analysis (not cuts, §9.4) enters the
+list." e8fed11b's checkout came from `upload_error`/`file_size`: in-app, the user's own work, but the
+`no-doc` surface — not an own-*document* source. Honoured narrowly, as the parenthesis requires: a
+**read-only** item joins the follow-up run — the attempt's `plan`/`billing_period` (what Stripe offered),
+the signup date against T_A, whether the user uploaded or returned afterwards, and the `file_size` gap above.
+Not a batch; no price or cap moves (§9.3: C ~ 5; §9.4; 08-25). `file_size` is now the limit behind both the
+product's only sale (§9.14) and its only post-A1 checkout — a fact to carry into any later packaging read, at
+n = 2 across five months.
+
+#### Defect trigger — fired, pending the detail listing
+
+Part 1 printed `*** DEFECT: checkout_failed fired ***`: **5** `checkout_failed` rows since T_A, counted over
+**any** user (the line is not owner-excluded), while the refined trigger (§9.8.1) reads the only
+authenticated non-owner in-app click as `works`.
+
+What the code fixes before any row is read:
+
+- `checkout_failed` has exactly one emitter, `frontend/src/lib/billing.ts:63`, the catch of `startCheckout`:
+  it fires only when `createSubscription()` throws, with the same `{plan, period, source, reason}` as the
+  `upgrade_click` fired lines earlier in the same call. Its `reason` is the **limit** reason, never the
+  failure cause; the cause exists only in the Railway log (`billing.py` `logger.error` lines) or the Vercel
+  function log.
+- It is not a `PUBLIC_EVENT` (`backend/app/api/events.py`), so anonymous rows are rejected 401: **all 5 rows
+  are authenticated users**, owner or non-owner.
+- Every `startCheckout` call emits `upgrade_click` first, including the `/billing` button
+  (`BillingPageClient.tsx:253-258`, `source = ?source || "billing"`, not in `MARKETING`). Section 2 lists every
+  non-owner-or-anonymous `upgrade_click` source since T_A: `demo_share_attempt` 1 (the anonymous click) and
+  `upload_error` 1. So **exactly one authenticated non-owner `startCheckout` call exists since T_A** —
+  e8fed11b's — and any non-owner `checkout_failed` is either that click or a click whose `upgrade_click` POST
+  was dropped (`analytics.ts`: fire-and-forget `fetch` with `keepalive`, no retry).
+- Server side (`billing.py:906-1035`): the attempt row is committed `status='creating'` before Stripe is
+  called; `_apply_remote_checkout_session` commits `open`/`complete`/`expired`; `_record_product_event`
+  commits `checkout_created` in its own transaction **before** `return {"checkout_url"}`. A `checkout_created`
+  that coexists with a `checkout_failed` for one click therefore means the backend finished and the failure is
+  in the return path — the proxy's 30 s `AbortSignal.timeout` for non-chat routes (`route.ts:119`), the
+  network, or `handle()` — never a backend exception.
+- Failure modes and the trace each leaves: 503 "Stripe not configured", 400 "price not configured", 400 "You
+  already have an active subscription" (`:927`, `:972`), 502 "Failed to recover" → **no new attempt**;
+  StripeError on creation → attempt stays **`creating`, no session** (502); resolution `None` → attempt
+  present, 502 "expired before redirect", no created event; a recovered active attempt
+  (`_ACTIVE_CHECKOUT_ATTEMPT_STATUSES = {creating, open}`) returns the **old** URL with no new attempt and no
+  new `checkout_created`.
+
+Claude cannot read production. The listing is
+`.collab/reviews/2026-09-22-checkpoint-readout/defect_checkout_failed.py` (read-only, 8-char prefixes): every
+`checkout_failed` / `checkout_attempts` / `checkout_created` row since T_A, OWNER-marked, with
+`click_before` (an `upgrade_click` in the prior 30 s) and `nearest_attempt` (the attempt status within
+−2/+1 min). The owner runs it; the outcome is read off those columns:
+
+| Outcome, per `checkout_failed` row | Meaning | Claude, the same day |
+|---|---|---|
+| **All 5 OWNER**, attempts explained by the 09-13/14 verification (`RESULTS.md`; `e7db76e` "Recover orphaned subscription checkouts safely" implies orphaned checkouts were seen then) | Owner verification traffic; not a user-facing defect | Close the trigger. Owner confirms in one line that the failures were deliberate, **and** that no owner-controlled account other than the `OWNER` UUID was used in production since T_A (the kit knows one id; a second account would read as non-owner). Spec: Part 1's `checkout_failed (any)` becomes owner-excluded with an owner line beside it. |
+| OWNER rows **not** explained by a test: the attempt has `stripe_session=False`, or there is none | A production Stripe/config failure that would hit any user (price id, customer creation, recovery) | Ask the owner for the `logger.error` lines ("Failed to create subscription checkout" / "Failed to recover subscription checkout") at those timestamps; reproduce on the local stack with test keys; fix; Codex review; owner deploys backend-first. The Purchase row stays provisional until then. |
+| A non-owner row = **e8fed11b**, `click_before=True`, the attempts listing shows that attempt with **`stripe_session=True`** (any `status` — it is the *current* value, and `_apply_remote_checkout_session` moves `open` to `expired`/`complete` at the next reconcile), and a `checkout_created` within seconds | The session was created and committed; the client threw in the return path → **the user never reached Stripe** despite C = 1 | Withdraw "C >= 1 → works in the wild" in place (this section and the table). Owner exports the Vercel function log for 09-16 19:22Z (30 s abort vs 5xx) and the Railway request duration; Claude reads `route.ts` / `handle()` for the path, reproduces, fixes, Codex; frontend-only if it is the proxy timeout, backend-first otherwise; T_fix recorded; the by-limit row is re-read on 09-28 as "attempt, not reached". |
+| A non-owner row = e8fed11b, that attempt **`stripe_session=False`** (status `creating`), and a `checkout_created` **later** | The first click failed on a StripeError; a retry succeeded through the recovery path (its `upgrade_click` dropped, or the `creating` attempt reused) | Read the error line; deterministic → fix as above; transient → record. Either way register instrument note 1 below. |
+| A non-owner row with `click_before=False` and `nearest_attempt=None` | Either a dropped `upgrade_click` POST, or the 400 "already have an active subscription" path — a past subscriber whose `users.stripe_subscription_id` was not cleared (one canceled live subscription exists, `RESULTS.md`; the cancel paths do clear it at `billing.py:1446`, `:1577`, `:2084`, `:2142`, so unlikely, but the trace is exact) | Ask whether that user's `stripe_subscription_id` is set or NULL (not the value) and for the 400 in the Railway access log; set after cancellation → fix the clearing path; dropped POST → record and count the row as a second intent user. |
+| Non-owner row(s) from a user **other than** e8fed11b | Their click was not persisted; post-T_A in-app intent becomes 2 users | Classify by the same columns as the rows above; update the Purchase row's I. |
+
+Until the listing exists the trigger is **open** and the Purchase row is provisional. A defect is a same-day
+fix (§8.6 "act immediately"), not a batch; it selects nothing for 09-28.
+
+#### Instrument notes registered for the 09-28 re-run (spec-only; the candidate is frozen)
+
+1. §9.8.1's `attempted` (an attempt row within −5/+60 s of the click) misses the recovery path: a click that
+   reuses an active attempt started earlier returns the old URL with no new row, so a **repeat click reads as
+   DEFECT**. Amend: `attempted = exists attempt in the window OR exists attempt with status in
+   ('creating','open') started before the click and updated_at >= the click`.
+2. Not owner-excluded and to be printed owner / non-owner side by side: Part 1's `checkout_failed (any)` and
+   `checkout_attempts`; Section 2's `checkout_created` / `checkout_completed`; Section 7's two
+   `dashboard_upgrade_reminder` lines.
+3. Anonymous demo sessions cannot be owner-excluded; a spike on a deploy day is the smoke test until shown
+   otherwise.
+4. `limit_hit reason=file_size` carries no size, and the precheck path leaves no server trace. The file/cap
+   question is unanswerable from events; do not add instrumentation during the window.
+5. B1's unit stays the document (§9.13.4); print per-user activation beside it (signups since T_B with >= 1
+   active day within 7 d; base 0.39).
+6. `checkout_created` has two server emitters: the subscription path (`billing.py:1012`, metadata carries
+   `checkout_attempt_id`) and the credit-pack path (`:896`, `reason=credit_pack`, `pack_id`, no attempt row,
+   no `upgrade_click`). A pack checkout says nothing about the subscribe button. The follow-up listing's
+   `checkout_created events` section prints `reason` and whether `metadata_json ? 'checkout_attempt_id'`;
+   the 09-28 kit counts the two separately. The `checkout_failed` section's `nearest_attempt` is the
+   attempt's current `status`; the discriminating column is `stripe_session` in the attempts section.
+
+**Follow-up run — additions Claude makes to `defect_checkout_failed.py` before the owner runs it, or as a
+second pass carrying only these queries if it has already run.** Read-only; 8-char prefixes; no emails, no
+filenames, no Stripe ids.
+
+```sql
+-- (a) activity control: user-role messages by class, 16 d before T_A against since
+select case when s.user_id is null then 'anon'
+            when s.user_id::text = :owner then 'owner' else 'non-owner' end who,
+       count(*) filter (where m.created_at <  :ta) msgs_before_16d,
+       count(*) filter (where m.created_at >= :ta) msgs_since,
+       count(distinct s.user_id) filter (where m.created_at <  :ta) users_before,
+       count(distinct s.user_id) filter (where m.created_at >= :ta) users_since
+from messages m join sessions s on s.id = m.session_id
+where m.role = 'user' and m.created_at >= :ta - interval '16 days'
+group by 1 order by 1;
+
+-- (b) the one chain: signup vs T_A, what Stripe offered, what followed (limit source included)
+select left(u.id::text, 8) uid, u.created_at >= :ta signed_up_in_window, u.plan,
+       (select count(*) from documents d where d.user_id = u.id) docs,
+       (select count(*) from sessions s where s.user_id = u.id) sessions,
+       (select string_agg(a.plan || '/' || a.billing_period || ':' || a.status, ', ' order by a.started_at)
+          from checkout_attempts a where a.user_id = u.id and a.started_at >= :ta) attempts,
+       (select string_agg(p.event_name || ':' || coalesce(p.source, p.metadata_json->>'source', '')
+                          || '@' || to_char(p.created_at, 'MM-DD HH24:MI'), ', ' order by p.created_at)
+          from product_events p where p.user_id = u.id and p.created_at >= :ta) events_since
+from users u where u.id::text like 'e8fed11b%';
+```
+
+#### The historical returner read (§9.11) — what is readable
+
+Ten pre-T_A users returned within 7 days of their first active day (the 13 of §9.12 less the three uncapped
+returners — 558731d6, 72f99d73, 58688124). Persistable-from window for `citation_clicked`: the
+`product_events` table is migration `20260501_0022` (`b93d9f2`, 05-01); the client emitter and the backend
+allowlist are one commit, `b8fa396` (2026-05-06 15:20 CEST), and the backend 400s unknown event names, so
+rows exist only from the next backend deploy — by the release-record convention on `stable`, no later than
+`a69a77a` (tagged `v0.3.0-beta`, 05-07 01:32 CEST). **Seven of the ten rows have first and return days
+before that** (0c25a28a, c6cce383, 09508131, d3300664, 55dde629, 29280f00, 5c451f94 — the last returned
+05-05): their `cites = 0` is unreadable. `cites` is per-user all-time, so an undated later active day (the
+three `days = 3` users) cannot be excluded; none shows a click. Readable: **5954da3d 0, 5e03a844 0, 040411e1
+44** — the 44 plus 558731d6's 31 (uncapped, §9.17) are §9.14's 75, i.e. all citation clicking among returners
+sits in two users. The single paper-cohort returner (5c451f94, `paper=True`) is in the unreadable seven, so
+this table cannot test the 06-12 "paper writers verify by clicking" thesis either way. Readable regardless
+of instrumentation: **7 of 10 returned to the same document**; return-day user messages 1–7 (median 2);
+`quote_*` events 0 for all ten; uploads 1–3; two ever hit a limit (0c25a28a; 040411e1 — the demo
+`session_limit`, §9.16). The profile is §9.14's, now in table form: the return is "keep working on the
+document I have", shallow, never through Quote Finder. It was converted into the citation → verified-quote
+bridge on 09-22 (strategy §2.1; owner ruling 4.3) and this table adds no second hook. No post-T_A returner
+exists to extend it.
+
+#### §9.11 — does a thread exist for 09-28?
+
+| Thread | Evidence | Verdict |
+|---|---|---|
+| Returner profile from the historical read | Exists (above); it is the 09-08 read (§9.14/§9.17) in table form, 7 of 10 unreadable on `cites`; already the basis of the bridge (§2.1, ratified). No post-T_A returner. | **Not a second thread** — its product is already sequenced. |
+| Day-4 user | 0 (base 0/67). | **None.** |
+| Non-owner Quote Finder search | 0; post-T_A citation clickers 0, so C1's reach is untested. | **None.** |
+| Defect | `checkout_failed` open pending the listing; a residual instrument doubt on "active" pending control (a). | **A fix, not a batch** (§8.6). |
+
+**Verdict: no thread selects a product batch. The §9.11 default — acquisition — stands for 09-28**: 2.2 ships
+(slice A; slice B approved, owner 4.7); 2.3 anonymous upload starts on the owner's 09-28 go, **now that this
+section records the baseline it needs** (strategy §2.3, §5) — conditional only on the follow-up run closing
+the defect trigger and control (a) not overturning the zero-active read; 2.3 changes the funnel's unit and
+must not start on an open trigger or an unconfirmed baseline. The bridge (§2.1) is unaffected — it runs on
+the mechanism argument — and one consequence of read 1 is recorded honestly: its own metric (`quote_saved`
+by citation clickers) has no readers until non-owner activity returns. 09-28 remains the decision day, not
+09-22: re-run the kit plus the follow-up that morning (owner, 5 min); the rows that can move in six days are
+active users, day-4, Quote Finder and the purchase chain. §9.4's "do not extend past 09-28" is unchanged.
+
+**What Claude does next, dated.**
+- **09-22/23:** add (a) and (b) to `defect_checkout_failed.py` (syntax-checked on `doctalk_test`); hand the
+  README command to the owner; on the output, take the decision-table row that day and record the outcome as
+  §9.26. Bridge slice 1 continues (frontend-only, no deploy). Nothing else changes.
+- **09-28:** owner re-runs `readout_0922.py` and the follow-up; Fable applies the tables above with six more
+  days of exposure; the §9.11 default applies unless a row moved.
+
+**Record.** This section and the strategy plan's §9 are edited in the worktree on `feat/citation-save-bridge`
+and **uncommitted** — Fable makes no git writes; Claude commits them with the follow-up script change. Raw
+output and kit: `70153ff`. Nothing here touches a product surface or production.
