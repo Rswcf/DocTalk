@@ -5,7 +5,9 @@ Part 1 runs backend/scripts/observation_window.py unchanged (OW_PATH overrides t
 Part 2 runs, by hand, the amendments the plan specified but never applied to the script:
 §9.8 (refined defect trigger, active-user denominator, refreshed intent rates), §9.11/§9.13 (day-2 anchored on
 the first active day, 7-day cap and uncapped), §9.18 item 6 (purchase-by-limit chain split at T_copy, day-4
-capped flag, Quote Finder among citation clickers) and §9.11's historical returner read.
+capped flag, Quote Finder among citation clickers) and §9.11's historical returner read; then Fable's
+2026-09-22 additions (strategy plan §2.0): the purchase-by-limit chain split demo/own, anonymous demo sessions
+per day, share_created, non-owner signups per day.
 Owner excluded everywhere. Prints counts and 8-character user-id prefixes only (no emails, no content).
 """
 import asyncio
@@ -141,13 +143,24 @@ async def day4(con):
 
 
 async def by_limit(con):
+    # §9.18.5 / §9.19: a demo session wall routes to Stripe, so a demo `session_limit` chain must never read as the
+    # purchase wall falling. `is_demo` rides on the event since T_copy (SessionDropdown.tsx:120); before that the
+    # event's `document_id` resolves demo-ness through documents.demo_slug. Neither -> "unknown": treat as
+    # demo-contaminated. Limits with no document (dashboard file_size/upload/url) read "no-doc".
     rows = await con.fetch("""
         with lh as (
-          select p.user_id, p.created_at t, coalesce(p.reason, p.metadata_json->>'reason', '?') reason
+          select p.user_id, p.created_at t, coalesce(p.reason, p.metadata_json->>'reason', '?') reason,
+            case lower(p.metadata_json->>'is_demo')
+              when 'true' then 'demo' when 'false' then 'own'
+              else case when p.metadata_json->>'document_id' is null then 'no-doc'
+                        when d.id is null then 'unknown'
+                        when d.demo_slug is not null then 'demo' else 'own' end
+            end surface
           from product_events p
+          left join documents d on d.id::text = p.metadata_json->>'document_id'
           where p.event_name = 'limit_hit' and p.created_at >= $1
             and p.user_id is not null and p.user_id::text <> $2)
-        select reason, (t >= $3) post_copy, count(*) hits, count(distinct user_id) users,
+        select reason, surface, (t >= $3) post_copy, count(*) hits, count(distinct user_id) users,
           count(distinct user_id) filter (where exists (select 1 from product_events u where u.user_id = lh.user_id
               and u.event_name = 'upgrade_click' and u.created_at between lh.t and lh.t + interval '10 minutes')) clicked,
           count(distinct user_id) filter (where exists (select 1 from checkout_attempts a where a.user_id = lh.user_id
@@ -156,18 +169,53 @@ async def by_limit(con):
               and c.event_name = 'checkout_created' and c.created_at between lh.t and lh.t + interval '15 minutes')) created,
           count(distinct user_id) filter (where exists (select 1 from product_events c where c.user_id = lh.user_id
               and c.event_name = 'checkout_completed' and c.created_at >= lh.t)) completed
-        from lh group by 1, 2 order by 1, 2""", T_A, OWNER, T_COPY)
-    print(f"  {'reason':<22}{'T_copy':<8}{'hits':>5}{'users':>6}{'click':>6}{'attempt':>8}{'created':>8}{'paid':>5}")
+        from lh group by 1, 2, 3 order by 1, 2, 3""", T_A, OWNER, T_COPY)
+    print(f"  {'reason':<22}{'surface':<9}{'T_copy':<7}{'hits':>5}{'users':>6}{'click':>6}{'attempt':>8}{'created':>8}{'paid':>5}")
     for r in rows:
-        print(f"  {r['reason']:<22}{'post' if r['post_copy'] else 'pre':<8}{r['hits']:>5}{r['users']:>6}"
+        print(f"  {r['reason']:<22}{r['surface']:<9}{'post' if r['post_copy'] else 'pre':<7}{r['hits']:>5}{r['users']:>6}"
               f"{r['clicked']:>6}{r['attempted']:>8}{r['created']:>8}{r['completed']:>5}")
     if not rows:
         print("  no authenticated non-owner limit_hit since T_A")
+    print("  surface: demo = demo document (a checkout here is the demo wall routing to Stripe, not the purchase wall);")
+    print("           unknown = no is_demo and an unresolvable document_id -> treat as demo-contaminated (§9.18.5).")
     anon = await con.fetch("""select coalesce(reason, metadata_json->>'reason', '?') reason, count(*) n
         from product_events where event_name = 'limit_hit' and created_at >= $1 and user_id is null
         group by 1 order by 2 desc""", T_A)
     print("  anonymous limit_hit since T_A (cannot chain to checkout): "
           + (", ".join(f"{r['reason']}={r['n']}" for r in anon) or "none"))
+
+
+async def anon_demo_sessions(con):
+    days = await con.fetch("""select date(s.created_at) d, count(*) n
+        from sessions s join documents d on d.id = s.document_id
+        where s.user_id is null and d.demo_slug is not null and s.created_at >= $1
+        group by 1 order by 1""", T_A)
+    slugs = await con.fetch("""select d.demo_slug slug, count(*) n
+        from sessions s join documents d on d.id = s.document_id
+        where s.user_id is null and d.demo_slug is not null and s.created_at >= $1
+        group by 1 order by 2 desc""", T_A)
+    total = sum(r["n"] for r in days)
+    print(f"  anonymous demo sessions since T_A: {total}   by document: "
+          + (", ".join(f"{r['slug']}={r['n']}" for r in slugs) or "none"))
+    print("  per day: " + (", ".join(f"{r['d']:%m-%d}={r['n']}" for r in days) or "none"))
+
+
+async def shares(con):
+    r = await con.fetchrow("""select count(*) filter (where user_id is null or user_id::text <> $1) non_owner,
+        count(*) filter (where user_id::text = $1) owner, min(created_at) first_at, max(created_at) last_at
+        from product_events where event_name = 'share_created'""", OWNER)
+    print(f"  share_created all time: non-owner {r['non_owner']}, owner {r['owner']}"
+          f"   (first {r['first_at']:%Y-%m-%d}, last {r['last_at']:%Y-%m-%d})" if r["first_at"] else
+          f"  share_created all time: non-owner {r['non_owner']}, owner {r['owner']}")
+
+
+async def signups_per_day(con):
+    rows = await con.fetch("""select date(created_at) d, count(*) n from users
+        where created_at >= $1 and id::text <> $2 group by 1 order by 1""", T_A, OWNER)
+    days = (NOW.date() - T_A.date()).days + 1
+    total = sum(r["n"] for r in rows)
+    print(f"  non-owner signups since T_A: {total} over {days} days ({total / days:.2f}/day)")
+    print("  per day: " + (", ".join(f"{r['d']:%m-%d}={r['n']}" for r in rows) or "none"))
 
 
 async def quote_finder(con):
@@ -240,6 +288,9 @@ async def main():
         await section("§9.11 day-4 decider, with §9.18 'ever capped'", day4, con)
         await section("§9.18.6 purchase — by limit (limit_hit -> click 10 min -> attempt -> created -> paid)", by_limit, con)
         await section("§9.18.6 Quote Finder among citation clickers", quote_finder, con)
+        await section("Fable 2026-09-22 (2.0 ii): anonymous demo sessions since T_A", anon_demo_sessions, con)
+        await section("Fable 2026-09-22 (2.0 ii): share_created, all time", shares, con)
+        await section("Fable 2026-09-22 (2.0 ii): non-owner signups per day since T_A", signups_per_day, con)
         await section("§9.8.4 refreshed intent rates", intent_rates, con)
         await section("§9.11 historical returner read (first active 2026-02-01..T_A, returned within 7 days)", returners, con)
     finally:

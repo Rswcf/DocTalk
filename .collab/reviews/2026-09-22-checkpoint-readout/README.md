@@ -15,8 +15,16 @@ via the database's public URL. The owner runs it, or allows it.
   - §9.18.6: the purchase chain by limit reason, split at T_copy; the day-4 "ever capped" flag; Quote Finder
     among citation clickers;
   - §9.11: the historical returner read.
+- Part 2 also runs the additions from Fable's strategy plan (`.collab/plans/2026-09-22-next-strategy.md` §2.0):
+  - the purchase-by-limit chain split by surface: `demo`, `own`, `no-doc`, or `unknown`. A demo session wall routes
+    to Stripe, so a checkout on the demo surface is not the purchase wall falling. `unknown` counts as
+    demo-contaminated;
+  - anonymous demo sessions per day and per demo document;
+  - `share_created`, all time;
+  - non-owner signups per day since T_A.
 
-The SQL was syntax-checked against the migrated local `doctalk_test` database. Every section executes.
+The SQL was syntax-checked against the migrated local `doctalk_test` database. Every section executes, but that
+database is empty, so the classification logic has not run on real rows.
 
 Run from the repository root (needs the logged-in Railway CLI and `python3.12` with asyncpg):
 
