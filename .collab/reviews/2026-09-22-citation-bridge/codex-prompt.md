@@ -34,7 +34,13 @@ Files:
    403 path mirrors `QuoteCardList.tsx` (`paywall_opened`, `PaywallModal`).
 4. **Stale results.** A save that resolves after the reader moved to another citation must not write state
    (`citationTarget !== target`). Look for races: a double click, a citation change mid-save, a locale change, the
-   translated-preview mode, the converted-PDF viewer, and the reset effect keyed on `citationTarget`.
+   translated-preview mode, the converted-PDF viewer, and the reset effect keyed on `citationTarget`. Two cases
+   to rule on:
+   - **Re-clicking the same marker after a save.** `navigateToCitation` builds a new `citationTarget` object on
+     every click (store `:211`), so the reset fires and the "Saved" notice disappears with no feedback. The
+     server is fine, because a re-save is idempotent. Accept this, or key the reset on `chunkId + messageId`?
+   - **The Saved tab.** Does it refetch on tab switch, or does it cache while the panel is open? If it caches,
+     a bridge save made with the panel open would not show in the "n of 30" count.
 5. **Anonymous and demo.** Anonymous → sign-in, no request. Signed-in users on demo documents: the backend allows
    saving (`can_access_document`). Confirm, and confirm nothing leaks or mis-bills.
 6. **Cited-claim extraction.** Offsets are Python codepoints (`insertCitationMarkers`); legacy citations use
@@ -50,10 +56,13 @@ Files:
 - `quote_saved` is emitted server-side with `source="quote_finder"`. Slice 2 adds an optional `source` on
   `SaveQuoteRequest`, so bridge saves are distinguishable.
 - Strings use `tOr` with English fallbacks. The ten locales land in slice 2.
-- The popover action (`CitationPopover.tsx`) is slice 2.
+- The popover action (`CitationPopover.tsx`) is slice 2. So is `auth_modal_opened` with
+  `source=citation_save` for the anonymous path (plan §2.1 metric). Today `openAuthModal()` carries no source,
+  and `AuthModal.tsx:59` always reports `auth_modal`, as the chat chip's anonymous path already does.
 - The TextViewer (non-PDF documents) has no evidence bar, so it has no bridge yet.
 - Acceptance criterion 7 (the local golden path, signed in) was not run. Claude cannot sign in, and the local
-  backend has no demo documents seeded.
+  backend is stale (it reports 0.30.1, its `doctalk` database is at alembic 0039 against head 0046, and no demo
+  documents are seeded). The owner checks it on their own stack; otherwise it happens at deploy after 09-28.
 
 ## Output
 For each finding give severity (BLOCKER / HIGH / MEDIUM / LOW / NIT), `file:line`, a concrete failing scenario
