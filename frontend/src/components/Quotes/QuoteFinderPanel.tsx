@@ -35,6 +35,10 @@ interface QuoteFinderPanelProps {
    * submit (or edit first), since this action is billed. Undefined for the
    * plain toolbar entry point, which always opens with an empty topic. */
   initialTopic?: string;
+  /** Where the open came from when the default derivation (prefill → chat_hint,
+   * none → document_toolbar) would misattribute it: the evidence bar's "Save
+   * quote" falls back here when the server cannot verify the sentence. */
+  openSource?: 'citation_evidence_bar';
 }
 
 /**
@@ -51,7 +55,7 @@ interface QuoteFinderPanelProps {
  * rendered inside `QuoteCardList` so this panel and the chat artifact
  * (F3) stay consistent.
  */
-export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose, onCitationClick, initialTopic }: QuoteFinderPanelProps) {
+export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose, onCitationClick, initialTopic, openSource }: QuoteFinderPanelProps) {
   const { t, tOr, locale } = useLocale();
   const { costs, failed: costsFailed, retry: retryCosts } = useWorkflowEstimates(isOpen);
   const [topic, setTopic] = useState('');
@@ -85,7 +89,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
     if (!isOpen) return;
     openGenerationRef.current += 1;
     trackEvent('quote_finder_panel_opened', {
-      source: initialTopic?.trim() ? 'chat_hint' : 'document_toolbar',
+      source: openSource ?? (initialTopic?.trim() ? 'chat_hint' : 'document_toolbar'),
       has_prefill: Boolean(initialTopic?.trim()),
     });
     // Reset on EVERY open (and every retarget while already open): a
@@ -106,7 +110,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
       inputRef.current?.select();
     }, 50);
     return () => window.clearTimeout(id);
-  }, [isOpen, initialTopic]);
+  }, [isOpen, initialTopic, openSource]);
 
   useEffect(() => {
     if (!isOpen) return;

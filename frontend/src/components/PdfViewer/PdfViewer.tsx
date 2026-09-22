@@ -71,6 +71,10 @@ export interface PdfViewerProps {
   highlightFocus?: string | null;
   citation?: Citation;
   onReturnToAnswer?: () => void;
+  /** Extra evidence-bar actions (the reader's "Save quote"), before "Back to answer". */
+  evidenceActions?: React.ReactNode;
+  /** A full-width status line under the evidence-bar actions (e.g. the saved quote). */
+  evidenceNotice?: React.ReactNode;
   onLayoutTranslate?: () => void;
   layoutTranslateBusy?: boolean;
   layoutTranslateDisabled?: boolean;
@@ -80,7 +84,7 @@ export interface PdfViewerProps {
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer, evidenceActions, evidenceNotice, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl }: PdfViewerProps) {
   const { refreshing, revision, retry, error: recoveryError } = usePdfRecovery(pdfUrl, onRefreshUrl);
   const [hiddenEvidence, setHiddenEvidence] = useState(false);
   const [evidenceVersion, setEvidenceVersion] = useState(0);
@@ -502,11 +506,13 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
             className="flex min-h-9 items-center gap-1.5 rounded px-2 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10 disabled:opacity-50">
             <ScanLine size={14} aria-hidden="true" />{t('evidence.fitWidth')}
           </button>
+          {evidenceActions}
           {onReturnToAnswer && <button type="button" onClick={onReturnToAnswer}
             className="min-h-9 rounded border border-[var(--reader-evidence-border)] px-2 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10">
             {t('evidence.return')}
           </button>}
         </span>
+        {evidenceNotice}
       </div>}
       <div
         className={`flex-1 overflow-auto ${grabMode ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}

@@ -8,7 +8,7 @@ import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
 import LayoutTranslationDrawer from '../../../components/LayoutTranslation/LayoutTranslationDrawer';
-import { ApiError, createLayoutTranslation, deleteDocument, getChunkDetail, reparseDocument, updateDocumentInstructions } from '../../../lib/api';
+import { ApiError, createLayoutTranslation, deleteDocument, getChunkDetail, reparseDocument, saveQuote, updateDocumentInstructions } from '../../../lib/api';
 import { PaywallModal } from '../../../components/PaywallModal';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
@@ -16,6 +16,8 @@ import { useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
 import { AlertTriangle, Download, FileText, LogIn, MessageSquare, Presentation, Quote, RotateCcw, Trash2, X } from 'lucide-react';
 import QuoteFinderPanel from '../../../components/Quotes/QuoteFinderPanel';
+import { CitationSaveButton, CitationSaveNotice, type CitationSaveState } from '../../../components/Quotes/CitationSaveControls';
+import { saveCitationAsQuote } from '../../../lib/citationSave';
 import { useCitationReturn } from '../../../lib/useCitationReturn';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
@@ -74,6 +76,14 @@ export default function DocumentReaderPageClient() {
   const [layoutPaywallReason, setLayoutPaywallReason] = useState<string | null>(null);
   const [quoteFinderOpen, setQuoteFinderOpen] = useState(false);
   const [quoteFinderPrefillTopic, setQuoteFinderPrefillTopic] = useState<string | undefined>(undefined);
+  const [quoteFinderOpenSource, setQuoteFinderOpenSource] = useState<'citation_evidence_bar' | undefined>(undefined);
+  // Evidence-bar "Save quote" (plan 2026-09-22-next-strategy §2.1): one state per
+  // citation — a save result belongs to the citation it was made for.
+  const [citationSave, setCitationSave] = useState<CitationSaveState>({ status: 'idle' });
+  const [quoteSaveLimitOpen, setQuoteSaveLimitOpen] = useState(false);
+  useEffect(() => {
+    setCitationSave({ status: 'idle' });
+  }, [citationTarget]);
   const [translatedPreview, setTranslatedPreview] = useState<{
     url: string;
     downloadUrl: string | null;
@@ -289,6 +299,7 @@ export default function DocumentReaderPageClient() {
       onClick={() => {
         // A prior "Try Quote Finder" chip click may have left a stale
         // prefill in state — the plain toolbar entry always opens empty.
+        setQuoteFinderOpenSource(undefined);
         setQuoteFinderPrefillTopic(undefined);
         setQuoteFinderOpen(true);
       }}
@@ -317,6 +328,50 @@ export default function DocumentReaderPageClient() {
       {quoteFinderEntry}
     </div>
   );
+
+  // Save the cited sentence as a verified quote. The server re-verifies it; when
+  // there is nothing to save or it cannot be verified, Quote Finder opens
+  // prefilled with the cited claim and waits for the user (searches are billed).
+  const handleSaveCitationQuote = useCallback(async () => {
+    const target = useDocTalkStore.getState().citationTarget;
+    if (!target) return;
+    const messageText = target.messageId
+      ? useDocTalkStore.getState().messages.find((m) => m.id === target.messageId)?.text
+      : undefined;
+    setCitationSave({ status: 'saving' });
+    const outcome = await saveCitationAsQuote(target.citation, { isLoggedIn, documentId, save: saveQuote, messageText });
+    if (useDocTalkStore.getState().citationTarget !== target) return;
+    switch (outcome.kind) {
+      case 'signin':
+        setCitationSave({ status: 'idle' });
+        openAuthModal();
+        return;
+      case 'saved':
+        setCitationSave({ status: 'saved', quote: outcome.quote });
+        return;
+      case 'fallback':
+        setCitationSave({ status: 'idle' });
+        setQuoteFinderOpenSource('citation_evidence_bar');
+        setQuoteFinderPrefillTopic(outcome.topic);
+        setQuoteFinderOpen(true);
+        return;
+      case 'limit':
+        setCitationSave({ status: 'idle' });
+        setQuoteSaveLimitOpen(true);
+        trackEvent('paywall_opened', {
+          source: 'quote_save',
+          reason: 'SAVED_QUOTES_LIMIT_REACHED',
+          plan: userPlan || 'free',
+          period: 'monthly',
+        });
+        return;
+      case 'error':
+        setCitationSave({ status: 'error', message: errorCopy(outcome.error, t, tOr).title });
+        return;
+    }
+  }, [documentId, isLoggedIn, t, tOr, userPlan]);
+  const citationSaveButton = <CitationSaveButton state={citationSave} onSave={() => void handleSaveCitationQuote()} />;
+  const citationSaveNotice = <CitationSaveNotice state={citationSave} />;
 
   const viewerContent = (
     <div className="h-full flex flex-col dt-reader-pane-document">
@@ -387,6 +442,8 @@ export default function DocumentReaderPageClient() {
                 <PdfViewer
                   citation={pdfPreviewMode === 'original' ? citationTarget?.citation : undefined}
                   onReturnToAnswer={canReturn ? returnToAnswer : undefined}
+                  evidenceActions={citationSaveButton}
+                  evidenceNotice={citationSaveNotice}
                   pdfUrl={pdfPreviewMode === 'translated' && translatedPreview ? translatedPreview.url : pdfUrl}
                   onRefreshUrl={pdfPreviewMode === 'translated' ? undefined : refreshPdfUrl}
                   currentPage={currentPage}
@@ -405,7 +462,7 @@ export default function DocumentReaderPageClient() {
             <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
           )
         ) : useConvertedPdf ? (
-          <PdfViewer citation={citationTarget?.citation} onReturnToAnswer={canReturn ? returnToAnswer : undefined} pdfUrl={convertedPdfUrl} onRefreshUrl={refreshConvertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
+          <PdfViewer citation={citationTarget?.citation} onReturnToAnswer={canReturn ? returnToAnswer : undefined} evidenceActions={citationSaveButton} evidenceNotice={citationSaveNotice} pdfUrl={convertedPdfUrl} onRefreshUrl={refreshConvertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
         ) : (
           <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
         )}
@@ -449,6 +506,7 @@ export default function DocumentReaderPageClient() {
       return;
     }
     trackEvent('quote_finder_chip_clicked', { source: 'chat_message' });
+    setQuoteFinderOpenSource(undefined);
     setQuoteFinderPrefillTopic(topic);
     setQuoteFinderOpen(true);
   }, [isLoggedIn]);
@@ -704,6 +762,13 @@ export default function DocumentReaderPageClient() {
         onClose={() => setQuoteFinderOpen(false)}
         onCitationClick={handleCitationClick}
         initialTopic={quoteFinderPrefillTopic}
+        openSource={quoteFinderOpenSource}
+      />
+      <PaywallModal
+        isOpen={quoteSaveLimitOpen}
+        onClose={() => setQuoteSaveLimitOpen(false)}
+        reason="SAVED_QUOTES_LIMIT_REACHED"
+        currentPlan={userPlan}
       />
     </div>
   );
