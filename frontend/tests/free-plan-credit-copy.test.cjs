@@ -41,3 +41,18 @@ test('no locale promises hundreds of questions on the free allowance', () => {
     for (const locale of LOCALES) assert.doesNotMatch(messages[locale][key], hundreds, `${locale}: ${key}`);
   }
 });
+
+test('month one is described as the starter pool first, never as starter credits plus the monthly grant', () => {
+  // Signup grants the 500 starter credits and stamps the monthly clock, so the first 300 arrives in month two
+  // (auth_service.py, credit_service.ensure_monthly_credits). "500 starter + 300/month" read as 800 in month one.
+  for (const key of ['auth.freeCredits', 'pricing.free.feature1']) {
+    for (const locale of LOCALES) {
+      const value = asciiDigits(messages[locale][key]);
+      assert.match(value, /(?<![\d,.])500(?![\d,.])/, `${locale}: ${key} lost the starter credits`);
+      assert.ok(statesFree(value), `${locale}: ${key} lost the monthly grant`);
+      assert.doesNotMatch(value, /\+/, `${locale}: ${key} adds the starter credits to the monthly grant`);
+      assert.ok(value.indexOf('500') < value.indexOf(FREE), `${locale}: ${key} should lead with the starter pool`);
+    }
+  }
+  assert.match(messages.en['pricing.free.feature1'], /second month/);
+});
