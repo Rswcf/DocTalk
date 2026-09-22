@@ -99,9 +99,11 @@ async def main():
         print("\ncheckout_created events:")
         for r in await con.fetch("""
             select created_at, user_id::text = $2 owner, left(user_id::text, 8) uid,
-                   coalesce(source, metadata_json->>'source') src
+                   coalesce(source, metadata_json->>'source') src, coalesce(reason, metadata_json->>'reason') reason,
+                   metadata_json ? 'checkout_attempt_id' subscription
             from product_events where event_name = 'checkout_created' and created_at >= $1 order by created_at""", T_A, OWNER):
-            print(f"  {r['created_at']:%m-%d %H:%M:%S}  {'OWNER' if r['owner'] else r['uid']:<8}  src={r['src']}")
+            print(f"  {r['created_at']:%m-%d %H:%M:%S}  {'OWNER' if r['owner'] else r['uid']:<8}  src={r['src']}"
+                  f"  reason={r['reason']}  kind={'subscription' if r['subscription'] else 'credit pack/other'}")
     finally:
         await con.close()
 

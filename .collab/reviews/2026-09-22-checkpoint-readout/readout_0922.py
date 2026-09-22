@@ -75,6 +75,8 @@ async def defect_trigger(con):
           exists (select 1 from checkout_attempts a where a.user_id = e.user_id
                   and a.started_at between e.created_at - interval '5 seconds'
                                        and e.created_at + interval '60 seconds') attempted,
+          exists (select 1 from checkout_attempts a where a.user_id = e.user_id and a.status in ('creating', 'open')
+                  and a.started_at < e.created_at and a.updated_at >= e.created_at) recovered,
           exists (select 1 from product_events b where b.user_id = e.user_id and b.event_name = 'billing_view'
                   and b.created_at between e.created_at and e.created_at + interval '60 seconds') fell_back
         from product_events e join users u on u.id = e.user_id
@@ -86,6 +88,7 @@ async def defect_trigger(con):
     seen = {}
     for r in rows:
         kind = ("works" if r["attempted"] else
+                "works (reused an active attempt, §9.25 note 1)" if r["recovered"] else
                 "fallback (plan not loaded)" if (r["plan_now"] == "free" and r["fell_back"]) else
                 "DEFECT" if r["plan_now"] == "free" else f"not free now ({r['plan_now']})")
         key = (r["uid"], r["created_at"].replace(minute=0, second=0, microsecond=0))
@@ -183,6 +186,49 @@ async def by_limit(con):
         group by 1 order by 2 desc""", T_A)
     print("  anonymous limit_hit since T_A (cannot chain to checkout): "
           + (", ".join(f"{r['reason']}={r['n']}" for r in anon) or "none"))
+
+
+async def instrument_notes(con):
+    # §9.25 notes 2, 5 and 6 (registered for the 09-28 re-run); notes 3 and 4 are printed as caveats.
+    rows = await con.fetch("""select event_name,
+            count(*) filter (where user_id::text = $2) owner,
+            count(*) filter (where user_id is not null and user_id::text <> $2) non_owner,
+            count(*) filter (where user_id is null) anon
+        from product_events where created_at >= $1
+          and event_name in ('checkout_failed', 'checkout_created', 'checkout_completed')
+        group by 1 order by 1""", T_A, OWNER)
+    print("  note 2 — owner | non-owner | anonymous since T_A:")
+    for r in rows:
+        print(f"    {r['event_name']:<20} {r['owner']:>3} | {r['non_owner']:>3} | {r['anon']:>3}")
+    a = await con.fetchrow("""select count(*) filter (where user_id::text = $2) owner,
+            count(*) filter (where user_id::text <> $2) non_owner from checkout_attempts where started_at >= $1""", T_A, OWNER)
+    print(f"    {'checkout_attempts':<20} {a['owner']:>3} | {a['non_owner']:>3} |   -")
+    for event in ('upgrade_click', 'checkout_created'):
+        r = await con.fetchrow("""select count(*) filter (where user_id::text = $3) owner,
+                count(*) filter (where user_id is not null and user_id::text <> $3) non_owner
+            from product_events where event_name = $1 and created_at >= $2
+              and coalesce(source, metadata_json->>'source') = 'dashboard_upgrade_reminder'""", event, T_A, OWNER)
+        print(f"    {event + ' @ reminder':<20} {r['owner']:>3} | {r['non_owner']:>3} |   -")
+    split = await con.fetch("""select (metadata_json ? 'checkout_attempt_id') subscription,
+            coalesce(reason, metadata_json->>'reason', '-') reason,
+            count(*) filter (where user_id::text = $2) owner,
+            count(*) filter (where user_id is not null and user_id::text <> $2) non_owner
+        from product_events where event_name = 'checkout_created' and created_at >= $1
+        group by 1, 2 order by 1 desc, 2""", T_A, OWNER)
+    print("  note 6 — checkout_created by kind (a credit-pack checkout says nothing about the subscribe button):")
+    for r in split:
+        print(f"    {'subscription' if r['subscription'] else 'credit pack/other':<18} reason={r['reason']:<24}"
+              f" owner {r['owner']} | non-owner {r['non_owner']}")
+    exposed_to = (NOW - dt.timedelta(days=7))
+    act = await con.fetchrow("""with su as (select id, created_at from users
+            where created_at >= $1 and created_at <= $3 and id::text <> $2)
+        select count(*) n, count(*) filter (where exists (select 1 from messages m join sessions s on s.id = m.session_id
+            where s.user_id = su.id and m.role = 'user' and m.created_at < su.created_at + interval '7 days')) activated
+        from su""", T_B, OWNER, exposed_to)
+    print(f"  note 5 — per-user activation beside B1: {act['activated']}/{act['n']} non-owner signups since T_B"
+          f" (signed up by {exposed_to:%m-%d}, >= 7 d exposure) sent a message within 7 days; base 0.39")
+    print("  note 3 — anonymous demo sessions cannot be owner-excluded: a deploy-day spike is the smoke test until shown otherwise.")
+    print("  note 4 — limit_hit reason=file_size carries no size, and the precheck leaves no server trace.")
 
 
 async def anon_demo_sessions(con):
@@ -288,6 +334,7 @@ async def main():
         await section("§9.11 day-4 decider, with §9.18 'ever capped'", day4, con)
         await section("§9.18.6 purchase — by limit (limit_hit -> click 10 min -> attempt -> created -> paid)", by_limit, con)
         await section("§9.18.6 Quote Finder among citation clickers", quote_finder, con)
+        await section("§9.25 instrument notes for the 09-28 re-run", instrument_notes, con)
         await section("Fable 2026-09-22 (2.0 ii): anonymous demo sessions since T_A", anon_demo_sessions, con)
         await section("Fable 2026-09-22 (2.0 ii): share_created, all time", shares, con)
         await section("Fable 2026-09-22 (2.0 ii): non-owner signups per day since T_A", signups_per_day, con)
