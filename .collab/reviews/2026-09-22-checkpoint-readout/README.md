@@ -31,3 +31,16 @@ Run from the repository root (needs the logged-in Railway CLI and `python3.12` w
     DATABASE_URL="$(railway variables --service Postgres --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["DATABASE_PUBLIC_URL"])')" python3.12 .collab/reviews/2026-09-22-checkpoint-readout/readout_0922.py | tee readout-0922.txt
 
 Append the raw output, with no interpretation, to the DRAFT under "Readout 2026-09-22". The reading is Fable's.
+
+## For the 09-28 re-run (added 2026-09-22 after §9.25 / §9.26)
+
+The owner re-runs the same command on the morning of 09-28. After the first run, Part 2 gained the six
+instrument notes that Fable registered in `.collab/plans/2026-09-03-backlog-decision.md` §9.25:
+- the refined trigger now counts a repeat click that reuses an active attempt as working (note 1);
+- checkout counts are printed owner / non-owner / anonymous side by side (note 2);
+- `checkout_created` is split into subscription and credit-pack checkouts (note 6);
+- per-user activation is printed beside B1 (note 5);
+- caveats are printed for anonymous demo sessions (note 3) and for `file_size` (note 4).
+
+Run `defect_checkout_failed.py` as well (the same command pattern as in its docstring). It now also prints each
+`checkout_created`'s reason and kind.
