@@ -119,9 +119,11 @@ DOMAIN_RULES: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 
 MODEL_PROFILES: dict[str, ModelProfile] = {
+    # Flash max_tokens is set from measured decode speed against the 60 s proxy budget, including the repair
+    # call a complete answer can trigger (tests/test_answer_length_budget.py). Re-measure before raising it.
     "deepseek-flash": ModelProfile(
         temperature=0.1,
-        max_tokens=3072,
+        max_tokens=6144,
         supports_cache_control=False,
         supports_stream_options=True,
         prompt_style="positive_framing",
@@ -129,7 +131,7 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
     # Legacy alias retained while DeepSeek still accepts it and for rollback.
     "deepseek-v4-flash": ModelProfile(
         temperature=0.1,
-        max_tokens=3072,
+        max_tokens=6144,
         supports_cache_control=False,
         supports_stream_options=True,
         prompt_style="positive_framing",
