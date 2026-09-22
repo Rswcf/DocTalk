@@ -323,3 +323,10 @@ test('the sign-in error copy falls back to the English strings', () => {
     assert.equal(m[1], en[key], `${key}: the fallback drifted from en.json`);
   }
 });
+
+test('a wrapped action label keeps its icon size and reads from the start (German at 375 px wraps to two lines)', () => {
+  const code = stripComments(read('components/Chat/MessageBubble.tsx'));
+  const button = slice(code, '{isAssistant && isLastAssistant && onAskBeyondDocument', '</button>');
+  assert.match(button, /className="[^"]*\btext-start\b[^"]*"/);
+  assert.match(button, /<Lightbulb size=\{14\} aria-hidden="true" className="shrink-0" \/>/);
+});

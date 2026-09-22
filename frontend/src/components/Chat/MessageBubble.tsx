@@ -462,10 +462,10 @@ function MessageBubble({
           <button
             type="button"
             onClick={onAskBeyondDocument}
-            className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-white"
+            className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-start text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-white"
             title={tOr('chat.beyondDocument.actionHint', 'Uses general knowledge. Not verified against your document.')}
           >
-            <Lightbulb size={14} aria-hidden="true" />
+            <Lightbulb size={14} aria-hidden="true" className="shrink-0" />
             {isAnonBeyondDocument
               ? tOr('chat.beyondDocument.signIn', 'Sign in to answer beyond the document')
               : tOr('chat.beyondDocument.action', 'Answer beyond the document')}
