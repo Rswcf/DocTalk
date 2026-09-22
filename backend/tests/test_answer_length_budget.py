@@ -22,13 +22,15 @@ import inspect
 
 import pytest
 
-from app.core.config import settings
+from app.core.config import Settings, settings
 from app.core.model_profiles import MODEL_PROFILES
 from app.services import chat_service
 
 PROXY_S = 60.0
-# Planner LLM fallback (capped) + auth, retrieval and DB, which were not measured here: 4 s allowed.
-SETUP_S = float(settings.ACTION_PLANNER_TIMEOUT_SECONDS) + 4.0
+# Planner LLM fallback cap (the code default, so a local .env cannot move this test; if production overrides
+# ACTION_PLANNER_TIMEOUT_SECONDS upward, re-run the numbers) + auth, retrieval and DB, not measured here: 4 s.
+PLANNER_TIMEOUT_S = float(Settings.model_fields["ACTION_PLANNER_TIMEOUT_SECONDS"].default)
+SETUP_S = PLANNER_TIMEOUT_S + 4.0
 POST_S = 1.0  # persistence and settlement
 SAFETY_S = 2.0
 LOAD_HAIRCUT = 0.75
@@ -71,8 +73,9 @@ def test_a_near_max_flash_answer_that_needs_repair_fits_the_proxy_budget() -> No
 
 
 @pytest.mark.xfail(strict=True, reason=(
-    "Pre-existing, not caused by the Flash raise: under provider load a near-max Pro answer plus its repair call "
-    "can outrun the proxy. Needs a repair time guard (like citation focus has) - reported for Codex / owner."
+    "Pre-existing, not caused by the Flash raise: a near-max Pro answer plus its repair call outruns the proxy "
+    "even at the median measured speed (~35 s + ~20 s + setup). Needs a repair time guard like citation focus "
+    "has - a decision for Fable / Codex."
 ))
 def test_a_near_max_pro_answer_that_needs_repair_fits_the_proxy_budget() -> None:
     model = settings.MODE_MODELS["balanced"]

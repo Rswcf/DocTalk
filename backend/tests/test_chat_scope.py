@@ -535,3 +535,44 @@ async def test_a_continuation_cut_at_the_cap_leaves_no_continue_flag(monkeypatch
 
     assert events[-1]["event"] == "done" and events[-1]["data"]["can_continue"] is False
     assert "truncated" not in h.asst_msg.metadata_json
+
+
+@pytest.mark.asyncio
+async def test_regenerating_a_beyond_answer_stays_beyond_even_with_strict_quote_words(monkeypatch) -> None:
+    # 07 §6.1: a regenerate must not flip scope, and the retry guard (which refuses tool retries) must not
+    # mistake a beyond answer whose question contains strict verbatim-quote words for one.
+    from app.services.chat_response_versions import ChatOperation, current_operation
+
+    h = _harness(
+        monkeypatch,
+        history=_history(("user", STRICT_QUOTE_MESSAGE, {"answer_scope": "beyond_document"})),
+        stream_chunks=_beyond_stream(),
+    )
+    _forbid(monkeypatch, chat_service_module.action_planner, "plan")
+    _forbid(monkeypatch, chat_service_module.claim_verifier_service, "verify")
+    debit, _ = _billing(monkeypatch, ledger_id=uuid.uuid4())
+    replaced: list[Message] = []
+
+    async def fake_replace(_db, candidate):
+        # Like replace_answer: the replaced row restarts its continuations and returns in the candidate's place.
+        candidate.continuation_count = 0
+        replaced.append(candidate)
+        return candidate
+
+    monkeypatch.setattr(chat_service_module, "replace_answer", fake_replace)
+    monkeypatch.setattr(chat_service_module, "fence_message_write", AsyncMock())
+    token = current_operation.set(ChatOperation(session_id=h.session_id, token=uuid.uuid4(), replace_id=uuid.uuid4()))
+    try:
+        events = await _run(
+            h, user_message=STRICT_QUOTE_MESSAGE, user=SimpleNamespace(id=uuid.uuid4(), plan="free"),
+            mode="quick", answer_scope="beyond_document",
+        )
+    finally:
+        current_operation.reset(token)
+
+    assert "error" not in [e["event"] for e in events], events
+    assert events[-1]["event"] == "done" and events[-1]["data"]["answer_scope"] == "beyond_document"
+    assert debit.await_args.kwargs["cost"] == chat_service_module.credit_service.get_estimated_cost("quick")
+    assert replaced and replaced[0].metadata_json.get("answer_scope") == "beyond_document"
+    assert replaced[0].citations is None
+    assert not [m for m in h.added if isinstance(m, Message) and m.role == "user"], "a regenerate saves no new question"
