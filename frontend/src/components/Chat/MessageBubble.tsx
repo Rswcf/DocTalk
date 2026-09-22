@@ -19,6 +19,9 @@ const ReactMarkdown = React.lazy(() => import('react-markdown'));
 interface MessageBubbleProps {
   message: Message;
   onCitationClick?: (c: Citation) => void;
+  /** Save a citation's supporting sentence as a verified quote, from its
+   * popover (the reader wires it; see CitationPopover's onSaveQuote). */
+  onCitationSave?: (c: Citation) => void;
   onPreviewLayoutTranslation?: (url: string, artifact: ChatArtifact) => void;
   isStreaming?: boolean;
   onRegenerate?: () => void;
@@ -40,6 +43,7 @@ function processCitationLinks(
   citations: Citation[],
   onClick?: (c: Citation) => void,
   t?: (key: string, params?: Record<string, string | number>) => string,
+  onSave?: (c: Citation) => void,
 ): React.ReactNode {
   if (!citations || citations.length === 0) return children;
 
@@ -59,7 +63,7 @@ function processCitationLinks(
         const citation = citations.find((c) => c.refIndex === refNum);
         if (citation) {
           parts.push(
-            <CitationPopover key={`cite-${refNum}-${keyIdx++}`} citation={citation}>
+            <CitationPopover key={`cite-${refNum}-${keyIdx++}`} citation={citation} onSaveQuote={onSave ? () => onSave(citation) : undefined}>
               <button
                 type="button"
                 className="not-prose dt-source-index align-super mx-0.5 inline-flex h-[1.125rem] min-w-[1.125rem] cursor-pointer select-none items-center justify-center rounded px-1 text-[10px] font-semibold leading-none transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)]"
@@ -95,7 +99,7 @@ function processCitationLinks(
         return child;
       }
       return React.cloneElement(child as React.ReactElement<any>, {
-        children: processCitationLinks(child.props.children, citations, onClick, t),
+        children: processCitationLinks(child.props.children, citations, onClick, t, onSave),
       });
     }
 
@@ -108,9 +112,10 @@ function createCitationComponent(
   citations: Citation[],
   onClick?: (c: Citation) => void,
   t?: (key: string, params?: Record<string, string | number>) => string,
+  onSave?: (c: Citation) => void,
 ) {
   return function CitationElement({ children, ...props }: any) {
-    return React.createElement(Tag, props, processCitationLinks(children, citations, onClick, t));
+    return React.createElement(Tag, props, processCitationLinks(children, citations, onClick, t, onSave));
   };
 }
 
@@ -196,6 +201,7 @@ function setFeedbackStorage(messageId: string, fb: Feedback) {
 function MessageBubble({
   message,
   onCitationClick,
+  onCitationSave,
   onPreviewLayoutTranslation,
   isStreaming,
   onRegenerate,
@@ -260,11 +266,11 @@ function MessageBubble({
     if (citations.length > 0) {
       const tags = ['p', 'li', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'blockquote'] as const;
       for (const tag of tags) {
-        components[tag] = createCitationComponent(tag, citations, onCitationClick, t);
+        components[tag] = createCitationComponent(tag, citations, onCitationClick, t, onCitationSave);
       }
     }
     return components;
-  }, [displayCitations, onCitationClick, t]);
+  }, [displayCitations, onCitationClick, onCitationSave, t]);
 
   return (
     <div className={`w-full flex ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'my-4' : 'my-6'} group`}>

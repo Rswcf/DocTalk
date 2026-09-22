@@ -3,12 +3,17 @@
 import { citationPageRange } from '../../lib/citationText';
 import React from 'react';
 import * as HoverCard from '@radix-ui/react-hover-card';
-import { ExternalLink } from 'lucide-react';
+import { BookmarkPlus, ExternalLink } from 'lucide-react';
+import { useLocale } from '../../i18n';
 import type { Citation } from '../../types';
 
 interface CitationPopoverProps {
   citation: Citation;
   children: React.ReactNode;
+  /** Secondary entry to the evidence-bar "Save quote" (plan 2026-09-22 §2.1 (b)):
+   * hover-only, so never the primary path. Wired only where a reader can
+   * receive the save; absent elsewhere (collection chat, shared pages). */
+  onSaveQuote?: () => void;
 }
 
 function confidenceColor(score: number): string {
@@ -17,7 +22,8 @@ function confidenceColor(score: number): string {
   return 'bg-red-500';
 }
 
-export default function CitationPopover({ citation, children }: CitationPopoverProps) {
+export default function CitationPopover({ citation, children, onSaveQuote }: CitationPopoverProps) {
+  const { tOr } = useLocale();
   const hasExtra = citation.confidenceScore != null || citation.contextText || citation.documentId;
   const shouldHighlight = citation.retrievalModality !== 'summary' && Boolean(citation.bboxes?.length);
   const originalHref = citation.documentId
@@ -79,6 +85,16 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
             >
               <ExternalLink size={10} /> View in original
             </a>
+          )}
+          {onSaveQuote && (
+            <button
+              type="button"
+              onClick={onSaveQuote}
+              className="mt-2 flex min-h-9 items-center gap-1.5 rounded px-2 text-zinc-700 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            >
+              <BookmarkPlus size={14} aria-hidden="true" />
+              {tOr('evidence.saveQuote', 'Save quote')}
+            </button>
           )}
           <HoverCard.Arrow className="fill-white dark:fill-zinc-800" />
         </HoverCard.Content>

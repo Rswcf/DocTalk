@@ -3967,6 +3967,11 @@
   "evidence.hide": "Markierung ausblenden",
   "evidence.show": "Markierung anzeigen",
   "evidence.return": "Zurück zur Antwort",
+  "evidence.saveQuote": "Zitat speichern",
+  "evidence.quoteSaving": "Wird gespeichert…",
+  "evidence.quoteSavedShort": "Gespeichert",
+  "evidence.saveQuoteHint": "Diesen belegenden Satz als verifiziertes Zitat speichern",
+  "evidence.quoteSaved": "Als verifiziertes Zitat gespeichert",
   "evidence.fitWidth": "An Breite anpassen",
   "evidence.unavailable": "Quellseite nicht verfügbar",
   "billing.subscribePlan": "{plan} abonnieren"

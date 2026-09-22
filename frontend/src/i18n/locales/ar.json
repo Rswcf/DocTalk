@@ -3967,6 +3967,11 @@
   "evidence.hide": "إخفاء التمييز",
   "evidence.show": "إظهار التمييز",
   "evidence.return": "العودة إلى الإجابة",
+  "evidence.saveQuote": "حفظ الاقتباس",
+  "evidence.quoteSaving": "جارٍ الحفظ…",
+  "evidence.quoteSavedShort": "محفوظ",
+  "evidence.saveQuoteHint": "احفظ هذه الجملة الداعمة كاقتباس موثّق",
+  "evidence.quoteSaved": "حُفظ كاقتباس موثّق",
   "evidence.fitWidth": "ملاءمة العرض",
   "evidence.unavailable": "صفحة المصدر غير متاحة",
   "billing.subscribePlan": "الاشتراك في {plan}"

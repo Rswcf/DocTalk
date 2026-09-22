@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { useLocale } from '../i18n';
 import { AuthFormContent } from './AuthFormContent';
-import { AUTH_MODAL_HASH, clearAuthCallbackOverride, getUrlWithoutAuthHash, isAuthModalHash, peekAuthCallbackOverride } from '../lib/auth-modal';
+import { AUTH_MODAL_HASH, clearAuthCallbackOverride, getUrlWithoutAuthHash, isAuthModalHash, peekAuthCallbackOverride, clearAuthSourceOverride, peekAuthSourceOverride } from '../lib/auth-modal';
 import { trackEvent } from '../lib/analytics';
 
 export function AuthModal() {
@@ -50,13 +50,14 @@ export function AuthModal() {
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
       clearAuthCallbackOverride();
+      clearAuthSourceOverride();
     }
     wasOpenRef.current = isOpen;
   }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
-    trackEvent('auth_modal_opened', { source: 'auth_modal' });
+    trackEvent('auth_modal_opened', { source: peekAuthSourceOverride() ?? 'auth_modal' });
     const previouslyFocused = document.activeElement as HTMLElement;
     const modal = modalRef.current;
     if (!modal) return;

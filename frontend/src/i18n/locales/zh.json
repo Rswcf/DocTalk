@@ -4006,6 +4006,11 @@
   "evidence.hide": "隐藏高亮",
   "evidence.show": "显示高亮",
   "evidence.return": "返回刚才回答",
+  "evidence.saveQuote": "保存引文",
+  "evidence.quoteSaving": "正在保存…",
+  "evidence.quoteSavedShort": "已保存",
+  "evidence.saveQuoteHint": "将这句支撑原文保存为已核实的引文",
+  "evidence.quoteSaved": "已保存为已核实的引文",
   "evidence.fitWidth": "适合宽度",
   "evidence.unavailable": "来源页不可用",
   "billing.subscribePlan": "订阅 {plan}"

@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 import uuid
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import anyio
 import sqlalchemy as sa
@@ -450,6 +450,11 @@ class SaveQuoteRequest(BaseModel):
     # page (see quote_search_service.verify_saved_quote's docstring). Never
     # trusted for storage or verification on its own.
     page_hint: Optional[int] = None
+    # Where the save came from — attribution only, never verification or
+    # storage (plan .collab/plans/2026-09-22-next-strategy.md §2.1): a Quote
+    # Finder card, or the citation bridge (the reader's evidence bar, the chat
+    # citation popover). Written to the quote_saved / quote_save_limit_hit events.
+    source: Literal["quote_finder", "citation_evidence_bar", "citation_popover"] = "quote_finder"
 
 
 class SavedQuoteResponse(BaseModel):
@@ -587,7 +592,7 @@ async def create_saved_quote(
             ProductEvent(
                 user_id=user.id,
                 event_name="quote_save_limit_hit",
-                source="quote_finder",
+                source=body.source,
                 reason="saved_quotes_limit",
                 plan=(user.plan or "free").lower(),
                 metadata_json={
@@ -612,7 +617,7 @@ async def create_saved_quote(
             ProductEvent(
                 user_id=user.id,
                 event_name="quote_saved",
-                source="quote_finder",
+                source=body.source,
                 reason="quote_saved",
                 plan=(user.plan or "free").lower(),
                 metadata_json={

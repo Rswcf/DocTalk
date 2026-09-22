@@ -40,10 +40,14 @@ test('an anonymous reader is sent to sign in and nothing is saved', async () => 
   assert.equal(save.calls.length, 0);
 });
 
-test('saving sends only the chunk, the supporting sentence and the page', async () => {
+test('saving sends only the chunk, the supporting sentence, the page and where the save came from', async () => {
   const save = recorder(() => serverQuote());
-  await saveCitationAsQuote(citation({ focusSnippet: '  Interest rates rose to 5.25% in July.  ' }), { isLoggedIn: true, documentId: 'd1', save });
-  assert.deepEqual(save.calls, [['d1', { chunkId: 'c1', quoteText: 'Interest rates rose to 5.25% in July.', pageHint: 4 }]]);
+  await saveCitationAsQuote(citation({ focusSnippet: '  Interest rates rose to 5.25% in July.  ' }), {
+    isLoggedIn: true, documentId: 'd1', save, source: 'citation_popover',
+  });
+  assert.deepEqual(save.calls, [['d1', {
+    chunkId: 'c1', quoteText: 'Interest rates rose to 5.25% in July.', pageHint: 4, source: 'citation_popover',
+  }]]);
 });
 
 test('a citation from another document is saved to that document', async () => {

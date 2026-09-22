@@ -3967,6 +3967,11 @@
   "evidence.hide": "हाइलाइट छिपाएँ",
   "evidence.show": "हाइलाइट दिखाएँ",
   "evidence.return": "उत्तर पर वापस जाएँ",
+  "evidence.saveQuote": "उद्धरण सहेजें",
+  "evidence.quoteSaving": "सहेजा जा रहा है…",
+  "evidence.quoteSavedShort": "सहेजा गया",
+  "evidence.saveQuoteHint": "इस सहायक वाक्य को सत्यापित उद्धरण के रूप में सहेजें",
+  "evidence.quoteSaved": "सत्यापित उद्धरण के रूप में सहेजा गया",
   "evidence.fitWidth": "चौड़ाई के अनुसार",
   "evidence.unavailable": "स्रोत पृष्ठ उपलब्ध नहीं है",
   "billing.subscribePlan": "{plan} की सदस्यता लें"

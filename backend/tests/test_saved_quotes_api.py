@@ -296,6 +296,86 @@ async def test_create_rejects_new_save_at_the_free_plan_cap(
     assert events[0].metadata_json["current"] == settings.FREE_SAVED_QUOTES_LIMIT
 
 
+# Attribution for the citation → verified-quote bridge (plan
+# .collab/plans/2026-09-22-next-strategy.md §2.1): a save names where it came
+# from, so bridge saves are countable apart from Quote Finder card saves. The
+# field never touches verification or storage.
+
+def _source_save_fixture(monkeypatch: pytest.MonkeyPatch, *, limit_reached: bool = False):
+    user = _make_user(plan="free")
+    doc = _make_doc(user)
+    added: list[object] = []
+    db = _make_db(get=AsyncMock(return_value=doc), add=lambda obj: added.append(obj))
+    _override_dependencies(db, user)
+    card = _sample_card()
+    monkeypatch.setattr(quotes_api.quote_search_service, "verify_saved_quote", AsyncMock(return_value=card))
+    outcome = (
+        saved_quotes_service.SaveQuoteOutcome(
+            row=None, created=False, limit_reached=True, active_count=settings.FREE_SAVED_QUOTES_LIMIT,
+        )
+        if limit_reached
+        else saved_quotes_service.SaveQuoteOutcome(
+            row=_saved_row(document_id=doc.id), created=True, limit_reached=False, active_count=1,
+        )
+    )
+    monkeypatch.setattr(saved_quotes_service, "save_quote", AsyncMock(return_value=outcome))
+    return doc, card, added
+
+
+@pytest.mark.asyncio
+async def test_create_records_the_request_source_on_quote_saved(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    doc, card, added = _source_save_fixture(monkeypatch)
+    response = await client.post(
+        f"/api/documents/{doc.id}/quotes",
+        json={"chunk_id": card.chunk_id, "quote_text": card.display_text, "source": "citation_evidence_bar"},
+    )
+    assert response.status_code == 201
+    [event] = [obj for obj in added if getattr(obj, "event_name", None) == "quote_saved"]
+    assert event.source == "citation_evidence_bar"
+
+
+@pytest.mark.asyncio
+async def test_create_without_a_source_is_attributed_to_quote_finder(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    doc, card, added = _source_save_fixture(monkeypatch)
+    response = await client.post(
+        f"/api/documents/{doc.id}/quotes", json={"chunk_id": card.chunk_id, "quote_text": card.display_text},
+    )
+    assert response.status_code == 201
+    [event] = [obj for obj in added if getattr(obj, "event_name", None) == "quote_saved"]
+    assert event.source == "quote_finder"
+
+
+@pytest.mark.asyncio
+async def test_create_rejects_an_unknown_source(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    doc, card, added = _source_save_fixture(monkeypatch)
+    response = await client.post(
+        f"/api/documents/{doc.id}/quotes",
+        json={"chunk_id": card.chunk_id, "quote_text": card.display_text, "source": "anything_else"},
+    )
+    assert response.status_code == 422
+    assert [obj for obj in added if getattr(obj, "event_name", None) == "quote_saved"] == []
+
+
+@pytest.mark.asyncio
+async def test_the_cap_event_carries_the_request_source(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    doc, card, added = _source_save_fixture(monkeypatch, limit_reached=True)
+    response = await client.post(
+        f"/api/documents/{doc.id}/quotes",
+        json={"chunk_id": card.chunk_id, "quote_text": card.display_text, "source": "citation_popover"},
+    )
+    _assert_error(response, 403, "SAVED_QUOTES_LIMIT_REACHED")
+    [event] = [obj for obj in added if getattr(obj, "event_name", None) == "quote_save_limit_hit"]
+    assert event.source == "citation_popover"
+
+
 # FIX-1 (Codex M3 r1 HIGH — cap race): the "pro plan isn't capped by the
 # free limit" behavior moved OUT of this layer entirely — save_quote()
 # decides limit_reached now, inside its own locked critical section (see

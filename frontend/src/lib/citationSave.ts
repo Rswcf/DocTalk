@@ -21,9 +21,12 @@ import type { SavedQuote } from './api';
 export const TOPIC_MAX = 300;
 const MIN_CLAIM = 12;
 
+/** Where a bridge save came from: attribution only (quote_saved.source). */
+export type CitationSaveSource = 'citation_evidence_bar' | 'citation_popover';
+
 export type SaveQuoteFn = (
   documentId: string,
-  params: { chunkId: string; quoteText: string; pageHint?: number },
+  params: { chunkId: string; quoteText: string; pageHint?: number; source?: CitationSaveSource },
 ) => Promise<SavedQuote>;
 
 export type CitationSaveOutcome =
@@ -35,7 +38,7 @@ export type CitationSaveOutcome =
 
 export async function saveCitationAsQuote(
   citation: Citation,
-  deps: { isLoggedIn: boolean; documentId: string; save: SaveQuoteFn; messageText?: string },
+  deps: { isLoggedIn: boolean; documentId: string; save: SaveQuoteFn; messageText?: string; source?: CitationSaveSource },
 ): Promise<CitationSaveOutcome> {
   if (!deps.isLoggedIn) return { kind: 'signin' };
   const quoteText = citation.focusSnippet?.trim();
@@ -47,6 +50,7 @@ export async function saveCitationAsQuote(
       chunkId: citation.chunkId,
       quoteText,
       pageHint: citation.page,
+      source: deps.source,
     });
     return { kind: 'saved', quote };
   } catch (error) {

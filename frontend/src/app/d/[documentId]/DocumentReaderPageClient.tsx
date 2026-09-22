@@ -17,7 +17,7 @@ import { usePageTitle } from '../../../lib/usePageTitle';
 import { AlertTriangle, Download, FileText, LogIn, MessageSquare, Presentation, Quote, RotateCcw, Trash2, X } from 'lucide-react';
 import QuoteFinderPanel from '../../../components/Quotes/QuoteFinderPanel';
 import { CitationSaveButton, CitationSaveNotice, type CitationSaveState } from '../../../components/Quotes/CitationSaveControls';
-import { saveCitationAsQuote } from '../../../lib/citationSave';
+import { saveCitationAsQuote, type CitationSaveSource } from '../../../lib/citationSave';
 import { useCitationReturn } from '../../../lib/useCitationReturn';
 import { useDocumentLoader } from '../../../lib/useDocumentLoader';
 import { useChatSession } from '../../../lib/useChatSession';
@@ -77,13 +77,18 @@ export default function DocumentReaderPageClient() {
   const [quoteFinderOpen, setQuoteFinderOpen] = useState(false);
   const [quoteFinderPrefillTopic, setQuoteFinderPrefillTopic] = useState<string | undefined>(undefined);
   const [quoteFinderOpenSource, setQuoteFinderOpenSource] = useState<'citation_evidence_bar' | undefined>(undefined);
-  // Evidence-bar "Save quote" (plan 2026-09-22-next-strategy §2.1): one state per
-  // citation — a save result belongs to the citation it was made for.
-  const [citationSave, setCitationSave] = useState<CitationSaveState>({ status: 'idle' });
+  // Evidence-bar "Save quote" (plan 2026-09-22-next-strategy §2.1). The state
+  // remembers the citation it belongs to: a result never shows on another
+  // citation, and a new click reads as idle without a reset effect racing a
+  // save that the popover starts in the same tick as the jump.
+  const [citationSave, setCitationSave] = useState<{
+    target: { citation: Citation; messageId?: string } | null;
+    state: CitationSaveState;
+  }>({ target: null, state: { status: 'idle' } });
   const [quoteSaveLimitOpen, setQuoteSaveLimitOpen] = useState(false);
-  useEffect(() => {
-    setCitationSave({ status: 'idle' });
-  }, [citationTarget]);
+  const visibleCitationSave: CitationSaveState = citationTarget && citationSave.target === citationTarget
+    ? citationSave.state
+    : { status: 'idle' };
   const [translatedPreview, setTranslatedPreview] = useState<{
     url: string;
     downloadUrl: string | null;
@@ -332,31 +337,31 @@ export default function DocumentReaderPageClient() {
   // Save the cited sentence as a verified quote. The server re-verifies it; when
   // there is nothing to save or it cannot be verified, Quote Finder opens
   // prefilled with the cited claim and waits for the user (searches are billed).
-  const handleSaveCitationQuote = useCallback(async () => {
+  const handleSaveCitationQuote = useCallback(async (source: CitationSaveSource) => {
     const target = useDocTalkStore.getState().citationTarget;
     if (!target) return;
     const messageText = target.messageId
       ? useDocTalkStore.getState().messages.find((m) => m.id === target.messageId)?.text
       : undefined;
-    setCitationSave({ status: 'saving' });
-    const outcome = await saveCitationAsQuote(target.citation, { isLoggedIn, documentId, save: saveQuote, messageText });
+    setCitationSave({ target, state: { status: 'saving' } });
+    const outcome = await saveCitationAsQuote(target.citation, { isLoggedIn, documentId, save: saveQuote, messageText, source });
     if (useDocTalkStore.getState().citationTarget !== target) return;
     switch (outcome.kind) {
       case 'signin':
-        setCitationSave({ status: 'idle' });
-        openAuthModal();
+        setCitationSave({ target, state: { status: 'idle' } });
+        openAuthModal({ source: 'citation_save' });
         return;
       case 'saved':
-        setCitationSave({ status: 'saved', quote: outcome.quote });
+        setCitationSave({ target, state: { status: 'saved', quote: outcome.quote } });
         return;
       case 'fallback':
-        setCitationSave({ status: 'idle' });
+        setCitationSave({ target, state: { status: 'idle' } });
         setQuoteFinderOpenSource('citation_evidence_bar');
         setQuoteFinderPrefillTopic(outcome.topic);
         setQuoteFinderOpen(true);
         return;
       case 'limit':
-        setCitationSave({ status: 'idle' });
+        setCitationSave({ target, state: { status: 'idle' } });
         setQuoteSaveLimitOpen(true);
         trackEvent('paywall_opened', {
           source: 'quote_save',
@@ -366,12 +371,14 @@ export default function DocumentReaderPageClient() {
         });
         return;
       case 'error':
-        setCitationSave({ status: 'error', message: errorCopy(outcome.error, t, tOr).title });
+        setCitationSave({ target, state: { status: 'error', message: errorCopy(outcome.error, t, tOr).title } });
         return;
     }
   }, [documentId, isLoggedIn, t, tOr, userPlan]);
-  const citationSaveButton = <CitationSaveButton state={citationSave} onSave={() => void handleSaveCitationQuote()} />;
-  const citationSaveNotice = <CitationSaveNotice state={citationSave} />;
+  const citationSaveButton = (
+    <CitationSaveButton state={visibleCitationSave} onSave={() => void handleSaveCitationQuote('citation_evidence_bar')} />
+  );
+  const citationSaveNotice = <CitationSaveNotice state={visibleCitationSave} />;
 
   const viewerContent = (
     <div className="h-full flex flex-col dt-reader-pane-document">
@@ -496,6 +503,16 @@ export default function DocumentReaderPageClient() {
     }
   }, [isDemo, navigateToCitation, revealMobileDocumentPane, captureCitationOrigin]);
 
+  // The chat popover's Save quote (secondary, hover-only): jump to the citation
+  // as a click would, then save through the evidence bar, where the result
+  // shows. Wired only when the document opens in the PDF viewer, which is the
+  // only viewer with an evidence bar.
+  const handleCitationSave = useCallback((citation: Citation, messageId?: string) => {
+    handleCitationClick(citation, messageId);
+    void handleSaveCitationQuote('citation_popover');
+  }, [handleCitationClick, handleSaveCitationQuote]);
+  const citationsOpenInPdf = fileType === 'pdf' || Boolean(useConvertedPdf);
+
   // "Try Quote Finder" chip (FIX3-B, Codex r3 #5): reuses the same panel-open
   // mechanism as the toolbar entry, just with a prefilled topic. Never
   // auto-submits — the search itself is billed, so the user still has to
@@ -548,7 +565,7 @@ export default function DocumentReaderPageClient() {
   }, [deleteBusy, documentId, router, t, tOr]);
 
   const chatContent = documentStatus === 'ready' && sessionId ? (
-    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} documentBrief={documentBrief} briefPolling={briefPolling} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} onTryQuoteFinder={handleTryQuoteFinder} />
+    <ChatPanel sessionId={sessionId} onCitationClick={handleCitationClick} onCitationSave={citationsOpenInPdf ? handleCitationSave : undefined} onPreviewLayoutTranslation={handlePreviewLayoutTranslation} maxUserMessages={isDemo && !isLoggedIn ? 5 : undefined} suggestedQuestions={suggestedQuestions.length > 0 ? suggestedQuestions : undefined} documentBrief={documentBrief} briefPolling={briefPolling} initialQuestion={initialQuestion} autoSubmitInitialQuestion={isDemo} onOpenSettings={canUseCustomInstructions ? () => setShowInstructions(true) : undefined} hasCustomInstructions={!!customInstructions} userPlan={userPlan} onTryQuoteFinder={handleTryQuoteFinder} />
   ) : sessionErrorCopy ? (
     <div className="flex h-full w-full items-center justify-center px-5 py-8">
       <div

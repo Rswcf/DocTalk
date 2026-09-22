@@ -3967,6 +3967,11 @@
   "evidence.hide": "ハイライトを隠す",
   "evidence.show": "ハイライトを表示",
   "evidence.return": "回答に戻る",
+  "evidence.saveQuote": "引用を保存",
+  "evidence.quoteSaving": "保存中…",
+  "evidence.quoteSavedShort": "保存済み",
+  "evidence.saveQuoteHint": "この根拠となる一文を検証済みの引用として保存",
+  "evidence.quoteSaved": "検証済みの引用として保存しました",
   "evidence.fitWidth": "幅に合わせる",
   "evidence.unavailable": "出典ページを表示できません",
   "billing.subscribePlan": "{plan} を契約"

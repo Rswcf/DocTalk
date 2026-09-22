@@ -3969,6 +3969,11 @@
   "evidence.hide": "Hide highlight",
   "evidence.show": "Show highlight",
   "evidence.return": "Back to answer",
+  "evidence.saveQuote": "Save quote",
+  "evidence.quoteSaving": "Saving…",
+  "evidence.quoteSavedShort": "Saved",
+  "evidence.saveQuoteHint": "Save this supporting sentence as a verified quote",
+  "evidence.quoteSaved": "Saved as a verified quote",
   "evidence.fitWidth": "Fit width",
   "evidence.unavailable": "Source page unavailable",
   "billing.subscribePlan": "Subscribe to {plan}"

@@ -3967,6 +3967,11 @@
   "evidence.hide": "Ocultar resaltado",
   "evidence.show": "Mostrar resaltado",
   "evidence.return": "Volver a la respuesta",
+  "evidence.saveQuote": "Guardar cita",
+  "evidence.quoteSaving": "Guardando…",
+  "evidence.quoteSavedShort": "Guardado",
+  "evidence.saveQuoteHint": "Guardar esta frase de apoyo como cita verificada",
+  "evidence.quoteSaved": "Guardada como cita verificada",
   "evidence.fitWidth": "Ajustar al ancho",
   "evidence.unavailable": "Página de origen no disponible",
   "billing.subscribePlan": "Suscribirse a {plan}"

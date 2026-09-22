@@ -429,7 +429,16 @@ function mapSavedQuote(data: any): SavedQuote {
  * 201 with the EXISTING row, never a duplicate and never a 409, so the
  * caller doesn't need to track save-state itself before calling this.
  */
-export async function saveQuote(documentId: string, params: { chunkId: string; quoteText: string; pageHint?: number }): Promise<SavedQuote> {
+export async function saveQuote(
+  documentId: string,
+  params: {
+    chunkId: string;
+    quoteText: string;
+    pageHint?: number;
+    /** Attribution only: omitted means a Quote Finder card save. */
+    source?: 'quote_finder' | 'citation_evidence_bar' | 'citation_popover';
+  },
+): Promise<SavedQuote> {
   const res = await fetch(`${PROXY_BASE}/api/documents/${documentId}/quotes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -437,6 +446,7 @@ export async function saveQuote(documentId: string, params: { chunkId: string; q
       chunk_id: params.chunkId,
       quote_text: params.quoteText,
       page_hint: params.pageHint ?? null,
+      source: params.source,
     }),
   });
   const data: any = await handle(res);

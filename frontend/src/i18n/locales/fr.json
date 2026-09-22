@@ -3967,6 +3967,11 @@
   "evidence.hide": "Masquer le surlignage",
   "evidence.show": "Afficher le surlignage",
   "evidence.return": "Revenir à la réponse",
+  "evidence.saveQuote": "Enregistrer la citation",
+  "evidence.quoteSaving": "Enregistrement…",
+  "evidence.quoteSavedShort": "Enregistré",
+  "evidence.saveQuoteHint": "Enregistrer cette phrase justificative comme citation vérifiée",
+  "evidence.quoteSaved": "Enregistrée comme citation vérifiée",
   "evidence.fitWidth": "Ajuster à la largeur",
   "evidence.unavailable": "Page source indisponible",
   "billing.subscribePlan": "S’abonner à {plan}"
