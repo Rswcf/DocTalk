@@ -35,7 +35,9 @@ Why:
 
 **Gates.**
 1. CI green on `main`.
-2. After the `stable` push, `prodverify.py` passes, repeated until the edge cache turns over:
+2. After the `stable` push, the production checks in Fable's review §3 pass (`findings-fable.md`; the
+   `prodverify.py` named here originally was a local scratch script and is not in the repo). Poll the
+   `age` header, not no-cache headers, until the edge cache turns over. Expected results:
    - /ja, /de and /pt titles match option B, and /zh, /es, /ko and / are unchanged;
    - 5 font preloads on /, /pricing and /ja, and 4 on /auth;
    - no Fraunces preload anywhere.
@@ -43,3 +45,6 @@ Why:
 
 **Follow-up for whoever deploys the backend next.** The main checkout's local `main` and `stable`
 still point at `57a667a`. `railway up` packages the main checkout, so `git pull` there first.
+
+**Review (added 2026-09-22 08:5x):** Fable's retry of the review found SHIP, with no must-fix items, and agreed with
+the frontend-only, no-bump call. `stable` waits on the owner's push; Claude's push was denied by the auto-mode classifier.
