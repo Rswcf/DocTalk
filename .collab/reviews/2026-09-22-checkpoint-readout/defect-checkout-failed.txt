@@ -1,0 +1,30 @@
+since T_A = 2026-09-07T00:22Z; owner rows marked OWNER
+
+checkout_failed:
+  09-13 15:03:36  OWNER     src=limit  reason=document_limit  plan=plus/monthly  click_before=True  nearest_attempt=None
+  09-13 15:03:40  OWNER     src=limit  reason=document_limit  plan=plus/monthly  click_before=True  nearest_attempt=None
+  09-13 15:03:42  OWNER     src=limit  reason=document_limit  plan=plus/monthly  click_before=True  nearest_attempt=None
+  09-13 15:04:08  OWNER     src=profile_credits  reason=None  plan=plus/monthly  click_before=True  nearest_attempt=None
+  09-13 15:06:03  OWNER     src=profile_credits  reason=None  plan=plus/monthly  click_before=True  nearest_attempt=None
+
+checkout_attempts:
+  09-14 06:48:22  OWNER     plus/monthly  src=profile_credits  reason=None  status=expired  stripe_session=True  updated=09-14 09:23:57
+  09-14 09:23:57  OWNER     plus/monthly  src=billing  reason=None  status=expired  stripe_session=True  updated=09-20 20:44:30
+  09-16 19:22:29  e8fed11b  plus/monthly  src=upload_error  reason=file_size  status=open  stripe_session=True  updated=09-16 19:22:30
+  09-20 20:44:30  OWNER     plus/monthly  src=dashboard_upgrade_reminder  reason=sustained_free_usage  status=open  stripe_session=True  updated=09-20 20:44:31
+
+control (a): user-role messages / sessions with one, by class
+  16 d before T_A  anonymous 18 msgs in 10 sessions | owner 0 msgs | non-owner 52 msgs from 9 users
+  since T_A        anonymous 41 msgs in 34 sessions | owner 11 msgs | non-owner 0 msgs from 0 users
+
+read (b): the upload_error purchase chain since T_A
+  user e8fed11b: signed up 2026-09-16 (after T_A), plan now free, first click 09-16 19:22:29
+    limit_hit 09-16 19:17:55 src=dashboard_upload_precheck reason=file_size plan=free
+    attempt  09-16 19:22:29 offered plus/monthly status=open stripe_session=True
+    documents before/after the click: 0/0; user messages after: 0; last event 09-16 19:22
+
+checkout_created events:
+  09-14 06:48:23  OWNER     src=profile_credits
+  09-14 09:23:58  OWNER     src=billing
+  09-16 19:22:30  e8fed11b  src=upload_error
+  09-20 20:44:31  OWNER     src=dashboard_upgrade_reminder
