@@ -321,6 +321,21 @@ export function useChatStream({
     updateLastMessageMeta({ citations: citations || [] });
   }, [flushPendingText, updateLastMessageMeta]);
 
+  // Statuses sent with a stable code are shown in the user's language; any other status (a tool action's own
+  // message) keeps the server's text.
+  const statusText = useCallback((status: { message: string; code?: string }) => {
+    switch (status.code) {
+      case 'checking_citations':
+        return tOr('chat.status.checkingCitations', 'Checking the answer against its sources…');
+      case 'refining_citations':
+        return tOr('chat.status.refiningCitations', 'Refining citations…');
+      case 'summarizing_sections':
+        return tOr('chat.status.summarizingSections', 'Summarizing the document section by section…');
+      default:
+        return status.message;
+    }
+  }, [tOr]);
+
   // `onErrorOverride` lets a caller observe an error before it reaches the
   // shared `handleStreamError` (used by regenerateLastResponse to trigger a
   // demo-counter re-anchor). A fetch rejection happens before `chatStream`
@@ -360,7 +375,7 @@ export function useChatStream({
         controller.signal,
         domainMode,
         (artifact) => { if (active()) addArtifactToLastMessage(artifact); },
-        ({ message }) => { if (active()) setLastMessageToolStatus(message); },
+        (status) => { if (active()) { flushPendingText(); setLastMessageToolStatus(statusText(status)); } },
         (data) => { if (active()) handleAnswerRepaired(data); },
         (data) => { if (active()) handleCitationsRefined(data); },
         retry,
@@ -372,7 +387,7 @@ export function useChatStream({
       }
     }
     return completed;
-  }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, isAbortLikeError]);
+  }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, isAbortLikeError, flushPendingText, statusText]);
 
   const sendMessage = useCallback(async (text: string, options?: { answerScope?: 'beyond_document' }) => {
     if (!text.trim()) return false;
@@ -590,7 +605,7 @@ export function useChatStream({
           locale,
           controller.signal,
           (artifact) => { if (active()) addArtifactToLastMessage(artifact); },
-          ({ message }) => { if (active()) setLastMessageToolStatus(message); },
+          (status) => { if (active()) { flushPendingText(); setLastMessageToolStatus(statusText(status)); } },
           (data) => { if (active()) handleAnswerRepaired(data); },
           (data) => { if (active()) handleCitationsRefined(data); },
           lastMsg.responseVersion ?? null,
@@ -603,7 +618,7 @@ export function useChatStream({
     } finally {
       release();
     }
-  }, [sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, isAbortLikeError]);
+  }, [sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, isAbortLikeError, flushPendingText, statusText]);
 
   // Opt-in "beyond the document" answer (design 07 §2.2): the user's explicit choice on the last grounded
   // answer, re-asking the question it replied to. Anonymous demo visitors are sent to sign-in by ChatPanel

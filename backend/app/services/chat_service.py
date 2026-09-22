@@ -462,6 +462,23 @@ def _should_apply_repair(initial: dict, repaired: dict) -> bool:
     return repaired_issues == initial_issues and repaired_score >= initial_score + 0.15
 
 
+# Everything after the model starts — the answer, a citation repair and citation focus — must end within this many
+# seconds, so a finished answer is never cut by the 60 s proxy (setup before it, persistence after it; the numbers are
+# derived in tests/test_answer_length_budget.py). A repair starts only with _REPAIR_MIN_S left and is abandoned at the
+# remaining budget, capped at _REPAIR_MAX_S; the unrepaired answer keeps its verification status.
+_MODEL_PHASE_BUDGET_S = 49.0
+_REPAIR_MIN_S = 8.0
+_REPAIR_MAX_S = 25.0
+
+
+def _repair_timeout(elapsed_s: float) -> Optional[float]:
+    """Seconds a citation repair may take after `elapsed_s` of the model phase, or None when it must be skipped."""
+    remaining = _MODEL_PHASE_BUDGET_S - elapsed_s
+    if remaining < _REPAIR_MIN_S:
+        return None
+    return min(remaining, _REPAIR_MAX_S)
+
+
 async def _try_repair_rag_answer(
     *,
     client: Any,
@@ -475,6 +492,7 @@ async def _try_repair_rag_answer(
     verification: dict,
     locale: Optional[str],
     user_id: object | None = None,
+    timeout_s: float = _REPAIR_MAX_S,
 ) -> _CitationRepairResult | None:
     if verification.get("status") == "pass" or not chunk_map or not assistant_text.strip():
         return None
@@ -532,7 +550,7 @@ async def _try_repair_rag_answer(
             operation="citation_repair",
             requested_model=model,
         ) as started_at:
-            response = await client.chat.completions.create(**create_kwargs)
+            response = await asyncio.wait_for(client.chat.completions.create(**create_kwargs), timeout=timeout_s)
         log_completion(
             logger,
             operation="citation_repair",
@@ -569,6 +587,19 @@ async def _try_repair_rag_answer(
             prompt_tokens=prompt_tokens,
             output_tokens=output_tokens,
             applied=applied,
+        )
+    except asyncio.TimeoutError:
+        # Abandoned to keep the finished answer inside the proxy budget; the draft stands as verified.
+        logger.warning("RAG answer repair abandoned after %.1fs (proxy budget)", timeout_s)
+        metadata["repair_error"] = "repair_timeout"
+        return _CitationRepairResult(
+            text=assistant_text,
+            citations=citations,
+            verification=verification,
+            metadata=metadata,
+            prompt_tokens=prompt_tokens,
+            output_tokens=output_tokens,
+            applied=False,
         )
     except Exception:
         logger.warning("Failed to repair RAG answer citations", exc_info=True)
@@ -2125,7 +2156,7 @@ class ChatService:
                 and document_id
                 and not is_collection_session
             ):
-                yield sse("tool_status", {"message": "Summarizing the document section by section…"})
+                yield sse("tool_status", {"message": "Summarizing the document section by section…", "code": "summarizing_sections"})
                 retrieved = await document_brief_service.get_summary_context(
                     db,
                     document_id,
@@ -2658,8 +2689,13 @@ class ChatService:
                     retrieved_count=len(chunk_map),
                 )
                 verification_payload = verification_report.to_payload()
-                if verification_report.status != "pass" and finish_reason != "length":
-                    yield sse("tool_status", {"message": "Checking citation support..."})
+                needs_repair = verification_report.status != "pass" and finish_reason != "length"
+                repair_timeout_s = _repair_timeout(time.time() - llm_start)
+                if needs_repair and repair_timeout_s is None:
+                    # Too little of the proxy budget is left to rewrite the answer; it keeps its verification status.
+                    repair_metadata = {"repair_skipped": "time_budget"}
+                elif needs_repair:
+                    yield sse("tool_status", {"message": "Checking citation support...", "code": "checking_citations"})
                     repair = await _try_repair_rag_answer(
                         client=client,
                         model=effective_model,
@@ -2672,6 +2708,7 @@ class ChatService:
                         verification=verification_payload,
                         locale=locale,
                         user_id=settlement_user_id,
+                        timeout_s=repair_timeout_s,
                     )
                     if repair is not None:
                         repair_metadata = repair.metadata
@@ -2713,7 +2750,7 @@ class ChatService:
             focus_elapsed = time.time() - llm_start
             if not beyond:
                 if user is not None and citations and focus_elapsed <= _FOCUS_ELAPSED_BUDGET_S:
-                    yield sse("tool_status", {"message": "Refining citations..."})
+                    yield sse("tool_status", {"message": "Refining citations...", "code": "refining_citations"})
                 focus_changed, focus_model_used, focus_pt, focus_ct = await _refine_citation_focus(
                     answer=assistant_text,
                     citations=citations,
@@ -3455,8 +3492,13 @@ class ChatService:
                     retrieved_count=len(chunk_map),
                 )
                 verification_payload = verification_report.to_payload()
-                if verification_report.status != "pass" and finish_reason != "length":
-                    yield sse("tool_status", {"message": "Checking citation support..."})
+                needs_repair = verification_report.status != "pass" and finish_reason != "length"
+                repair_timeout_s = _repair_timeout(time.time() - llm_start)
+                if needs_repair and repair_timeout_s is None:
+                    # Too little of the proxy budget is left to rewrite the answer; it keeps its verification status.
+                    repair_metadata = {"repair_skipped": "time_budget"}
+                elif needs_repair:
+                    yield sse("tool_status", {"message": "Checking citation support...", "code": "checking_citations"})
                     repair = await _try_repair_rag_answer(
                         client=client,
                         model=effective_model,
@@ -3469,6 +3511,7 @@ class ChatService:
                         verification=verification_payload,
                         locale=locale,
                         user_id=settlement_user_id,
+                        timeout_s=repair_timeout_s,
                     )
                     if repair is not None:
                         repair_metadata = repair.metadata
@@ -3509,7 +3552,7 @@ class ChatService:
             focus_elapsed = time.time() - llm_start
             if not beyond:
                 if user is not None and merged_citations and focus_elapsed <= _FOCUS_ELAPSED_BUDGET_S:
-                    yield sse("tool_status", {"message": "Refining citations..."})
+                    yield sse("tool_status", {"message": "Refining citations...", "code": "refining_citations"})
                 focus_changed, focus_model_used, focus_pt, focus_ct = await _refine_citation_focus(
                     answer=full_assistant_text,
                     citations=merged_citations,

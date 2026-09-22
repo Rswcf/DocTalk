@@ -174,6 +174,14 @@ const initialState = {
   _flushTimer: null as ReturnType<typeof setTimeout> | null,
 };
 
+// An answer's first text retires any status shown before it (e.g. a section-by-section summary). A status that
+// belongs after the text (the citation check) is set only once the pending text is flushed, so it is never cleared.
+function withAppendedText(message: Message, pending: string): Message {
+  return message.text
+    ? { ...message, text: message.text + pending }
+    : { ...message, text: pending, toolStatus: undefined };
+}
+
 export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
   ...initialState,
 
@@ -235,7 +243,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
         }
 
         const last = msgs[msgs.length - 1];
-        const updated = { ...last, text: (last.text || '') + s._pendingText };
+        const updated = withAppendedText(last, s._pendingText);
         set({
           messages: [...msgs.slice(0, -1), updated],
           _pendingText: '',
@@ -261,7 +269,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     }
 
     const last = msgs[msgs.length - 1];
-    const updated = { ...last, text: (last.text || '') + state._pendingText };
+    const updated = withAppendedText(last, state._pendingText);
     set({
       messages: [...msgs.slice(0, -1), updated],
       _pendingText: '',

@@ -13,7 +13,7 @@ Measured 2026-09-22 against api.deepseek.com with the production request shape (
   deepseek-v4-pro  decode 122.4 / 129.2 / 129.6 / 145.5 / 146.1 tok/s, first token 2.79-4.56 s
 
 The provider accepted max_tokens up to 393216 on both models, so its output limit is not the binding constraint.
-Every check uses the slowest measured decode cut by a further quarter for provider load, plus the slowest
+The max-length checks use the slowest measured decode cut by a further quarter for provider load, plus the slowest
 measured first token. Re-measure before raising a limit; these checks fail if a raise outruns the numbers.
 """
 from __future__ import annotations
@@ -65,28 +65,24 @@ def test_a_max_length_answer_fits_the_proxy_budget(mode: str) -> None:
     assert total <= PROXY_S, f"{model}: {total:.1f}s for a max-length answer"
 
 
-def test_a_near_max_flash_answer_that_needs_repair_fits_the_proxy_budget() -> None:
-    model = settings.MODE_MODELS["quick"]
-    phase = _model_seconds(model, MODEL_PROFILES[model].max_tokens) + _model_seconds(model, REPAIR_MAX_TOKENS)
+def test_everything_after_the_model_starts_ends_inside_the_proxy_budget() -> None:
+    # The answer, a repair and citation focus all end within _MODEL_PHASE_BUDGET_S of the model starting: a repair
+    # is cut at the remaining budget (chat_service._repair_timeout) and focus runs only while within its own window.
+    assert SETUP_S + chat_service._MODEL_PHASE_BUDGET_S + POST_S + SAFETY_S <= PROXY_S
+    assert chat_service._FOCUS_ELAPSED_BUDGET_S + chat_service._FOCUS_TIMEOUT_S <= chat_service._MODEL_PHASE_BUDGET_S
 
-    assert _total_seconds(phase) <= PROXY_S, f"{model}: {_total_seconds(phase):.1f}s with a repair"
 
-
-@pytest.mark.xfail(strict=True, reason=(
-    "Pre-existing, not caused by the Flash raise: a near-max Pro answer plus its repair call outruns the proxy "
-    "even at the median measured speed (~35 s + ~20 s + setup). Needs a repair time guard like citation focus "
-    "has - a decision for Fable / Codex."
-))
-def test_a_near_max_pro_answer_that_needs_repair_fits_the_proxy_budget() -> None:
-    model = settings.MODE_MODELS["balanced"]
-    phase = _model_seconds(model, MODEL_PROFILES[model].max_tokens) + _model_seconds(model, REPAIR_MAX_TOKENS)
-
-    assert _total_seconds(phase) <= PROXY_S
+@pytest.mark.parametrize("mode", ["quick", "balanced"])
+def test_a_full_repair_fits_its_cap_at_the_slowest_measured_speed(mode: str) -> None:
+    # Without the load haircut: the cap must not abandon repairs that ordinary provider speed would finish.
+    model = settings.MODE_MODELS[mode]
+    tps, ttft = MEASURED[model]
+    assert ttft + REPAIR_MAX_TOKENS / tps <= chat_service._REPAIR_MAX_S
 
 
 def test_flash_answers_are_twice_as_long_as_before() -> None:
-    # 4a: answers were cut at the old 3072-token Flash cap. 6144 is the largest multiple of 512 whose repair path
-    # still fits the budget above; Pro stays at 4096 (already at the edge of it).
+    # 4a: answers were cut at the old 3072-token Flash cap. 6144 was set when a near-max answer plus an unbounded
+    # repair still had to fit; the repair is now bounded by the model-phase budget. Pro stays at 4096.
     assert MODEL_PROFILES["deepseek-flash"].max_tokens == 6144
     assert MODEL_PROFILES["deepseek-v4-flash"].max_tokens == MODEL_PROFILES["deepseek-flash"].max_tokens
     assert MODEL_PROFILES["deepseek-v4-pro"].max_tokens == 4096

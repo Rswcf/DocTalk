@@ -3,7 +3,7 @@
 import { citationPageRange } from '../../lib/citationText';
 import React, { Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2, Quote, Lightbulb } from 'lucide-react';
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2, Quote, Lightbulb, Loader2 } from 'lucide-react';
 import type { ChatArtifact, Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
@@ -318,7 +318,7 @@ function MessageBubble({
                 <span className="w-1.5 h-1.5 bg-zinc-400 dark:bg-zinc-500 rounded-full animate-bounce motion-reduce:animate-none" aria-hidden="true" />
                 <span className="hidden motion-reduce:inline" aria-hidden="true">...</span>
               </div>
-              {!isBeyond && <span>{t('chat.searching')}</span>}
+              {message.toolStatus ? <span>{message.toolStatus}</span> : !isBeyond && <span>{t('chat.searching')}</span>}
             </div>
           ) : (
             <>
@@ -344,8 +344,13 @@ function MessageBubble({
                   <span aria-hidden="true" className="inline-block w-2 h-4 bg-zinc-400 dark:bg-white/45 animate-pulse motion-reduce:animate-none rounded-sm ml-0.5 align-text-bottom" />
                 )}
               </div>
-              {isAssistant && !message.text && message.toolStatus ? (
-                <p className="mt-3 text-sm text-[var(--workbench-muted)]">{message.toolStatus}</p>
+              {/* A status is the content while there is no text (a tool action), and shows under the text while the
+                  stream stays open after it — the citation check, a repair, citation focus. */}
+              {isAssistant && message.toolStatus && (!message.text || isStreaming) ? (
+                <p className="mt-3 flex items-center gap-1.5 text-sm text-[var(--workbench-muted)]" aria-live="polite">
+                  {isStreaming ? <Loader2 size={14} aria-hidden="true" className="shrink-0 animate-spin motion-reduce:animate-none" /> : null}
+                  {message.toolStatus}
+                </p>
               ) : null}
               {isAssistant && message.artifacts?.map((artifact, index) => (
                 <ChatArtifactCard

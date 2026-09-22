@@ -33,7 +33,7 @@ type DonePayload = {
   quote_finder_topic?: string | null;
   answer_scope?: AnswerScope;
 };
-type ToolStatusPayload = { message: string };
+type ToolStatusPayload = { message: string; code?: string };
 type AnswerRepairedPayload = { text: string; citations: Citation[]; verification?: unknown };
 
 async function _processSSEStream(
@@ -117,7 +117,10 @@ async function _processSSEStream(
               onArtifact?.(mapArtifactPayload(data));
               break;
             case 'tool_status':
-              onToolStatus?.({ message: typeof data.message === 'string' ? data.message : '' });
+              onToolStatus?.({
+                message: typeof data.message === 'string' ? data.message : '',
+                ...(typeof data.code === 'string' ? { code: data.code } : {}),
+              });
               break;
             case 'answer_repaired':
               onAnswerRepaired?.({
