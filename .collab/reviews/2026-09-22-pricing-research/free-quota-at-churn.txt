@@ -1,0 +1,133 @@
+Computed from the owner-run export (export_qa.py, 2026-09-22T12:48Z), not a live read. Differences from a
+live run: credits spent = net negative ledger by reason; "paid" also counts a checkout_completed event;
+Pro-model answers are counted from usage_records (v4-pro + legacy mistral) without timestamps, so the
+20-in-30-days line in section 10 counts users with >= 20 such calls in total (an upper bound).
+
+Pricing research — free quota at churn (owner excluded; buckets are exclusive, first match wins)
+
+1a. All non-owner users: 175 users
+  bucket                     users own docs med msgs med days med spent demo-only upgrade clicks
+  paid                           1        1       16        1       126         0              2
+  hit a wall                    37       28        1        1         7         0             26
+  real work, no wall            25       24        3        1        46         0              9
+  light use, no wall            18       14      1.0      1.0      11.0         6              0
+  uploaded, never chatted       16       16      0.0      0.0       0.0         0              0
+  never started                 78        0      0.0      0.0       0.0         0              0
+
+1b. Signed up since 2026-06-01: 61 users
+  bucket                     users own docs med msgs med days med spent demo-only upgrade clicks
+  paid                           0        0        -        -         -         0              0
+  hit a wall                     6        3      3.0      0.5     115.5         0              8
+  real work, no wall            11       10        3        1        65         0              9
+  light use, no wall             5        3        1        1        14         3              0
+  uploaded, never chatted        4        4      0.0      0.0       0.0         0              0
+  never started                 35        0        0        0         0         0              0
+
+2. Walls fired (users per reason; a user can have several)
+  activated_free_user                       26
+  file_size                                  9
+  upload_limit: 3-document cap               6
+  session_limit                              1
+  INSUFFICIENT_CREDITS                       1
+  users with an upgrade_click: 19; with a checkout_created: 2; paid: 1
+
+3. How episodic is real work? (users with >= 3 messages or a citation click: 44)
+  first-to-last message <10 min       19
+  first-to-last message <1 h           8
+  first-to-last message <1 day         6
+  first-to-last message <7 days        6
+  first-to-last message >=7 days       4
+  first-to-last message no messages    1
+  active on 1 day(s): 31
+  active on 2 day(s): 8
+  active on 3 day(s): 4
+  active on >= 4 days: 0
+
+4. Hard-trial counterfactual: a wall at user message N+1 (demo and own messages both count)
+     N  stopped  cited before the wall  on day one
+     3       24                      5          18
+     5       17                      3          10
+    10        9                      2           5
+    20        2                      1           2
+    50        0                      0           0
+
+5. Own documents per user
+  0: 92
+  1: 58
+  2: 13
+  >= 3 (the Free cap): 12
+
+6. Credits spent, lifetime, users with >= 1 message (n = 67; month one grants ~800)
+  p50 28  p75 89  p90 205  p95 305  max 520
+  spent > 25  : 36
+  spent > 50  : 24
+  spent > 100 : 16
+  spent > 200 : 7
+  spent > 300 : 4
+  spent > 500 : 1
+  spent > 800 : 0
+
+7. Wall timing and what followed (users with >= 1 wall event: 38)
+  first wall after first citation click                      4
+  first wall after the first message                         8
+  first wall before first citation click                     6
+  first wall before the first message, or no messages       30
+  kept going after the first wall (>= 1 later message)      22
+  no citation click ever                                    28
+  stopped at the first wall (0 later messages)              16
+  walls by demo flag (events; the flag exists only where the client sends it):
+    INSUFFICIENT_CREDITS                    not recorded     2
+    activated_free_user                     not recorded    72
+    file_size                               not recorded    13
+    session_limit                           not recorded    10
+    upload_limit: 3-document cap            not recorded     8
+
+8a. Document-trial counterfactual (own documents)
+  a 1-document trial would have stopped: 25
+  a 2-document trial would have stopped: 12
+8b. Time-trial counterfactual (any user message or own upload after day N from first activity)
+  active after day 7: 5
+  active after day 14: 4
+
+9. The hypothesis cell: real-work users (44) by surface x citation x span, count and median credits spent
+  no messages · cited · span >= 1 day                1   median spent 65
+  own document · cited · span < 1 day               16   median spent 45.5
+  own document · cited · span >= 1 day               2   median spent 213.5
+  own document · never cited · span < 1 day         17   median spent 56
+  own document · never cited · span >= 1 day         8   median spent 67.0
+  (the owner's population is own document · cited · span < 1 day; activation failure is 'never cited')
+
+10. The other free caps
+  users who met PRO_MODE_LIMIT_REACHED: 0
+  users who met BALANCED_MODE_LIMIT_REACHED: 0
+  users who met upload_limit: 3-document cap: 6
+  users who met INSUFFICIENT_CREDITS: 1
+  users who met DOMAIN_MODE_REQUIRES_PLUS: 0
+  users with >= 1 Pro-model answer: 11; median 3, max 6
+  users with >= 20 Pro-model answers inside any 30 days (the Free cap): 0
+
+11. Job size: pages of own documents
+  real-work users  documents   66   p50 27   p90 254
+  everyone else    documents   54   p50 92   p90 291
+  real-work users whose first own document is > 100 pages: 9 of 42
+
+12. First-session depth
+  user messages in the first session: median 2, p75 4 (n = 67)
+  whole lifetime = one session with >= 3 messages ('one job, done' signature): 20
+
+13. 'Real work, no wall' users (the owner's hypothesis population), newest first, max 15
+  f7760d54  signup 2026-08-30  msgs 4 (demo 0)  days 1  cites 0  own docs 3  sessions 1  largest doc 10 pages  spent 46  span <10 min
+  ae668226  signup 2026-08-29  msgs 1 (demo 0)  days 1  cites 1  own docs 1  sessions 1  largest doc 21 pages  spent 12  span <10 min
+  6eccc466  signup 2026-08-26  msgs 5 (demo 0)  days 1  cites 8  own docs 1  sessions 1  largest doc 66 pages  spent 89  span <1 h
+  e804f5e0  signup 2026-08-24  msgs 0 (demo 0)  days 0  cites 7  own docs 0  sessions 0  largest doc - pages  spent 65  span no messages
+  42c4f302  signup 2026-08-23  msgs 1 (demo 0)  days 1  cites 8  own docs 1  sessions 1  largest doc 10 pages  spent 29  span <10 min
+  b404e957  signup 2026-08-22  msgs 3 (demo 0)  days 1  cites 5  own docs 1  sessions 1  largest doc 517 pages  spent 141  span <10 min
+  c0c13aa9  signup 2026-08-13  msgs 3 (demo 0)  days 1  cites 1  own docs 1  sessions 1  largest doc 227 pages  spent 62  span <10 min
+  55631688  signup 2026-08-05  msgs 2 (demo 0)  days 1  cites 4  own docs 1  sessions 1  largest doc 12 pages  spent 62  span <10 min
+  5954da3d  signup 2026-07-26  msgs 10 (demo 0)  days 2  cites 0  own docs 1  sessions 1  largest doc 1 pages  spent 205  span <7 days
+  ca8f3159  signup 2026-07-08  msgs 5 (demo 0)  days 1  cites 1  own docs 1  sessions 1  largest doc 100 pages  spent 173  span <10 min
+  58688124  signup 2026-06-17  msgs 12 (demo 0)  days 2  cites 0  own docs 1  sessions 1  largest doc 17 pages  spent 318  span >=7 days
+  195ad6aa  signup 2026-05-24  msgs 3 (demo 0)  days 1  cites 0  own docs 1  sessions 1  largest doc 84 pages  spent 56  span <10 min
+  e5ffbf88  signup 2026-05-20  msgs 2 (demo 0)  days 1  cites 1  own docs 1  sessions 1  largest doc 1 pages  spent 28  span <10 min
+  70e1daa9  signup 2026-05-17  msgs 3 (demo 0)  days 1  cites 0  own docs 1  sessions 1  largest doc 31 pages  spent 28  span <1 h
+  249b9f09  signup 2026-04-29  msgs 3 (demo 0)  days 1  cites 0  own docs 2  sessions 2  largest doc 20 pages  spent 18  span <1 h
