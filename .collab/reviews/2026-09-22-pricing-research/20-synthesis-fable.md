@@ -1,5 +1,7 @@
 # Pricing research — synthesis (Fable 5.1, 2026-09-22, step 2 of 2)
 
+> **Erratum (Claude, 2026-09-22, after re-reading chatdoc.com):** ChatDOC Free's page limit per file is **300**, not 3 — "3 Pages/File" belongs to another row of its table. Every "3 pages per file" below (§1 items 1–2, §6, the first owner bullet) is wrong; ChatDOC's lifetime caps (10 files, 100 questions) and DocTalk's per-document lead (750 vs 300/150/120/100 pages) stand. See `04-claude-after-synthesis.md`, which also records Claude's concession and one dissent.
+
 Inputs: `00-brief.md`, `01-plan-fable.md` (my prior), `02-claude-independent-view.md`, `03-repo-answers-claude.md`,
 the four worker reports `10`–`13`, and the amended `free_quota_at_churn.py`. Rows are cited by the worker files'
 own numbering (T1 = `10-competitors-en.md`, T2 = `11-…zh-es.md`, T3 = `12-evidence.md`, T4 = `13-constraints.md`).
