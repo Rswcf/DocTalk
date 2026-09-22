@@ -68,3 +68,38 @@ Files:
 For each finding give severity (BLOCKER / HIGH / MEDIUM / LOW / NIT), `file:line`, a concrete failing scenario
 (inputs → wrong outcome), and a minimal fix. End with a verdict: SHIP / SHIP-WITH-FIXES / BLOCK. Be adversarial;
 do not restate the design back.
+
+---
+
+# Slice 2 (commit `b1159be`) — review it together with slice 1
+
+The owner deferred reviews ("审查我们后面再做"), so both slices wait for this pass. Review
+`git diff c8831e4^..b1159be -- frontend backend` as one change. Write findings to the same `codex-r1.md`, one
+section per slice.
+
+What slice 2 adds:
+- **Backend** (`backend/app/api/quotes.py`, `backend/tests/test_saved_quotes_api.py`): an optional
+  `SaveQuoteRequest.source: Literal["quote_finder", "citation_evidence_bar", "citation_popover"] =
+  "quote_finder"`. It is written to the `quote_saved` and `quote_save_limit_hit` events, which were hardcoded
+  to `quote_finder`, and an unknown value gets a 422. It must never influence verification, storage,
+  idempotency or the cap. Attack that claim: extra-field handling, the idempotent 200 path (no event), and the
+  403 path.
+- **Auth attribution** (`frontend/src/lib/auth-modal.ts`, `frontend/src/components/AuthModal.tsx`):
+  `openAuthModal({ source })` stores a module-level override. `auth_modal_opened` reports it (default
+  `auth_modal`), and closing the modal clears it. Look for a stale source leaking into a later hash-link open,
+  for example `openAuthModal` returning early while the hash is already `#auth`, or the modal never opening.
+- **Popover entry** (`CitationPopover.tsx`, `MessageBubble.tsx`, `ChatPanel.tsx`, the reader):
+  `onSaveQuote` is threaded with the message id. The reader's handler runs `handleCitationClick` (the jump) and
+  then `handleSaveCitationQuote('citation_popover')`. It is wired only when `fileType === 'pdf' ||
+  useConvertedPdf`, because the TextViewer has no evidence bar to show the result. Check:
+  - the jump and save ordering, including mobile pane reveal and focus;
+  - a hover-card click that also bubbles to the marker button;
+  - whether the popover's `hasExtra` early return hides the action where it should show;
+  - collection chat and shared pages staying unwired.
+- **State redesign** (the reader): the save state is now `{ target, state }` bound to the `citationTarget`
+  object. The visible state is idle unless `target === citationTarget`, and slice 1's reset effect is gone.
+  This removes the race where the reset effect wiped "Saving…" after a popover save started in the same tick
+  as its jump, and it answers the §4 re-click case (a new target object reads as idle). Rule on whether
+  identity binding is right, or whether keying on `chunkId + messageId` is better.
+- **Locales**: five `evidence.*` keys in all eleven locales, in each locale's existing Quote Finder terms
+  (zh uses 已核实 for "verified", matching `quoteFinder.verifiedBadge`).
