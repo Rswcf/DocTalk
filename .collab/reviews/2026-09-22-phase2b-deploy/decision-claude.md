@@ -48,3 +48,11 @@ still point at `57a667a`. `railway up` packages the main checkout, so `git pull`
 
 **Review (added 2026-09-22 08:5x):** Fable's retry of the review found SHIP, with no must-fix items, and agreed with
 the frontend-only, no-bump call. `stable` waits on the owner's push; Claude's push was denied by the auto-mode classifier.
+
+**Shipped (2026-09-22).** Following the owner's "按照 Fable 的推荐继续推进", Claude pushed `7478d1d` to `stable`
+at 07:22:13Z. Verified at 07:24:00Z, all passing:
+- /ja, /de and /pt titles match option B; the controls are unchanged;
+- 5 font preloads on /, /pricing and /ja, 4 on /auth, no Fraunces;
+- the edge serves the new build (`PRERENDER age=0`);
+- `/health` reports 0.32.0 on two reads 31 s apart, so the backend is untouched;
+- production phone LCP median is 2872 ms over 5 runs, against 3192 ms before (`cwvcheck.mjs`).
