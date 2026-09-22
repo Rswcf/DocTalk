@@ -301,3 +301,52 @@ profile is already 2.1; it adds no second hook.
    (5 min); the rows that can move in six days are active users, day-4, Quote Finder and the purchase chain.
    Four instrument caveats for that run are registered spec-only in §9.25 (recovered-attempt success
    signature; owner-exclusion on four lines; `file_size` carries no size; per-user activation beside B1).
+
+## 10. Build status (Claude, 2026-09-22 evening)
+
+The owner asked for the 09-24 items and what follows to be built now, with every review held until later
+("审查我们后面再做"). Nothing below is deployed and nothing touches `version.json`.
+
+| Item | Branch @ head | State | Ships |
+|---|---|---|---|
+| 2.1 bridge, slices 1+2 | `feat/citation-save-bridge` @ `307e334` | built; frontend + backend tests green; the Codex brief covers both slices | v0.33.0 after the review, backend-first; criterion 7 (signed-in golden path) still needs the owner's sign-in on a local stack at head |
+| 2.2 slices A+B | `growth/students-academic` @ `67196cf` | built; `npm run build` + 185 unit tests green | frontend-only push on the 09-28 acquisition default; the es copy wants a native pass |
+| Free-allowance copy (new) | `fix/free-credit-copy` @ `a179c80` | built; `npm run build` + 183 unit tests green | frontend-only; a correction, not an experiment, so it can ship before or with 2.2 |
+
+- The three branches merge cleanly pairwise, and all three merged together pass 220/220 unit tests.
+- **2.2 as built.** A verified-quotes section on `/use-cases/students` in 11 locales: Quote Finder is named the
+  way each locale's UI names it, and no locale makes a word-for-word claim. The test's vocabulary now covers
+  all eleven locales, which caught a Korean "그대로". Also built: the zh/es hero and helps copy, the approved
+  (4.7) zh/es search titles, and sentence-case es headings.
+- **2.2 inlinks.** The `/features/citations` use-case cards sent every locale to the English students page;
+  that is fixed. Its related links were already localized, and the blog post already links the page.
+- **2.2 item not built, on purpose: "the zh/es landing related links".** The Night landing has no
+  related-links block, and adding one is a design change to the landing. `EditorialFooter` already links
+  `/use-cases/students` through `lh()` on every marketing page, the landing included. Fable and the owner
+  decide whether a body link is wanted.
+- **Found while building 2.2, fixed on its own branch.** Five translated landing FAQs promised 500 free credits
+  a month: zh/ko/es/de/it, and each answer also ships as the home page's FAQPage JSON-LD. So did three
+  comparison pages. The backend grants 300 a month; 500 is the one-time signup bonus. ja/ko/it also promised
+  "hundreds of questions" where English says "dozens". The test now reads the number from
+  `backend/app/core/config.py`.
+- **Numeric drift not fixed.** The other en↔locale number differences are omissions and competitor figures,
+  not false claims about DocTalk; they are left for a follow-up audit.
+- **Bridge deploy note.** The live `SaveQuoteRequest` ignores unknown fields (the Pydantic default), so a
+  frontend-first deploy would lose `source` attribution but not break anything. Ship backend-first anyway, so
+  T_bridge counts from the first save. Once the bridge is on `main`, every `stable` push is backend-first
+  until v0.33.0 is live.
+- **Script fold (§5, 09-26–27): deferred to after 09-28**, so that the 09-28 re-run uses the same instrument
+  as 09-22 and the two reads are comparable.
+- **Owner-only, still open:**
+  - run the updated `defect_checkout_failed.py` (gate checks 1–4);
+  - web-filter categorization (4.5);
+  - the GSC Domain property, disavow re-upload and D2 export (4.6);
+  - criterion 7.
+- **Owner ruling, 2026-09-22 (needs analysis).**
+  - The pricing direction is ratified, and the opt-in "document-first" scope rule is chosen. Details are in
+    `.collab/reviews/2026-09-22-needs-analysis/06-owner-ruling.md`.
+  - Three items join the post-09-28 queue behind the bridge:
+    - the scope-rule design, then its build (Codex mandatory);
+    - the pass design, which waits on the price and the Stripe check;
+    - the readable-unit rewrite, which waits on the grant decision.
+  - The month-one copy fix is staged on `fix/free-credit-copy`.

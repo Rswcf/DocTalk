@@ -55,6 +55,19 @@ Fable 说这是第三次、也是最后一次提这件事。
 3. 导出一次基线：“效果”报告选过去 3 个月，导出；“链接”报告也导出一次。这就是计划里的 D2。有了它，
    标题改动才能按阈值自动决定（D4），学生页的标题实验（§2.2 B 片）也才有对照。
 
+## 4. 定价研究要用的两份数据（2026-09-22 新增，只读，约 5 分钟）
+
+这是你问"免费额度是不是给多了"之后启动的研究。资料都在 `.collab/reviews/2026-09-22-pricing-research/`。
+
+1. 跑一次只读脚本。它统计每个用户最后停在哪一步，估算"只给 N 次免费"会拦住多少人、拦在见到价值之前还是之后，
+   也会算出免费额度实际用掉多少。命令和上面第 1 节相同，只换了脚本路径：
+
+       DATABASE_URL="$(railway variables --service Postgres --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["DATABASE_PUBLIC_URL"])')" python3.12 .collab/reviews/2026-09-22-pricing-research/free_quota_at_churn.py | tee .collab/reviews/2026-09-22-pricing-research/free-quota-at-churn.txt
+
+2. 看一眼 Stripe 后台开了哪些付款方式：Settings → Payments → Payment methods，把已开启的列表告诉 Claude，
+   **不要改任何设置**。代码里没有指定付款方式，所以结账页显示哪些方式，完全取决于这里的设置。研究要确认的是：
+   面向中文用户能否用支付宝或微信支付，面向西语用户能否用 PayPal 或本地方式。
+
 ## 其余推荐由 Claude 执行，或等 09-28
 
 - 4.2 推 `stable`：Claude 已于 2026-09-22 07:22Z 推送，并在推送后验证线上。
