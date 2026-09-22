@@ -22,6 +22,8 @@ interface SharedMessage {
   role: string;
   content: string;
   citations?: SharedCitation[];
+  /** An answer the user asked to go beyond the document, and the question it re-asked. */
+  answer_scope?: 'beyond_document';
 }
 
 async function fetchShared(token: string) {
@@ -100,6 +102,18 @@ export default async function SharedPage({ params }: { params: Promise<{ token: 
                     : {}),
                 }}
               >
+                {/* A shared beyond-document answer must never look like a cited one. Same copy as the app's
+                    chat.beyondDocument.label / .userTag (this server page is English-only). */}
+                {msg.role === 'assistant' && msg.answer_scope === 'beyond_document' && (
+                  <p className="ed-caption" style={{ marginBottom: '8px', color: 'var(--ed-ink-2)' }}>
+                    Answered from general knowledge — not verified against the document
+                  </p>
+                )}
+                {msg.role === 'user' && msg.answer_scope === 'beyond_document' && (
+                  <p className="ed-caption" style={{ marginBottom: '4px', color: 'var(--ed-paper)', opacity: 0.8 }}>
+                    Beyond the document
+                  </p>
+                )}
                 <p className="ed-body" style={{ whiteSpace: 'pre-wrap', ...(msg.role === 'user' ? { color: 'var(--ed-paper)' } : {}) }}>
                   {msg.content}
                 </p>

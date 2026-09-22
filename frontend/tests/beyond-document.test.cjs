@@ -256,3 +256,28 @@ test('the new controls follow the app palette rules', () => {
     }
   }
 });
+
+// ── Sharing (slice 2): a shared beyond answer must never look like a cited one ──
+
+test('the share preview shows the label, so what gets approved is what goes public', () => {
+  const api = stripComments(read('lib/api.ts'));
+  const previewType = slice(api, 'export interface AnswerSharePreview', 'export async function getAnswerSharePreview');
+  assert.match(previewType, /answer_scope\?: 'beyond_document';/);
+  const dialog = stripComments(read('components/Chat/ShareAnswerDialog.tsx'));
+  assert.match(dialog, new RegExp(`\\{message\\.answer_scope === 'beyond_document' && \\([\\s\\S]{0,300}tOr\\('${KEYS.label}'`));
+});
+
+test('the public shared page labels a beyond answer and tags the question it re-asked', () => {
+  const page = stripComments(read('app/shared/[token]/page.tsx'));
+  assert.match(page, /answer_scope\?: 'beyond_document';/);
+  const en = JSON.parse(read('i18n/locales/en.json'));
+  // The public page is server-rendered English; its copy must not drift from the in-app strings.
+  const label = page.indexOf(en[KEYS.label]);
+  const tag = page.indexOf(en[KEYS.userTag]);
+  assert.ok(label !== -1, 'the public page does not show the label');
+  assert.ok(tag !== -1, 'the public page does not show the tag');
+  assert.match(page.slice(Math.max(0, label - 400), label), /msg\.role === 'assistant' && msg\.answer_scope === 'beyond_document'/);
+  assert.match(page.slice(Math.max(0, tag - 400), tag), /msg\.role === 'user' && msg\.answer_scope === 'beyond_document'/);
+  // Night marketing surface: the label uses the muted ink, never the citation amber or the verified olive.
+  assert.doesNotMatch(page.slice(Math.max(0, label - 400), label), /--ed-(evidence|olive|verified)/);
+});

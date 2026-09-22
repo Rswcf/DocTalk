@@ -153,6 +153,18 @@ def _prepare_export(messages: List[Any], *, markdown: bool = False) -> tuple[lis
     return prepared, references
 
 
+# An answer the user asked to go beyond the document is general knowledge; an export is passed on, so it
+# carries the same label as the app and the shared page (exports are English, like "Q:" and "References").
+BEYOND_DOCUMENT_LABEL = "Answered from general knowledge — not verified against the document"
+
+
+def _beyond_label(msg: Any) -> str | None:
+    meta = getattr(msg, "metadata_json", None)
+    if getattr(msg, "role", None) == "assistant" and isinstance(meta, dict) and meta.get("answer_scope") == "beyond_document":
+        return BEYOND_DOCUMENT_LABEL
+    return None
+
+
 def _format_footnote(c: dict) -> str:
     page = c.get("page", "?")
     end = c.get("page_end")
@@ -178,9 +190,11 @@ def render_markdown(title: str, doc_name: str, messages: List[Any]) -> str:
     ]
 
     prepared, citations = _prepare_export(messages, markdown=True)
-    for role, text in prepared:
+    for msg, (role, text) in zip(messages, prepared, strict=True):
         if role == "user":
             lines.append(f"**Q:** {text}")
+        elif label := _beyond_label(msg):
+            lines.extend([f"**A:** *{label}*", "", text])
         else:
             lines.append(f"**A:** {text}")
         lines.append("")
@@ -224,13 +238,17 @@ def render_docx(title: str, doc_name: str, messages: List[Any]) -> io.BytesIO:
     run.font.color.rgb = RGBColor(128, 128, 128)
 
     prepared, citations = _prepare_export(messages)
-    for role, text in prepared:
+    for msg, (role, text) in zip(messages, prepared, strict=True):
         content = _sanitize_xml_text(text)
         if role == "user":
             p = doc.add_paragraph()
             run = p.add_run(f"Q: {content}")
             run.bold = True
         else:
+            if label := _beyond_label(msg):
+                run = doc.add_paragraph().add_run(label)
+                run.italic = True
+                run.font.color.rgb = RGBColor(128, 128, 128)
             doc.add_paragraph(content)
 
     if citations:
@@ -268,11 +286,13 @@ def render_pdf(title: str, doc_name: str, messages: List[Any]) -> io.BytesIO:
 
     prepared, citations = _prepare_export(messages)
     msg_html = []
-    for role, text in prepared:
+    for msg, (role, text) in zip(messages, prepared, strict=True):
         safe_content = html_escape(_sanitize_xml_text(text))
         if role == "user":
             msg_html.append(f'<div class="q"><strong>Q:</strong> {safe_content}</div>')
         else:
+            if label := _beyond_label(msg):
+                msg_html.append(f'<div class="scope">{html_escape(label)}</div>')
             msg_html.append(f'<div class="a">{safe_content}</div>')
 
     refs_html = ""
@@ -292,6 +312,7 @@ def render_pdf(title: str, doc_name: str, messages: List[Any]) -> io.BytesIO:
   .meta {{ color: #888; font-size: 9pt; margin-bottom: 16pt; }}
   .q {{ background: #f5f5f5; padding: 8pt; margin: 6pt 0; border-radius: 4pt; }}
   .a {{ padding: 8pt; margin: 6pt 0; }}
+  .scope {{ color: #888; font-size: 9pt; font-style: italic; margin: 6pt 0 -4pt; padding: 0 8pt; }}
   .q, .a {{ white-space: pre-wrap; overflow-wrap: anywhere; }}
   h2 {{ font-size: 13pt; margin-top: 20pt; break-after: avoid; }}
   .references {{ list-style: none; padding-left: 0; font-size: 9pt; color: #666; }}

@@ -719,6 +719,8 @@ export interface AnswerSharePreview {
         text_snippet: string;
         document_filename: string;
       }>;
+      /** Present only on an answer the user asked to go beyond the document. */
+      answer_scope?: 'beyond_document';
     }>;
   };
 }

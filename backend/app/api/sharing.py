@@ -9,7 +9,7 @@ from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_serializer
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,6 +65,21 @@ class PublicAnswer(BaseModel):
     role: Literal["assistant"] = "assistant"
     content: str
     citations: list[PublicAnswerCitation] = Field(default_factory=list)
+    # Only an answer the user asked to go beyond the document carries this, so the public page labels it —
+    # and every grounded snapshot, with the digest re-sharing is matched on, stays byte-identical.
+    answer_scope: Literal["beyond_document"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_grounded_scope(self, handler):
+        data = handler(self)
+        if data.get("answer_scope") is None:
+            data.pop("answer_scope", None)
+        return data
+
+
+def _is_beyond_document(message) -> bool:
+    meta = getattr(message, "metadata_json", None)
+    return isinstance(meta, dict) and meta.get("answer_scope") == "beyond_document"
 
 
 class AnswerSnapshot(BaseModel):
@@ -111,6 +126,7 @@ def _answer_snapshot(session, message) -> tuple[dict, str]:
                 id=message_share_anchor(message.id),
                 content=prepared[0][1],
                 citations=safe_citations,
+                answer_scope="beyond_document" if _is_beyond_document(message) else None,
             )
         ],
     ).model_dump()
@@ -447,6 +463,9 @@ async def view_shared(
             "role": msg.role,
             "content": msg.content,
         }
+        if _is_beyond_document(msg):
+            # Labels the beyond answer and tags the question it re-asked; nothing else from metadata is public.
+            safe_msg["answer_scope"] = "beyond_document"
         if msg.citations:
             safe_citations = []
             for c in msg.citations:

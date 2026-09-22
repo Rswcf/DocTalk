@@ -111,6 +111,11 @@ export default function ShareAnswerDialog({ sessionId, messageId, onClose }: {
           <p dir="auto" className="mb-3 break-words text-xs text-zinc-500">{preview.preview.document_name}</p>
           {preview.preview.messages.map((message) => (
             <div key={message.id}>
+              {message.answer_scope === 'beyond_document' && (
+                <p className="mb-2 text-[13px] text-zinc-500 dark:text-zinc-400">
+                  {tOr('chat.beyondDocument.label', 'Answered from general knowledge — not verified against the document')}
+                </p>
+              )}
               <p dir="auto" className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
               {message.citations.map((citation) => (
                 <blockquote key={citation.ref_index} dir="auto" className="mt-3 break-words border-s-2 border-zinc-300 ps-3 text-xs text-zinc-600 dark:text-zinc-300">
