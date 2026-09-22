@@ -92,3 +92,39 @@ Tests: backend 1091 passed + 1 strict xfail (below); frontend 231/231; ruff, tsc
 - **Accessible name.** The browser tool reported the action button by its `title`. It does the same for the
   citation marker (`<button title="Jump to page 8">1</button>`), where accessible-name rules give "1". So this
   is how the tool reads the tree: the button's name is its visible text, and the title is its description.
+
+## Owner question, 2026-09-22 evening: the Pro tail, thinking mode, and "make the wait feel alive"
+
+The owner asked whether Pro needs thinking mode, whether ~63 s is too long, and whether to accept 60+ s while
+streaming a visible thinking process.
+
+**Measured.** The same analytical question was run on `deepseek-v4-pro` with a ~9.2k-token prompt, two runs each way.
+
+| thinking | first answer word | total | output tokens |
+|---|---|---|---|
+| off (today) | 1.2–1.3 s | 6.5–6.6 s | 828–864 |
+| on | 57.3–67.9 s | 61.1–71.8 s | 8,856–10,035 (8,136–9,245 reasoning) |
+
+**Decided (Claude; the owner asked Claude to think it through).**
+
+- **Thinking stays off.** It makes every Pro answer about 10× slower and 10× the output cost. It still does not fit
+  60 s, and it drops temperature, which breaks the deterministic contract in `llm_provider.py`. Streaming the
+  reasoning makes the wait visible, not shorter. The reasoning text is also exactly the unverified, uncited content
+  this branch labels.
+- **The tail is bounded where it comes from** (`bac0e78`):
+  - Everything after the model starts ends within 49 s.
+  - A citation repair starts only with at least 8 s left, and is abandoned at the remaining budget (at most 25 s).
+  - An abandoned or skipped repair keeps the draft and its verification status.
+  - No path can outrun the 60 s proxy any more; the strict xfail became passing tests.
+- **The silent wait is gone.** Status events now carry codes. The client shows the citation check and citation
+  focus under the finished text while the stream is open, in 11 languages. Before any text, the waiting line names
+  the reported step instead of "Searching document…".
+
+**For Fable — whether to lift the 60 s cap.**
+
+- The project was created on 2026-02-05, so Fluid compute should be on by Vercel's default. On Hobby, Fluid
+  compute allows 300 s. The 60 s in `route.ts` may therefore be self-imposed.
+- The functions also run in `iad1` while the backend is in us-west2: a cross-continent hop on every proxied call.
+- Raising `maxDuration` changes the billing model (active CPU) and is Fable's call. A preview build with a higher
+  value would settle whether Fluid is on: a non-Fluid Hobby build rejects anything above 60.
+- Nothing in this branch depends on the answer.
