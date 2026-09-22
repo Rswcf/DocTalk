@@ -16,6 +16,9 @@ class ChatRequest(BaseModel):
     mode: Optional[Literal["quick", "balanced", "thorough"]] = None
     domain_mode: Optional[Literal["legal", "academic"]] = None
     locale: Optional[str] = None  # Frontend locale code (en/zh/es/fr/de)
+    # "beyond_document" is the user's explicit opt-in to a general-knowledge answer (never a detected
+    # intent). It skips the planner, retrieval and citations; see chat_service.chat_stream.
+    answer_scope: Literal["document", "beyond_document"] = "document"
 
 
 class ContinueRequest(BaseModel):

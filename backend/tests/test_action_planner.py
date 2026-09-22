@@ -171,3 +171,29 @@ async def test_deepseek_planner_disables_thinking_and_requires_json(
     assert kwargs["extra_body"]["thinking"] == {"type": "disabled"}
     assert kwargs["extra_body"]["user_id"].startswith("dt_")
     assert "internal-user-123" not in kwargs["extra_body"]["user_id"]
+
+
+@pytest.mark.parametrize("message", ["Compare the two versions of this contract", "和上一版做对比"])
+def test_planner_compares_only_in_collections(message: str) -> None:
+    # A single-document session has nothing to compare against; the comparison tool's canned status used to
+    # become the reply (in English or Chinese only). It now gets an ordinary cited answer.
+    single = deterministic_plan(message, is_collection=False)
+    assert single.action != ChatAction.COMPARE_DOCUMENTS
+    assert single.uses_rag_answer_path
+    assert deterministic_plan(message, is_collection=True).action == ChatAction.COMPARE_DOCUMENTS
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Write an essay on the novel's main themes",
+        "Create a course outline from this textbook",
+        "Make study notes in my own words for chapter 2",
+        "Make a quiz from this chapter",
+        "根据这份文档写一份演示大纲",
+    ],
+)
+def test_drafting_requests_reach_the_grounded_answer_path(message: str) -> None:
+    plan = deterministic_plan(message)
+    assert plan.uses_rag_answer_path, (message, plan.action)
+    assert plan.action != ChatAction.VERIFIED_QUOTE_SEARCH

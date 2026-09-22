@@ -398,6 +398,17 @@ async def chat_stream(
             },
         )
 
+    # A beyond-document answer is a signed-in user's opt-in; the demo stays evaluation → sign-in. Refused
+    # before the rate limiter and the demo message counter, so a rejected request consumes neither.
+    if body.answer_scope == "beyond_document" and user is None:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "BEYOND_DOCUMENT_REQUIRES_SIGN_IN",
+                "message": "Sign in to get answers beyond the document",
+            },
+        )
+
     # Rate limit anonymous users
     if user is None:
         client_ip = get_client_ip(request)
@@ -450,7 +461,8 @@ async def chat_stream(
         # so this pre-check (and chat_service's own predebit, which mirrors
         # this exact predicate) must reflect the balanced estimate, not
         # effective_mode's (e.g. quick=5).
-        strict_quote_routed = _chat_strict_quote_routed(session, body.message)
+        # A beyond-document answer never runs the quote engine (chat_service mirrors this predicate).
+        strict_quote_routed = body.answer_scope == "document" and _chat_strict_quote_routed(session, body.message)
         estimated_cost = credit_service.get_estimated_cost(
             "balanced" if strict_quote_routed else effective_mode
         )
@@ -497,7 +509,7 @@ async def chat_stream(
     async def event_generator() -> AsyncGenerator[str, None]:
         source = chat_service.chat_stream(
             session_id, body.message, db, user=user, locale=body.locale, mode=body.mode,
-            domain_mode=body.domain_mode
+            domain_mode=body.domain_mode, answer_scope=body.answer_scope,
         )
         async with aclosing(stream_with_operation(source, operation, db)) as events:
             async for ev in events:

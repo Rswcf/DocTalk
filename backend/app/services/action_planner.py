@@ -254,7 +254,9 @@ def _fallthrough_plan(text: str, *, is_collection: bool) -> ActionPlan:
         re.search(r"\b(all|extract|list|find all|make|create|generate|table)\b|所有|全部|提取|列出|找出|整理|生成|做成", text, re.IGNORECASE)
     )
 
-    if has_compare:
+    # A single-document session has nothing to compare against: its comparison "status" used to become the
+    # persisted reply (English/Chinese only). Only collections route to the comparison tool.
+    if has_compare and is_collection:
         return ActionPlan(
             action=ChatAction.COMPARE_DOCUMENTS,
             confidence=0.86,
