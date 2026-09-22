@@ -32,7 +32,9 @@ interface UseChatStreamOptions {
 }
 
 interface UseChatStreamResult {
-  sendMessage: (text: string) => Promise<boolean>;
+  sendMessage: (text: string, options?: { answerScope?: 'beyond_document' }) => Promise<boolean>;
+  /** Re-asks the last question as an opt-in "beyond the document" answer. Never sends for an anonymous visitor. */
+  askBeyondDocument: () => Promise<boolean>;
   regenerateLastResponse: () => Promise<void>;
   continueGenerating: () => Promise<void>;
   stopStreaming: () => void;
@@ -279,13 +281,14 @@ export function useChatStream({
     continuation_count?: number;
     quote_finder_hint?: boolean;
     quote_finder_topic?: string | null;
+    answer_scope?: 'document' | 'beyond_document';
   }) => {
     flushPendingText();
     setStreaming(false);
     abortRef.current = null;
     updateSessionActivity(sessionId);
     triggerCreditsRefresh();
-    trackEvent('chat_message_completed', { source: 'chat_stream', mode: selectedMode });
+    trackEvent('chat_message_completed', { source: 'chat_stream', mode: selectedMode, answer_scope: d.answer_scope ?? 'document' });
     if (d.message_id) {
       updateLastMessageMeta({
         backendId: d.message_id,
@@ -293,7 +296,9 @@ export function useChatStream({
         shareAnchor: messageShareAnchorFromId(d.message_id),
         ...(d.continuation_count !== undefined ? { continuationCount: d.continuation_count } : {}),
         ...(d.can_continue !== undefined ? { isTruncated: d.can_continue } : {}),
-        quoteFinderHint: d.quote_finder_hint === true,
+        // The server's word on the scope wins over the placeholder's tag; a beyond answer never offers Quote Finder.
+        answerScope: d.answer_scope ?? 'document',
+        quoteFinderHint: d.answer_scope === 'beyond_document' ? false : d.quote_finder_hint === true,
         quoteFinderTopic: d.quote_finder_topic ?? null,
       });
     }
@@ -322,7 +327,7 @@ export function useChatStream({
   // can invoke its callback, so route that rejection through the same
   // caller-selected handler. Once handled, the rejection is swallowed just
   // like HTTP/SSE failures; user-initiated aborts remain silent.
-  const streamAssistantResponse = useCallback(async (prompt: string, onErrorOverride?: (err: unknown) => void, retry?: ChatRetry) => {
+  const streamAssistantResponse = useCallback(async (prompt: string, onErrorOverride?: (err: unknown) => void, retry?: ChatRetry, answerScope?: 'beyond_document') => {
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -359,6 +364,7 @@ export function useChatStream({
         (data) => { if (active()) handleAnswerRepaired(data); },
         (data) => { if (active()) handleCitationsRefined(data); },
         retry,
+        answerScope,
       );
     } catch (err) {
       if (!controller.signal.aborted && !isAbortLikeError(err) && !errorHandled) {
@@ -368,8 +374,9 @@ export function useChatStream({
     return completed;
   }, [sessionId, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, isAbortLikeError]);
 
-  const sendMessage = useCallback(async (text: string) => {
+  const sendMessage = useCallback(async (text: string, options?: { answerScope?: 'beyond_document' }) => {
     if (!text.trim()) return false;
+    const answerScope = options?.answerScope === 'beyond_document' ? 'beyond_document' : undefined;
 
     const release = acquireSingleFlight(
       chatOperationLatchRef,
@@ -383,11 +390,14 @@ export function useChatStream({
         return false;
       }
 
+      // Both carry the opt-in: the question is tagged, and the reply is labelled from its first token
+      // (the scope itself only arrives on `done`).
       const userMsg: Message = {
         id: `m_${Date.now()}_u`,
         role: 'user',
         text,
         createdAt: Date.now(),
+        ...(answerScope ? { answerScope } : {}),
       };
 
       const asstMsg: Message = {
@@ -396,6 +406,7 @@ export function useChatStream({
         text: '',
         citations: [],
         createdAt: Date.now(),
+        ...(answerScope ? { answerScope } : {}),
       };
 
       addMessage(userMsg);
@@ -408,9 +419,9 @@ export function useChatStream({
       // r4). No-op for authenticated/non-demo sessions.
       if (maxUserMessages != null) useDocTalkStore.getState().bumpDemoAccountingEpoch();
       setStreaming(true);
-      trackEvent('chat_message_sent', { source: 'chat_panel', mode: selectedMode });
+      trackEvent('chat_message_sent', { source: 'chat_panel', mode: selectedMode, answer_scope: answerScope ?? 'document' });
 
-      await streamAssistantResponse(text);
+      await streamAssistantResponse(text, undefined, undefined, answerScope);
       return true;
     } finally {
       release();
@@ -481,11 +492,14 @@ export function useChatStream({
         return;
       }
       const lastUserText = msgs[lastUserIdx].text;
+      // The server never infers scope from stored rows, so a beyond answer is regenerated as beyond only because
+      // its question says so here.
+      const answerScope = msgs[lastUserIdx].answerScope === 'beyond_document' ? 'beyond_document' : undefined;
       const retry: ChatRetry = originalAnswer?.backendId
         ? { regenerate_of: originalAnswer.backendId, expected_response_version: originalAnswer.responseVersion ?? null }
         : { retry_latest_question: true, retry_after: msgs.slice(0, lastUserIdx).reverse().find(m => m.backendId)?.backendId ?? null };
       useDocTalkStore.getState().setMessages(msgs.slice(0, lastUserIdx + 1));
-      addMessage({ id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() });
+      addMessage({ id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now(), ...(answerScope ? { answerScope } : {}) });
       bumpDemoUsageForRegenOrContinue();
       const epoch = useDocTalkStore.getState().demoAccountingEpoch;
       const active = () => useDocTalkStore.getState().sessionId === sessionId
@@ -494,7 +508,7 @@ export function useChatStream({
       let failure: unknown;
       const completed = await streamAssistantResponse(lastUserText, (err) => {
         failure = err;
-      }, retry);
+      }, retry, answerScope);
       if (!active()) return;
       if (!completed) {
         flushPendingText();
@@ -591,6 +605,27 @@ export function useChatStream({
     }
   }, [sessionId, markLastMessageTruncated, setStreaming, updateLastMessage, addCitationToLastMessage, addArtifactToLastMessage, setLastMessageToolStatus, handleStreamError, handleStreamDone, handleTruncated, handleAnswerRepaired, handleCitationsRefined, selectedMode, locale, bumpDemoUsageForRegenOrContinue, reanchorDemoCounter, isAbortLikeError]);
 
+  // Opt-in "beyond the document" answer (design 07 §2.2): the user's explicit choice on the last grounded
+  // answer, re-asking the question it replied to. Anonymous demo visitors are sent to sign-in by ChatPanel
+  // before this is reached; the guard below keeps the request unsendable for them anyway (the server refuses
+  // it as well).
+  const askBeyondDocument = useCallback(async () => {
+    if (maxUserMessages != null) {
+      onRequireAuth();
+      return false;
+    }
+    const state = useDocTalkStore.getState();
+    if (state.isStreaming) return false;
+    const last = state.messages.at(-1);
+    if (last?.role !== 'assistant' || last.isError || last.answerScope === 'beyond_document' || last.artifacts?.length || last.toolStatus) {
+      return false;
+    }
+    const question = [...state.messages].reverse().find((m) => m.role === 'user');
+    if (!question?.text.trim()) return false;
+    trackEvent('beyond_document_clicked', { source: 'answer_action', mode: selectedMode, document_kind: useDocTalkStore.getState().isDemo ? 'demo' : 'own' });
+    return sendMessage(question.text, { answerScope: 'beyond_document' });
+  }, [maxUserMessages, onRequireAuth, selectedMode, sendMessage]);
+
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -600,6 +635,7 @@ export function useChatStream({
 
   return useMemo(() => ({
     sendMessage,
+    askBeyondDocument,
     regenerateLastResponse,
     continueGenerating,
     stopStreaming,
@@ -607,5 +643,5 @@ export function useChatStream({
     demoLimitReached,
     messagesUsed,
     maxMessages,
-  }), [sendMessage, regenerateLastResponse, continueGenerating, stopStreaming, demoRemaining, demoLimitReached, messagesUsed, maxMessages]);
+  }), [sendMessage, askBeyondDocument, regenerateLastResponse, continueGenerating, stopStreaming, demoRemaining, demoLimitReached, messagesUsed, maxMessages]);
 }

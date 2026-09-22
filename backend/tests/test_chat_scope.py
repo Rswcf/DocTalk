@@ -367,6 +367,40 @@ class TestApi:
             pass
         assert seen.get("answer_scope") == "beyond_document"
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("scope, expected_mode", [("beyond_document", None), ("document", "legal")])
+    async def test_only_a_grounded_request_claims_a_domain_mode_slot(self, monkeypatch, scope, expected_mode) -> None:
+        # A beyond answer applies no domain rules, so a Free user's click must not spend (or be refused for)
+        # a Domain Mode trial slot; the grounded path is unchanged.
+        session = SimpleNamespace(id=uuid.uuid4(), document=SimpleNamespace(id=uuid.uuid4(), demo_slug=None, status="ready"),
+                                  document_id=uuid.uuid4(), collection_id=None, user_id=None)
+        monkeypatch.setattr(chat_api, "verify_session_access", AsyncMock(return_value=session))
+        monkeypatch.setattr(chat_api, "enforce_free_mode_limits", AsyncMock())
+        gate = AsyncMock()
+        monkeypatch.setattr(chat_api, "enforce_domain_mode_access", gate)
+        monkeypatch.setattr(chat_api.credit_service, "get_user_credits", AsyncMock(return_value=100))
+        monkeypatch.setattr(chat_api.auth_chat_limiter, "is_allowed", AsyncMock(return_value=True))
+        import app.services.credit_service as credit_service_module
+        monkeypatch.setattr(credit_service_module, "ensure_monthly_credits", AsyncMock())
+
+        async def fake_chat_stream(*_a, **_kwargs):
+            yield {"event": "done", "data": {}}
+
+        monkeypatch.setattr(chat_api.chat_service, "chat_stream", fake_chat_stream)
+        monkeypatch.setattr(chat_api, "claim_operation", AsyncMock())
+        monkeypatch.setattr(chat_api, "release_operation", AsyncMock())
+        monkeypatch.setattr(chat_api, "stream_with_operation", lambda source, _operation, _db: source)
+
+        await chat_api.chat_stream(
+            session_id=session.id,
+            body=ChatRequest(message="Who wrote this novel?", mode="quick", domain_mode="legal", answer_scope=scope),
+            request=SimpleNamespace(headers={}, client=None),
+            user=SimpleNamespace(id=uuid.uuid4(), plan="free"), db=SimpleNamespace(commit=AsyncMock()),
+        )
+
+        gate.assert_awaited_once()
+        assert gate.await_args.args[2] == expected_mode
+
     def test_request_scope_defaults_to_document_and_rejects_other_values(self) -> None:
         assert ChatRequest(message="hi").answer_scope == "document"
         with pytest.raises(Exception):
@@ -394,7 +428,7 @@ def test_beyond_click_event_is_allowlisted_but_not_public() -> None:
     assert "beyond_document_clicked" not in PUBLIC_EVENTS
 
 
-def _continue_harness(monkeypatch, *, asst_meta, stream_chunks):
+def _continue_harness(monkeypatch, *, asst_meta, stream_chunks, continuation_count=0):
     session_id = uuid.uuid4()
     document_id = uuid.uuid4()
     session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None, title="t", domain_mode=None)
@@ -403,7 +437,8 @@ def _continue_harness(monkeypatch, *, asst_meta, stream_chunks):
                               file_type="pdf")
     asst_msg = SimpleNamespace(
         id=uuid.uuid4(), session_id=session_id, role="assistant", content="General knowledge: the author was",
-        citations=None, metadata_json=dict(asst_meta), continuation_count=0, response_version=None, output_tokens=10,
+        citations=None, metadata_json=dict(asst_meta), continuation_count=continuation_count, response_version=None,
+        output_tokens=10,
     )
 
     async def fake_get(model, _id):
@@ -479,3 +514,24 @@ async def test_grounded_continuation_that_is_cut_again_keeps_the_flag(monkeypatc
 
     assert events[-1]["event"] == "done" and events[-1]["data"]["answer_scope"] == "document"
     assert h.asst_msg.metadata_json.get("truncated") is True
+
+
+@pytest.mark.asyncio
+async def test_a_continuation_cut_at_the_cap_leaves_no_continue_flag(monkeypatch) -> None:
+    # The persisted flag mirrors the done event's can_continue, so the Continue button after a reload matches
+    # the live one: at the cap the answer stays cut, but there is nothing left to continue.
+    from app.core.config import settings
+
+    h = _continue_harness(
+        monkeypatch, asst_meta={"truncated": True},
+        stream_chunks=[_FakeChunk(" more text"), _FakeChunk(None, finish_reason="length")],
+        continuation_count=settings.MAX_CONTINUATIONS_PER_MESSAGE - 1,
+    )
+    monkeypatch.setattr(chat_service_module, "_try_repair_rag_answer", AsyncMock(return_value=None))
+    monkeypatch.setattr(chat_service_module, "_refine_citation_focus", AsyncMock(return_value=(False, "", 0, 0)))
+    monkeypatch.setattr(chat_service_module, "_record_rag_verification_event", AsyncMock())
+
+    events = [e async for e in chat_service_module.chat_service.continue_stream(h.session_id, h.asst_msg.id, h.db, user=None)]
+
+    assert events[-1]["event"] == "done" and events[-1]["data"]["can_continue"] is False
+    assert "truncated" not in h.asst_msg.metadata_json

@@ -726,7 +726,8 @@ def _answer_metadata(*, beyond: bool, finish_reason: Optional[str]) -> dict:
     meta: dict = {}
     if beyond:
         meta["answer_scope"] = BEYOND_DOCUMENT_SCOPE
-    if finish_reason == "length":
+    # A new answer has no continuations yet, so a cut answer can be continued whenever continuing is enabled.
+    if finish_reason == "length" and settings.MAX_CONTINUATIONS_PER_MESSAGE > 0:
         meta["truncated"] = True
     return meta
 
@@ -3412,13 +3413,15 @@ class ChatService:
                 asst_msg.content = full_assistant_text
                 asst_msg.citations = merged_citations if merged_citations else None
                 continued_meta = dict(getattr(asst_msg, "metadata_json", None) or {})
-                if finish_reason == "length":
+                continued_count = (asst_msg.continuation_count or 0) + 1
+                # The flag mirrors the done event's can_continue, so a reload shows the same Continue button.
+                if finish_reason == "length" and continued_count < settings.MAX_CONTINUATIONS_PER_MESSAGE:
                     continued_meta["truncated"] = True
                 else:
                     continued_meta.pop("truncated", None)
                 asst_msg.metadata_json = continued_meta
                 asst_msg.response_version = continuation_version
-                asst_msg.continuation_count = (asst_msg.continuation_count or 0) + 1
+                asst_msg.continuation_count = continued_count
                 asst_msg.output_tokens = base_output_tokens + int(output_tokens or 0)
                 await db.commit()
                 persisted = True

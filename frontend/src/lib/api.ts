@@ -193,6 +193,9 @@ export async function getMessages(sessionId: string): Promise<{ messages: Messag
       backendId: m.id,
       responseVersion: m.response_version ?? null,
       shareAnchor: m.share_anchor,
+      // The beyond-document label and tag, and the Continue button, survive a reload.
+      ...(m.metadata_json?.answer_scope === 'beyond_document' ? { answerScope: 'beyond_document' } : {}),
+      ...(m.metadata_json?.truncated === true ? { isTruncated: true } : {}),
     } as Message;
   });
 

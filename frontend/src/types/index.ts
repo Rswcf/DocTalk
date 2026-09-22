@@ -97,6 +97,9 @@ export interface Message {
    * offer a non-blocking chip; never used to auto-open or auto-bill. */
   quoteFinderHint?: boolean;
   quoteFinderTopic?: string | null;
+  /** 'beyond_document' marks an answer the user explicitly asked to go beyond the document (general knowledge,
+   * uncited, labelled) and the question it re-asked. Absent or 'document' = the ordinary grounded answer. */
+  answerScope?: 'document' | 'beyond_document';
 }
 
 export interface DocumentResponse {

@@ -3,7 +3,7 @@
 import { citationPageRange } from '../../lib/citationText';
 import React, { Suspense, useMemo, useState, useCallback, useEffect } from 'react';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2, Quote } from 'lucide-react';
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, ChevronsDown, Share2, Quote, Lightbulb } from 'lucide-react';
 import type { ChatArtifact, Citation, Message } from '../../types';
 import { useLocale } from '../../i18n';
 import CitationPopover from './CitationPopover';
@@ -36,6 +36,11 @@ interface MessageBubbleProps {
    * Undefined on surfaces that don't wire a panel (e.g. collection chat),
    * in which case the chip simply never renders. */
   onTryQuoteFinder?: (topic: string) => void;
+  /** Re-asks the last question as an opt-in "beyond the document" answer (general knowledge, uncited,
+   * labelled). ChatPanel wires it on the last assistant message only. */
+  onAskBeyondDocument?: () => void;
+  /** True when `onAskBeyondDocument` opens sign-in (anonymous demo) instead of sending. */
+  isAnonBeyondDocument?: boolean;
 }
 
 function processCitationLinks(
@@ -211,12 +216,17 @@ function MessageBubble({
   isSharingAnswer,
   isAnonShareAnswer,
   onTryQuoteFinder,
+  onAskBeyondDocument,
+  isAnonBeyondDocument,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isError = !!message.isError;
   const isAssistant = !isUser;
   const { t, tOr } = useLocale();
-  const displayCitations = useMemo(() => uniqueCitationIndexes(message.citations || []), [message.citations]);
+  // An answer the user asked to go beyond the document is general knowledge: nothing in it is a citation, so
+  // stray `[n]` stays plain text and no source, popover or save affordance can attach to it.
+  const isBeyond = message.answerScope === 'beyond_document';
+  const displayCitations = useMemo(() => (isBeyond ? [] : uniqueCitationIndexes(message.citations || [])), [isBeyond, message.citations]);
 
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -284,8 +294,22 @@ function MessageBubble({
               : 'dt-answer-card text-[var(--workbench-ink)]'
           }
         >
+          {isAssistant && !isError && isBeyond && (
+            <p className="not-prose mb-3 flex items-center gap-1.5 text-[13px] leading-snug text-[var(--workbench-muted)]">
+              <Lightbulb size={14} aria-hidden="true" className="shrink-0" />
+              {tOr('chat.beyondDocument.label', 'Answered from general knowledge — not verified against the document')}
+            </p>
+          )}
           {isUser ? (
-            <span dir="auto" className="whitespace-pre-wrap">{message.text}</span>
+            <>
+              {isBeyond && (
+                <span className="mb-1 flex items-center gap-1 text-[13px] font-medium text-[var(--workbench-muted)]">
+                  <Lightbulb size={13} aria-hidden="true" className="shrink-0" />
+                  {tOr('chat.beyondDocument.userTag', 'Beyond the document')}
+                </span>
+              )}
+              <span dir="auto" className="whitespace-pre-wrap">{message.text}</span>
+            </>
           ) : isStreaming && !message.text ? (
             <div className="flex items-center gap-2 text-[var(--workbench-muted)] text-sm" aria-live="polite">
               <div className="flex gap-1">
@@ -294,7 +318,7 @@ function MessageBubble({
                 <span className="w-1.5 h-1.5 bg-zinc-400 dark:bg-zinc-500 rounded-full animate-bounce motion-reduce:animate-none" aria-hidden="true" />
                 <span className="hidden motion-reduce:inline" aria-hidden="true">...</span>
               </div>
-              <span>{t('chat.searching')}</span>
+              {!isBeyond && <span>{t('chat.searching')}</span>}
             </div>
           ) : (
             <>
@@ -303,7 +327,7 @@ function MessageBubble({
                   user reads the answer. During streaming with no citations
                   yet, SourcesStrip itself draws a skeleton so the block
                   doesn't flicker into existence mid-answer. */}
-              {isAssistant && (
+              {isAssistant && !isBeyond && (
                 <SourcesStrip
                   citations={displayCitations}
                   onCitationClick={onCitationClick}
@@ -334,7 +358,7 @@ function MessageBubble({
               {/* Non-blocking hint on safe RAG/citation paths. The click only
                   opens a prefilled panel; the billed search still requires an
                   explicit submit. */}
-              {isAssistant && !isStreaming && message.quoteFinderHint && message.quoteFinderTopic && onTryQuoteFinder && (
+              {isAssistant && !isStreaming && !isBeyond && message.quoteFinderHint && message.quoteFinderTopic && onTryQuoteFinder && (
                 <button
                   type="button"
                   onClick={() => onTryQuoteFinder(message.quoteFinderTopic || '')}
@@ -429,6 +453,22 @@ function MessageBubble({
           >
             <ChevronsDown size={14} />
             {t('chat.continueGenerating')}
+          </button>
+        )}
+
+        {/* Opt-in "beyond the document" answer: the user's explicit choice, offered on the last finished
+            grounded answer only — never on tool results, quote searches, errors or a beyond answer itself. */}
+        {isAssistant && isLastAssistant && onAskBeyondDocument && !isStreaming && !isError && !isBeyond && !message.artifacts?.length && !message.toolStatus && message.text && (
+          <button
+            type="button"
+            onClick={onAskBeyondDocument}
+            className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-white"
+            title={tOr('chat.beyondDocument.actionHint', 'Uses general knowledge. Not verified against your document.')}
+          >
+            <Lightbulb size={14} aria-hidden="true" />
+            {isAnonBeyondDocument
+              ? tOr('chat.beyondDocument.signIn', 'Sign in to answer beyond the document')
+              : tOr('chat.beyondDocument.action', 'Answer beyond the document')}
           </button>
         )}
       </div>

@@ -439,10 +439,11 @@ async def chat_stream(
     # Server-side at every Domain Mode entry point: paid plans are unlimited;
     # a Free-plan reservation belongs to this session, not to the session's
     # mutable current-mode display field. Commit the claim before streaming.
+    # A beyond-document answer applies no domain rules, so it neither needs nor claims a slot.
     await enforce_domain_mode_access(
         db,
         user,
-        body.domain_mode,
+        None if body.answer_scope == "beyond_document" else body.domain_mode,
         owning_session_id=session_id,
         commit_claim=True,
     )

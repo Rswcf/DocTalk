@@ -20,6 +20,7 @@ type CitationEventPayload = CitationPayload & {
   retrieval_modality?: string;
 };
 type ErrorPayload = { code: string; message: string; status?: number };
+type AnswerScope = 'document' | 'beyond_document';
 type DonePayload = {
   message_id: string;
   response_version?: string | null;
@@ -30,6 +31,7 @@ type DonePayload = {
    * quote-search `done` events omit it and therefore default to false/null. */
   quote_finder_hint?: boolean;
   quote_finder_topic?: string | null;
+  answer_scope?: AnswerScope;
 };
 type ToolStatusPayload = { message: string };
 type AnswerRepairedPayload = { text: string; citations: Citation[]; verification?: unknown };
@@ -140,6 +142,7 @@ async function _processSSEStream(
                 continuation_count: typeof data.continuation_count === 'number' ? data.continuation_count : undefined,
                 quote_finder_hint: data.quote_finder_hint === true,
                 quote_finder_topic: typeof data.quote_finder_topic === 'string' ? data.quote_finder_topic : null,
+                answer_scope: data.answer_scope === 'beyond_document' || data.answer_scope === 'document' ? data.answer_scope : undefined,
               });
               break;
             default:
@@ -186,6 +189,7 @@ export async function chatStream(
   onAnswerRepaired?: (payload: AnswerRepairedPayload) => void,
   onCitationsRefined?: (citations: Citation[]) => void,
   retry?: ChatRetry,
+  answerScope?: AnswerScope,
 ) {
   const res = await fetch(`${PROXY_BASE}/api/sessions/${sessionId}/chat`, {
     method: 'POST',
@@ -196,6 +200,8 @@ export async function chatStream(
       ...(locale ? { locale } : {}),
       domain_mode: domainMode ?? null,
       ...retry,
+      // Sent only for the opt-in: the grounded answer is the absence of the field, never a value.
+      ...(answerScope === 'beyond_document' ? { answer_scope: 'beyond_document' } : {}),
     }),
     signal,
   });

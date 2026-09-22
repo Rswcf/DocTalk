@@ -62,6 +62,10 @@ interface ChatMessageRowProps {
    *  itself to anonymous demo users. */
   isAnonShareAnswer: boolean;
   onTryQuoteFinder?: (topic: string) => void;
+  /** Opt-in "beyond the document" answer — wired on the last assistant message only. */
+  onAskBeyondDocument?: () => void;
+  /** True when `onAskBeyondDocument` opens sign-in (anonymous demo) instead of sending. */
+  isAnonBeyondDocument: boolean;
 }
 
 const ChatMessageRow = React.memo(function ChatMessageRow({
@@ -77,15 +81,18 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   isSharingAnswer,
   isAnonShareAnswer,
   onTryQuoteFinder,
+  onAskBeyondDocument,
+  isAnonBeyondDocument,
 }: ChatMessageRowProps) {
   const activeCitation = useDocTalkStore(state => state.citationTarget?.messageId === message.id ? state.citationTarget.citation : null);
   const handleCitation = useCallback((citation: Citation) => onCitationClick(citation, message.id), [onCitationClick, message.id]);
   const handleCitationSave = useCallback((citation: Citation) => onCitationSave?.(citation, message.id), [onCitationSave, message.id]);
   const displayCitations = React.useMemo(() => {
-    if (message.role !== 'assistant') return undefined;
+    // A beyond-document answer is uncited by construction; never build citation cards for one.
+    if (message.role !== 'assistant' || message.answerScope === 'beyond_document') return undefined;
     if (!message.citations || message.citations.length === 0) return undefined;
     return uniqueCitationIndexes(renumberCitations(message.citations));
-  }, [message.citations, message.role]);
+  }, [message.citations, message.role, message.answerScope]);
 
   const displayMessage = React.useMemo(
     () => (displayCitations ? { ...message, citations: displayCitations } : message),
@@ -115,6 +122,8 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           isSharingAnswer={isSharingAnswer}
           isAnonShareAnswer={isAnonShareAnswer}
           onTryQuoteFinder={onTryQuoteFinder}
+          onAskBeyondDocument={onAskBeyondDocument}
+          isAnonBeyondDocument={isAnonBeyondDocument}
         />
         {uniqueCitations && uniqueCitations.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
@@ -188,6 +197,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onCitationSave, 
 
   const {
     sendMessage,
+    askBeyondDocument,
     regenerateLastResponse,
     continueGenerating,
     stopStreaming,
@@ -490,6 +500,18 @@ export default function ChatPanel({ sessionId, onCitationClick, onCitationSave, 
     void handleShareAnswer(msg);
   }, [handleShareAnswer]);
 
+  // Anonymous demo visitors (the reader sets a message cap exactly when the document is a demo and nobody is
+  // signed in) get sign-in instead of a beyond-document answer, like the anonymous Quote Finder chip: the modal
+  // opens before any request or private event, and reports `auth_modal_opened` with this source itself.
+  const isAnonymousDemo = maxUserMessages != null;
+  const handleAskBeyondDocument = useCallback(() => {
+    if (isAnonymousDemo) {
+      openAuthModal({ source: 'beyond_document' });
+      return;
+    }
+    void askBeyondDocument();
+  }, [isAnonymousDemo, askBeyondDocument]);
+
   const handleAnonShareClick = useCallback(() => {
     trackEvent('upgrade_click', { source: 'demo_share_attempt' });
     // Anonymous transcripts are not preserved through signup (no session
@@ -610,6 +632,8 @@ export default function ChatPanel({ sessionId, onCitationClick, onCitationSave, 
                     isSharingAnswer={false}
                     isAnonShareAnswer={!userPlan}
                     onTryQuoteFinder={onTryQuoteFinder}
+                    onAskBeyondDocument={isLastAssistantMsg ? handleAskBeyondDocument : undefined}
+                    isAnonBeyondDocument={isAnonymousDemo}
                   />
                 );
               })}

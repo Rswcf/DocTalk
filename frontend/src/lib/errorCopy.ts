@@ -483,6 +483,13 @@ const CODE_TABLE: Record<string, Handler> = {
     severity: 'warning',
     openPaywall: true,
   }),
+  // Defensive: the client never sends a beyond-document request anonymously (it opens sign-in instead).
+  BEYOND_DOCUMENT_REQUIRES_SIGN_IN: (_d, tOr) => ({
+    title: tOr('errors.BEYOND_DOCUMENT_REQUIRES_SIGN_IN.title', 'Sign in required'),
+    body: tOr('errors.BEYOND_DOCUMENT_REQUIRES_SIGN_IN.body', 'Sign in to get answers beyond the document.'),
+    cta: { label: tOr('errors.cta.signin', 'Sign in'), href: '/auth' },
+    severity: 'info',
+  }),
   DOMAIN_MODE_REQUIRES_PLUS: (d, tOr) => ({
     title: tOr('errors.DOMAIN_MODE_REQUIRES_PLUS.title', 'Plus plan required'),
     body: tOr('errors.DOMAIN_MODE_REQUIRES_PLUS.body', 'Legal and Academic domain mode is available on the Plus plan.'),
