@@ -1939,3 +1939,17 @@ wall.
 - **Nothing selects a batch for 09-28;** the §9.11 default (acquisition) stands.
 - **Before the 09-28 re-run, Claude adds to the kit:** the owner-excluded `checkout_failed` line and §9.25's
   four instrument notes.
+
+**Owner's answer (2026-09-22): cannot recall, "proceed on an assumption".** The working assumption, chosen on
+the evidence:
+- Every owner test since T_A used the OWNER account. The 09-13/14 and 09-20 tests all sit under OWNER.
+- **e8fed11b is a real user.** No commit lands on any branch between 09-14 06:40Z and 09-20 16:02Z, so nothing
+  in the owner's work touched uploads or billing on 09-16. There is no collab note of a second account. The
+  profile, a new signup whose first act is an oversized file, then upgrade, then gone, is an ordinary
+  evaluator's.
+
+This is also the instrument's own default: only the OWNER UUID is excluded. **The trigger is closed** and the
+§9.25 2.3 gate is satisfied. The assumption is low-stakes: if e8fed11b turns out to be the owner, the only
+correction is that the Purchase row reads I = C = 0 since T_A. Under that correction, §9.4's "no intent event
+by 09-28" branch fires. Its consequence, acquisition by default, is the one already standing, so 09-28 is
+unchanged either way.
