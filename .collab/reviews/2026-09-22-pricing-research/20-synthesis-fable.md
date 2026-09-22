@@ -171,6 +171,8 @@ argument is restated (future rankings and on-page conversion, not current traffi
 
 ## 8. The 09-28 candidate, the decision, and the owner-only checks
 
+> **Ratified by the owner, 2026-09-22** ("认可付费方向"), as amended by `../2026-09-22-needs-analysis/03-synthesis-fable.md` §4.6 and its `05`. The ruling is recorded in `../2026-09-22-needs-analysis/06-owner-ruling.md`. The pass itself is still unbuilt and unpriced.
+
 **Candidate item (post-09-28, shape only):** one non-renewing SKU beside Plus at every capability wall a free user
 hits, in EUR/CNY-capable presentment, with `checkout_created reason=<pass>` and a first-purchase existence read;
 plus the readable-unit copy for Free. Sequenced by §3: first packaging item under B/C, below §2.3 and the bridge

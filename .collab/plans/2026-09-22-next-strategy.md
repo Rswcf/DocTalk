@@ -342,3 +342,11 @@ The owner asked for the 09-24 items and what follows to be built now, with every
   - web-filter categorization (4.5);
   - the GSC Domain property, disavow re-upload and D2 export (4.6);
   - criterion 7.
+- **Owner ruling, 2026-09-22 (needs analysis).**
+  - The pricing direction is ratified, and the opt-in "document-first" scope rule is chosen. Details are in
+    `.collab/reviews/2026-09-22-needs-analysis/06-owner-ruling.md`.
+  - Three items join the post-09-28 queue behind the bridge:
+    - the scope-rule design, then its build (Codex mandatory);
+    - the pass design, which waits on the price and the Stripe check;
+    - the readable-unit rewrite, which waits on the grant decision.
+  - The month-one copy fix is staged on `fix/free-credit-copy`.
