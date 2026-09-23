@@ -112,3 +112,21 @@ test('reader bottom cards and inline sources keep distinct locations with stable
   assert.deepEqual(display.map(c=>c.refIndex), [1,2]);
   assert.deepEqual(citationText.uniqueCitationIndexes(display), display);
 });
+
+// The golden path of 2026-09-23 found the reader's "Export Markdown" unlabelled: it renders in the browser
+// (lib/export.ts), while the label had been added only to the server's Markdown/DOCX/PDF export. An answer that
+// leaves the app carries the same label as the app and the shared page, in the server export's exact words.
+test('an answer beyond the document is labelled in the Markdown export; a grounded one is not', () => {
+  const serverLabel = fs.readFileSync(path.resolve(__dirname, '../../backend/app/services/export_service.py'), 'utf8')
+    .match(/^BEYOND_DOCUMENT_LABEL = "([^"]+)"$/m)[1];
+  const md = renderConversationAsMarkdown([
+    { id: 'q1', role: 'user', text: 'Who won the 2018 Turing Award?', answerScope: 'beyond_document', createdAt: 0 },
+    { id: 'a1', role: 'assistant', text: 'Bengio, Hinton and LeCun.', answerScope: 'beyond_document', citations: [], createdAt: 0 },
+    { id: 'q2', role: 'user', text: 'What BLEU score does the big model reach?', createdAt: 0 },
+    { id: 'a2', role: 'assistant', text: 'It reaches 28.4 BLEU.', answerScope: 'document', citations: [], createdAt: 0 },
+  ], 'attention-paper.pdf');
+  const label = `*${serverLabel}*`;
+  assert.equal(md.split(label).length - 1, 1, 'exactly one label, on the beyond answer');
+  assert.ok(md.indexOf(label) < md.indexOf('Bengio, Hinton and LeCun.'), 'the label comes before the answer it describes');
+  assert.ok(md.indexOf(label) > md.indexOf('Who won the 2018 Turing Award?'));
+});

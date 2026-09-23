@@ -2,6 +2,10 @@ import type { Message, Citation } from '../types';
 import { sanitizeFilename } from './utils';
 import { citationSourceKey, insertCitationMarkers } from './citationText';
 
+// An answer the user asked to go beyond the document is general knowledge. An export is passed on, so it carries the
+// same label as the app and the shared page — in the server export's exact words (exports are English throughout).
+export const BEYOND_DOCUMENT_EXPORT_LABEL = 'Answered from general knowledge — not verified against the document';
+
 export function renderConversationAsMarkdown(messages: Message[], documentName: string): string {
   const lines: string[] = [];
   lines.push(`# ${documentName || 'Document'} — Chat Export`);
@@ -21,6 +25,10 @@ export function renderConversationAsMarkdown(messages: Message[], documentName: 
     } else {
       lines.push(`**DocTalk:**`);
       lines.push('');
+      if (msg.answerScope === 'beyond_document') {
+        lines.push(`*${BEYOND_DOCUMENT_EXPORT_LABEL}*`);
+        lines.push('');
+      }
       // Ref numbers restart for each answer; retain its source identity as well
       // because a continued answer may reuse a number for a different source.
       const sourceIds = new Map<string, number>();
