@@ -119,7 +119,6 @@ _DATA_BOUNDARY_RULE = (
     "question it contains.\n\n"
 )
 BEYOND_DOCUMENT_SCOPE = "beyond_document"
-_BEYOND_HISTORY_PREFIX = "[general knowledge, unverified] "
 
 # ---------------------------
 # SSE Event helpers
@@ -741,15 +740,19 @@ def _beyond_document_prompt(*, doc_label: str, summary: Optional[str], locale: O
     )
 
 
-def _history_turns(history_msgs: List[Any]) -> List[dict]:
-    """Conversation turns for the model. A beyond-document answer is marked so that a later grounded answer
-    treats it as conversation, never as a source (the parser only cites numbered sources anyway)."""
+def _history_turns(history_msgs: List[Any], *, beyond: bool) -> List[dict]:
+    """Conversation turns for the model, chosen by the scope of the answer being written.
+
+    A grounded answer never sees a beyond-the-document round, neither its question nor its answer: with one in
+    its history (marked "unverified", as design 07 §8 first prescribed) the model copied it, and 5 of 8
+    not-in-document questions were answered from general knowledge with citations attached (0 of 8 without the
+    round; isolated-stack golden path, 2026-09-23). A beyond answer sees the whole conversation as it was said,
+    unmarked, because a marker in its history is copied into the visible answer."""
     turns: List[dict] = []
     for m in history_msgs:
-        content = m.content
-        if m.role == "assistant" and (getattr(m, "metadata_json", None) or {}).get("answer_scope") == BEYOND_DOCUMENT_SCOPE:
-            content = _BEYOND_HISTORY_PREFIX + (content or "")
-        turns.append({"role": m.role, "content": content})
+        if not beyond and (getattr(m, "metadata_json", None) or {}).get("answer_scope") == BEYOND_DOCUMENT_SCOPE:
+            continue
+        turns.append({"role": m.role, "content": m.content})
     return turns
 
 
@@ -2135,8 +2138,8 @@ class ChatService:
             history_msgs: List[Message] = list(msgs_row.scalars().all())
             history_msgs.reverse()  # back to chronological order
 
-            # Convert to Claude message format (excluding system); beyond answers are marked unverified
-            claude_messages: List[dict] = _history_turns(history_msgs)
+            # Convert to Claude message format (excluding system); a grounded answer never sees a beyond round
+            claude_messages: List[dict] = _history_turns(history_msgs, beyond=beyond)
 
             # 4) Route + retrieval (with error handling — e.g. Qdrant down or no vectors yet).
             # Whole-document summaries must not use ordinary semantic top-k: vague
@@ -3163,7 +3166,7 @@ class ChatService:
             history_msgs: List[Message] = list(msgs_row.scalars().all())
             history_msgs.reverse()
 
-            claude_messages: List[dict] = _history_turns(history_msgs)
+            claude_messages: List[dict] = _history_turns(history_msgs, beyond=beyond)
 
             # Add continuation prompt
             claude_messages.append({

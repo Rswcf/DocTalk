@@ -233,15 +233,32 @@ async def test_anonymous_beyond_request_is_refused_in_the_service(monkeypatch) -
     h.create.assert_not_awaited()
 
 
+_MIXED_HISTORY = (
+    ("user", "Who wrote this novel?", {}),
+    ("assistant", "The document does not name its author.", {}),
+    ("user", "Who wrote this novel?", {"answer_scope": "beyond_document"}),
+    ("assistant", "It is usually attributed to a nineteenth-century author.", {"answer_scope": "beyond_document"}),
+)
+
+
+def _turns(call) -> list[dict]:
+    return call.kwargs["messages"][1:]
+
+
+def _newest_first(*rows):
+    """History rows in the order the service reads them (created_at DESC); it reverses them itself."""
+    return _history(*reversed(rows))
+
+
+# The signed-in golden path of 2026-09-23 (isolated stack): with a beyond round in its history — marked
+# "[general knowledge, unverified]" as design 07 §8 prescribed — the next GROUNDED answer copied it. 5 of 8
+# not-in-document questions were answered from general knowledge, marker and all, with citations attached; 0 of 8
+# without the beyond round. A grounded answer therefore never sees a beyond round, and nothing is marked.
 @pytest.mark.asyncio
-async def test_grounded_history_marks_beyond_answers_as_unverified(monkeypatch) -> None:
+async def test_grounded_history_leaves_out_every_beyond_round(monkeypatch) -> None:
     h = _harness(
         monkeypatch,
-        history=_history(
-            ("user", "Who wrote this novel?", {"answer_scope": "beyond_document"}),
-            ("assistant", "It is usually attributed to a nineteenth-century author.", {"answer_scope": "beyond_document"}),
-            ("user", "What happens in chapter one?", {}),
-        ),
+        history=_newest_first(*_MIXED_HISTORY, ("user", "What happens in chapter one?", {})),
         stream_chunks=[_FakeChunk("Chapter one opens on the island."), _FakeChunk(None, finish_reason="stop")],
     )
     monkeypatch.setattr(chat_service_module.corrective_retrieval_service, "retrieve_single",
@@ -249,12 +266,39 @@ async def test_grounded_history_marks_beyond_answers_as_unverified(monkeypatch) 
 
     events = await _run(h, user_message="What happens in chapter one?", user=None, mode="quick")
 
-    gen_call = next(c for c in h.create.await_args_list if c.kwargs.get("stream") is True)
-    history = gen_call.kwargs["messages"][1:]
-    beyond_turn = next(m for m in history if m["role"] == "assistant")
-    assert beyond_turn["content"].startswith("[general knowledge, unverified]")
+    turns = _turns(next(c for c in h.create.await_args_list if c.kwargs.get("stream") is True))
+    assert [m["content"] for m in turns if m["role"] == "assistant"] == ["The document does not name its author."]
+    assert [m["content"] for m in turns if m["role"] == "user"].count("Who wrote this novel?") == 1
+    assert not any("nineteenth-century" in m["content"] or "general knowledge" in m["content"] for m in turns)
     assert events[-1]["event"] == "done"
     assert events[-1]["data"]["answer_scope"] == "document"
+
+
+@pytest.mark.asyncio
+async def test_beyond_history_keeps_every_round_unmarked(monkeypatch) -> None:
+    h = _harness(
+        monkeypatch,
+        history=_newest_first(*_MIXED_HISTORY, ("user", "When was that author born?", {"answer_scope": "beyond_document"})),
+        stream_chunks=_beyond_stream(),
+    )
+    _forbid(monkeypatch, chat_service_module.action_planner, "plan")
+    _billing(monkeypatch, ledger_id=uuid.uuid4())
+
+    await _run(h, user_message="When was that author born?", user=SimpleNamespace(id=uuid.uuid4(), plan="plus"),
+               mode="quick", answer_scope="beyond_document")
+
+    turns = _turns(next(c for c in h.create.await_args_list if c.kwargs.get("stream") is True))
+    assert [m["content"] for m in turns if m["role"] == "assistant"] == [
+        "The document does not name its author.",
+        "It is usually attributed to a nineteenth-century author.",
+    ], "a beyond answer keeps the whole conversation, each turn as it was said"
+    assert not any("[general knowledge" in m["content"] for m in turns), "a marker in history is copied into answers"
+
+
+def test_the_history_marker_is_gone() -> None:
+    assert not hasattr(chat_service_module, "_BEYOND_HISTORY_PREFIX")
+    source = Path(chat_service_module.__file__).read_text()
+    assert "[general knowledge, unverified]" not in source
 
 
 @pytest.mark.asyncio
@@ -428,7 +472,7 @@ def test_beyond_click_event_is_allowlisted_but_not_public() -> None:
     assert "beyond_document_clicked" not in PUBLIC_EVENTS
 
 
-def _continue_harness(monkeypatch, *, asst_meta, stream_chunks, continuation_count=0):
+def _continue_harness(monkeypatch, *, asst_meta, stream_chunks, continuation_count=0, history=None):
     session_id = uuid.uuid4()
     document_id = uuid.uuid4()
     session_obj = SimpleNamespace(id=session_id, document_id=document_id, collection_id=None, title="t", domain_mode=None)
@@ -446,7 +490,9 @@ def _continue_harness(monkeypatch, *, asst_meta, stream_chunks, continuation_cou
 
     db = SimpleNamespace(
         execute=AsyncMock(side_effect=[_ScalarOneResult(session_obj), _MessagesResult([
-            SimpleNamespace(role="user", content="Who wrote this novel?", metadata_json={"answer_scope": "beyond_document"}),
+            *(history if history is not None else [
+                SimpleNamespace(role="user", content="Who wrote this novel?", metadata_json={"answer_scope": "beyond_document"}),
+            ]),
             asst_msg,
         ])]),
         get=AsyncMock(side_effect=fake_get),
@@ -478,6 +524,7 @@ async def test_continuing_a_beyond_answer_stays_beyond_and_uncited(monkeypatch) 
     ]
 
     assert "citation" not in [e["event"] for e in events]
+    assert not any("[general knowledge" in m["content"] for m in _turns(next(c for c in h.create.await_args_list if c.kwargs.get("stream") is True)))
     system_prompt = next(c for c in h.create.await_args_list if c.kwargs.get("stream") is True).kwargs["messages"][0]["content"]
     assert "general knowledge" in system_prompt.lower()
     assert "## Document Sources" not in system_prompt
@@ -487,6 +534,25 @@ async def test_continuing_a_beyond_answer_stays_beyond_and_uncited(monkeypatch) 
     assert h.asst_msg.citations is None
     assert h.asst_msg.metadata_json.get("answer_scope") == "beyond_document"
     assert "truncated" not in h.asst_msg.metadata_json, "a completed continuation clears the truncation flag"
+
+
+@pytest.mark.asyncio
+async def test_a_grounded_continuation_leaves_out_beyond_rounds(monkeypatch) -> None:
+    h = _continue_harness(
+        monkeypatch, asst_meta={"truncated": True},
+        stream_chunks=[_FakeChunk(" and the keeper leaves."), _FakeChunk(None, finish_reason="stop")],
+        history=_newest_first(*_MIXED_HISTORY, ("user", "What happens in chapter one?", {})),
+    )
+    monkeypatch.setattr(chat_service_module, "_try_repair_rag_answer", AsyncMock(return_value=None))
+    monkeypatch.setattr(chat_service_module, "_refine_citation_focus", AsyncMock(return_value=(False, "", 0, 0)))
+    monkeypatch.setattr(chat_service_module, "_record_rag_verification_event", AsyncMock())
+
+    events = [e async for e in chat_service_module.chat_service.continue_stream(h.session_id, h.asst_msg.id, h.db, user=None)]
+
+    turns = _turns(next(c for c in h.create.await_args_list if c.kwargs.get("stream") is True))
+    assert not any("nineteenth-century" in m["content"] or "[general knowledge" in m["content"] for m in turns)
+    assert "The document does not name its author." in [m["content"] for m in turns]
+    assert events[-1]["event"] == "done" and events[-1]["data"]["answer_scope"] == "document"
 
 
 @pytest.mark.asyncio
