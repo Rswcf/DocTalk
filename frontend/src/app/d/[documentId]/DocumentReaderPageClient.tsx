@@ -52,7 +52,9 @@ export default function DocumentReaderPageClient() {
   const { t, tOr, locale } = useLocale();
   // react-resizable-panels 4.x has no right-to-left support: under <html dir="rtl"> its layout pass looked up a panel
   // that does not exist and crashed the Arabic reader. The desktop group lays out left to right; each pane's content
-  // keeps the page direction (tests/reader-rtl-panels.test.cjs).
+  // keeps the page direction (tests/reader-rtl-panels.test.cjs). Not mirrored on purpose: the library does not know
+  // direction, so a mirrored group would also invert dragging and the separator's arrow keys. Revisit if a release
+  // adds RTL support (none through 4.13.2).
   const contentDir = LOCALES.find((l) => l.code === locale)?.dir === 'rtl' ? 'rtl' : 'ltr';
   const { pdfUrl, currentPage, citationTarget, highlights, highlightSnippet, highlightFocus, scale, scrollNonce, sessionId, navigateToCitation, setDocumentStatus, totalPages } = useDocTalkStore();
   const revealChat = useCallback(() => setMobileTab('chat'), []);
