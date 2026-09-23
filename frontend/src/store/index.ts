@@ -107,6 +107,7 @@ export interface DocTalkStore {
   addCitationToLastMessage: (citation: Citation) => void;
   addArtifactToLastMessage: (artifact: ChatArtifact) => void;
   setLastMessageToolStatus: (message: string) => void;
+  retireLastMessageToolStatus: () => void;
   setStreaming: (v: boolean) => void;
   setSessionId: (id: string | null) => void;
   setSelectedMode: (id: string) => void;
@@ -299,6 +300,15 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
     if (msgs.length === 0) return;
     const last = msgs[msgs.length - 1];
     set({ messages: [...msgs.slice(0, -1), { ...last, toolStatus: message }] });
+  },
+  // A status names a step of the stream in flight. Once the stream ends it is stale on an answer with text (the bubble
+  // already hides it there, but it would still hide the answer's actions); a tool action with no text keeps it,
+  // because there the status is the content.
+  retireLastMessageToolStatus: () => {
+    const msgs = get().messages;
+    const last = msgs[msgs.length - 1];
+    if (!last?.toolStatus || !last.text) return;
+    set({ messages: [...msgs.slice(0, -1), { ...last, toolStatus: undefined }] });
   },
   setStreaming: (v: boolean) => set({ isStreaming: v }),
   setSessionId: (id: string | null) => set({ sessionId: id }),

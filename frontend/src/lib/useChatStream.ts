@@ -64,6 +64,7 @@ export function useChatStream({
     addCitationToLastMessage,
     addArtifactToLastMessage,
     setLastMessageToolStatus,
+    retireLastMessageToolStatus,
     setStreaming,
     updateSessionActivity,
     flushPendingText,
@@ -284,6 +285,7 @@ export function useChatStream({
     answer_scope?: 'document' | 'beyond_document';
   }) => {
     flushPendingText();
+    retireLastMessageToolStatus();
     setStreaming(false);
     abortRef.current = null;
     updateSessionActivity(sessionId);
@@ -302,7 +304,7 @@ export function useChatStream({
         quoteFinderTopic: d.quote_finder_topic ?? null,
       });
     }
-  }, [flushPendingText, setStreaming, updateSessionActivity, sessionId, selectedMode, updateLastMessageMeta]);
+  }, [flushPendingText, retireLastMessageToolStatus, setStreaming, updateSessionActivity, sessionId, selectedMode, updateLastMessageMeta]);
 
   const handleAnswerRepaired = useCallback((payload: { text: string; citations: Message['citations'] }) => {
     flushPendingText();
@@ -645,8 +647,9 @@ export function useChatStream({
     abortRef.current?.abort();
     abortRef.current = null;
     flushPendingText();
+    retireLastMessageToolStatus();
     setStreaming(false);
-  }, [flushPendingText, setStreaming]);
+  }, [flushPendingText, retireLastMessageToolStatus, setStreaming]);
 
   return useMemo(() => ({
     sendMessage,

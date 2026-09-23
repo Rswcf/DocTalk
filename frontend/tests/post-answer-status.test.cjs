@@ -87,6 +87,38 @@ test('the first text retires an earlier status; a status set after text survives
   assert.equal(s().messages[0].toolStatus, 'Exporting…');
 });
 
+// The golden path of 2026-09-23 found "Refining citations…" still set on every finished signed-in answer: the
+// status line hid it, but the stale status also hid "Answer beyond the document" and made askBeyondDocument refuse.
+// Only a regenerate (which reloads the transcript from the server) brought the action back.
+test('a finished answer drops its step status; a text-less tool action keeps it', () => {
+  const store = load('store/index.ts', {
+    '../lib/models': { DEFAULT_MODE: 'quick', isKnownMode: (value) => ['quick', 'balanced'].includes(value) },
+  }).useDocTalkStore;
+  const s = () => store.getState();
+  s().setMessages([{ id: 'a', role: 'assistant', text: 'The keeper leaves.', createdAt: 0 }]);
+  s().setLastMessageToolStatus('Refining citations…');
+  s().retireLastMessageToolStatus();
+  assert.equal(s().messages[0].toolStatus, undefined);
+  assert.equal(s().messages[0].text, 'The keeper leaves.');
+
+  s().setMessages([{ id: 't', role: 'assistant', text: '', createdAt: 0 }]);
+  s().setLastMessageToolStatus('Exporting…');
+  s().retireLastMessageToolStatus();
+  assert.equal(s().messages[0].toolStatus, 'Exporting…', 'a tool action’s status is its content');
+
+  s().setMessages([]);
+  s().retireLastMessageToolStatus();
+  assert.deepEqual(s().messages, []);
+});
+
+test('the end of a stream and the stop button both retire the status', () => {
+  const code = stripComments(read('lib/useChatStream.ts'));
+  for (const start of ['const handleStreamDone = useCallback(', 'const stopStreaming = useCallback(']) {
+    const body = slice(code, start, '}, [');
+    assert.match(body, /flushPendingText\(\);[\s\S]*retireLastMessageToolStatus\(\);/, `${start} must retire the status after flushing`);
+  }
+});
+
 test('both stream handlers flush the text before showing a status, in the user’s language', () => {
   const code = stripComments(read('lib/useChatStream.ts'));
   assert.match(code, /const statusText = useCallback\(\(status: \{ message: string; code\?: string \}\) =>/);

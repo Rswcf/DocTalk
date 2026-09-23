@@ -180,6 +180,7 @@ function createChatHookHarness({ chatStream, initialMessages, maxUserMessages, g
   state.addCitationToLastMessage = () => {};
   state.addArtifactToLastMessage = () => {};
   state.setLastMessageToolStatus = () => {};
+  state.retireLastMessageToolStatus = () => {};
   state.setStreaming = (value) => {
     state.isStreaming = value;
   };
