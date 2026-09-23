@@ -12,7 +12,7 @@ import { ApiError, createLayoutTranslation, deleteDocument, getChunkDetail, repa
 import { PaywallModal } from '../../../components/PaywallModal';
 import { useDocTalkStore } from '../../../store';
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import { useLocale } from '../../../i18n';
+import { LOCALES, useLocale } from '../../../i18n';
 import { usePageTitle } from '../../../lib/usePageTitle';
 import { AlertTriangle, Download, FileText, LogIn, MessageSquare, Presentation, Quote, RotateCcw, Trash2, X } from 'lucide-react';
 import QuoteFinderPanel from '../../../components/Quotes/QuoteFinderPanel';
@@ -50,6 +50,10 @@ export default function DocumentReaderPageClient() {
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
   const { t, tOr, locale } = useLocale();
+  // react-resizable-panels 4.x has no right-to-left support: under <html dir="rtl"> its layout pass looked up a panel
+  // that does not exist and crashed the Arabic reader. The desktop group lays out left to right; each pane's content
+  // keeps the page direction (tests/reader-rtl-panels.test.cjs).
+  const contentDir = LOCALES.find((l) => l.code === locale)?.dir === 'rtl' ? 'rtl' : 'ltr';
   const { pdfUrl, currentPage, citationTarget, highlights, highlightSnippet, highlightFocus, scale, scrollNonce, sessionId, navigateToCitation, setDocumentStatus, totalPages } = useDocTalkStore();
   const revealChat = useCallback(() => setMobileTab('chat'), []);
   const { capture: captureCitationOrigin, returnToAnswer, canReturn } = useCitationReturn(documentId, sessionId, revealChat);
@@ -602,10 +606,10 @@ export default function DocumentReaderPageClient() {
               </div>
             </div>
           ) : isDesktopLayout ? (
-            <div className="relative flex flex-1 min-h-0 px-2 pb-2 gap-0">
+            <div className="relative flex flex-1 min-h-0 px-2 pb-2 gap-0" dir="ltr">
               <Group orientation="horizontal" className="flex-1 min-h-0">
                 <Panel defaultSize={50} minSize={25}>
-                  <div className="dt-reader-pane h-full min-w-0 sm:min-w-[320px] flex flex-col border rounded-l-xl overflow-hidden">
+                  <div className="dt-reader-pane h-full min-w-0 sm:min-w-[320px] flex flex-col border rounded-l-xl overflow-hidden" dir={contentDir}>
                     <div className="flex-1 min-h-0">
                       {chatContent}
                     </div>
@@ -618,7 +622,7 @@ export default function DocumentReaderPageClient() {
                   <div className="dt-reader-resizer-grip" />
                 </Separator>
                 <Panel defaultSize={50} minSize={35}>
-                  <div className="dt-reader-pane h-full border rounded-r-xl overflow-hidden">
+                  <div className="dt-reader-pane h-full border rounded-r-xl overflow-hidden" dir={contentDir}>
                     {viewerContent}
                   </div>
                 </Panel>
