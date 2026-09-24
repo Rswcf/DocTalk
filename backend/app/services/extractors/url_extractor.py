@@ -264,7 +264,15 @@ def _meta_content(soup: BeautifulSoup, *names: str) -> str:
     return ""
 
 
+# The document's own roots are never boilerplate. Their class lists carry site-wide flags, and the pattern matches a
+# word at a hyphen: Wikipedia's <html> has "vector-feature-language-in-header-enabled", so every article was removed
+# whole and failed with NO_TEXT_CONTENT until 2026-09-24.
+_STRUCTURAL_ROOTS = frozenset({"html", "body", "main"})
+
+
 def _is_boilerplate_tag(tag) -> bool:
+    if getattr(tag, "name", None) in _STRUCTURAL_ROOTS:
+        return False
     attrs: list[str] = []
     for attr_name in ("id", "class", "role", "aria-label", "data-testid"):
         value = tag.get(attr_name)

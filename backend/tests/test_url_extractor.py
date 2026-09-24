@@ -293,3 +293,45 @@ def test_fetch_and_extract_url_rejects_image_only_title_page(monkeypatch: pytest
             "https://example.com/image-only",
             max_content_size=100 * 1024 * 1024,
         )
+
+
+def test_fetch_and_extract_url_keeps_a_page_whose_root_classes_name_boilerplate(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Every Wikipedia article failed with NO_TEXT_CONTENT (site test, 2026-09-24): the skin puts feature flags on
+    # <html>, e.g. "vector-feature-language-in-header-enabled", and the boilerplate pattern matches "header" at the
+    # hyphen, so the whole document was removed as boilerplate. The document's roots are never boilerplate.
+    html = b"""
+    <html class="client-nojs vector-feature-language-in-header-enabled vector-feature-main-menu-pinned-disabled">
+      <head><title>Lighthouse - Wikipedia</title></head>
+      <body class="skin-vector mediawiki page-Lighthouse menu-pinned">
+        <div class="vector-header-container"><p>Search Wikipedia</p></div>
+        <div class="mw-page-container">
+          <main id="content" class="mw-body with-sidebar">
+            <div id="mw-content-text" class="mw-body-content">
+              <p>A lighthouse is a tower designed to emit light to serve as a navigational aid.</p>
+              <h2>History</h2>
+              <p>The Pharos of Alexandria was among the earliest lighthouses.</p>
+            </div>
+          </main>
+        </div>
+        <div class="mw-footer-container"><p>Privacy policy</p></div>
+      </body>
+    </html>
+    """
+
+    def _fake_fetch(url: str, **_kwargs):
+        return url, "text/html; charset=utf-8", "utf-8", html
+
+    monkeypatch.setattr(url_extractor, "_fetch_with_safe_redirects", _fake_fetch)
+
+    title, pages, pdf_bytes = url_extractor.fetch_and_extract_url(
+        "https://en.wikipedia.org/wiki/Lighthouse",
+        max_content_size=100 * 1024 * 1024,
+    )
+    content = "\n\n".join(page.text for page in pages)
+
+    assert pdf_bytes is None
+    assert "A lighthouse is a tower designed to emit light" in content
+    assert "## History" in content
+    assert "The Pharos of Alexandria was among the earliest lighthouses." in content
+    assert "Search Wikipedia" not in content
+    assert "Privacy policy" not in content
