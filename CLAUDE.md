@@ -36,7 +36,7 @@ Run these after any non-trivial change — they are the contract for "this ships
 cd frontend && npm run build       # must pass, not just `npm run dev`
 cd backend && python3 -m ruff check app/ tests/
 cd backend && python3 -m pytest tests/test_parse_service.py -v   # no deps
-cd backend && python3 -m pytest -m integration -v                # docker required
+cd backend && SKIP_INTEGRATION=0 python3 -m pytest -m integration -v   # docker required (unset = everything skips)
 ```
 
 For UI changes, also open the dev server in a browser and exercise the golden path (upload → chat → citation jump).

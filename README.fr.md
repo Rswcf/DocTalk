@@ -216,9 +216,9 @@ Railway execute les services principaux : backend, PostgreSQL, Redis, Qdrant, Mi
 ## Tests
 
 ```bash
-cd backend && python3 -m pytest tests/test_smoke.py -v     # Tests de fumee
-cd backend && python3 -m pytest -m integration -v           # Tests d'integration
-cd backend && python3 -m ruff check app/ tests/             # Lint
+cd backend && python3 -m pytest tests/test_smoke.py -v                 # Tests de fumee
+cd backend && SKIP_INTEGRATION=0 python3 -m pytest -m integration -v   # Tests d'integration
+cd backend && python3 -m ruff check app/ tests/                        # Lint
 ```
 
 ## Contribuer

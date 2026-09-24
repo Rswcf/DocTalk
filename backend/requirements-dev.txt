@@ -1,5 +1,14 @@
 -r requirements.txt
 ruff==0.9.7
 pytest==8.3.5
-pytest-asyncio==0.24.0
+# Must stay >= 1.2. 0.24 ran each test body on the thread's current event loop,
+# so the asyncio.run() in tests/test_migrations.py left every later
+# session-loop test with no loop: 52 of 136 failed in a one-process
+# integration run.
+pytest-asyncio==1.3.0
 httpx==0.28.1
+# Sync driver behind app.models.sync_database, which builds its engine at
+# import time; seven test modules import it. The Dockerfile installs it
+# separately (outside requirements.txt), so without this line a fresh
+# `pip install -r requirements-dev.txt` cannot collect the test suite.
+psycopg[binary]==3.3.6
