@@ -95,7 +95,7 @@ is therefore self-imposed; lifting it is Fable's call.
   - contract v1 → v2 found all four edits: payment 30 → 45 days, termination removed, confidentiality 3 → 5 years,
     insurance added. They were grouped as Added/Removed/Modified.
 - **Pro mode:** first text 3.3 s, done in 15.7 s, 26 citations, both statuses shown.
-- **Every format:** the answer is right and cited for each one — DOCX 1936, PPTX 14 March 2027, XLSX 48,500, TXT
+- **Every format:** 7 of 7 input types answer correctly with citations (the passage highlight shows for only 2 of 7 — F21) — DOCX 1936, PPTX 14 March 2027, XLSX 48,500, TXT
   212, MD 20.11. URL import (after F20's fix) answers "Attention Is All You Need".
 - **Regression:**
   - branch: backend unit 1103, frontend unit 241, `npm run build`, ruff/tsc/eslint all clean;
@@ -109,6 +109,7 @@ is therefore self-imposed; lifting it is Fable's call.
 - question templates;
 - the OAuth and magic-link round trip (only the modal);
 - real mobile Safari;
+- the citations inside a Compare report (the four edits were checked; their citation chips were not clicked);
 - the real-user replay (after 09-28, needs production documents).
 
 ## Decisions
