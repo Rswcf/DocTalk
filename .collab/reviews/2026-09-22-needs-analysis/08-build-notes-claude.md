@@ -128,3 +128,71 @@ streaming a visible thinking process.
 - Raising `maxDuration` changes the billing model (active CPU) and is Fable's call. A preview build with a higher
   value would settle whether Fluid is on: a non-Fluid Hobby build rejects anything above 60.
 - Nothing in this branch depends on the answer.
+
+## Signed-in golden path, 2026-09-23/24 (isolated stack) — criterion 12 done, three defects fixed, one design amendment
+
+The owner chose option 2 above ("本地测试账号"): a local-only session was minted for a fixture user on the isolated
+stack (scratch DB `doctalk_golden`, its own bucket, collection and Redis db; backend :8001, dev frontend :3000). A
+headless Chrome drove it over CDP with real mouse and keyboard input and took screenshots. No Google account, no
+production data. Branch head after the fixes: `233c398`. It also carries two production fixes that ship on their own
+path (fix branch → main → stable), not with this branch: `fix/arabic-reader-rtl` and `fix/url-import-root-classes`.
+
+**Criterion 12 passes** (10/10 steps). A not-in-document question gets the honest "not covered" answer and the action.
+The beyond answer carries the label and the user tag while it streams, has no sources or markers, and offers no action
+of its own. A regenerate of it stays beyond. The share preview carries the label. A grounded question afterwards gets
+sources, shows the post-answer statuses, and its citation jump lands in view. Quote Finder searches and saves. A reload
+keeps the tag and the label. Also passing: 375 px layout and citation jump, the Arabic reader's labels (layout only on
+a dev server — the crash fix was verified on a local production build), and Academic mode on Free, grounded and
+beyond. Collections chat cites both files and its citation deep link lands on the page. Compare is gated on Free and
+runs on Pro. PDF and DOCX exports each carry one label per beyond answer. One Pro-mode turn: first text 3.3 s, done in
+15.7 s, 26 citations, both statuses shown.
+
+**Three defects in this branch, found and fixed:**
+
+1. **`b294df7` — the action never appeared after an ordinary signed-in answer.** Every signed-in answer with
+   citations ends with a "Refining citations…" status, and nothing cleared it when the stream ended. The bubble hid it,
+   but the stale status failed the action's `!message.toolStatus` gate and made `askBeyondDocument` refuse. Only a
+   regenerate or a reload brought the action back, because both re-read the transcript from the server. The first
+   render check used seeded history, so it missed this. Now the end of the stream and the stop button retire the
+   status on an answer that has text. A text-less tool action keeps its status, because there the status is the
+   content. **For Codex:** after **Stop** during "Checking citations…", the action now appears on the stopped answer.
+   Before, the stale status hid it.
+2. **`9fb96b0` — "Export Markdown" dropped the label.** That export renders in the browser (`lib/export.ts`) and is
+   open to every plan. The label had been added only to the server exports. It now uses the server export's exact
+   words; a test reads `BEYOND_DOCUMENT_LABEL` from `export_service.py`.
+3. **`ac249e5` — deviation #8 (amends 07 §8, the history marker).** This is a candidate for Fable and Codex, not a
+   verdict. With a beyond round in its history, marked "[general knowledge, unverified]", the next **grounded** answer
+   copied it. It wrote the general-knowledge fact and the marker, with three document citations attached: outside
+   facts dressed as document-sourced. That fails 07's own gate (review item 7: a grounded answer that supplies outside
+   facts without the opt-in is a BLOCK). The live screenshot shows it in Academic mode ("…not covered… [general
+   knowledge, unverified] … Canberra" with [1]). Measured through the proxy, Flash, eight not-in-document questions:
+
+   | condition | before | after `ac249e5` |
+   |---|---|---|
+   | grounded answer, no beyond round in history (control) | 0/8 leak | — |
+   | grounded answer after one beyond round | **5/8 leak** | **0/8** |
+   | second beyond answer opens with the literal marker | **4/4** | **0/4** (still answers, 4/4) |
+
+   The change: `_history_turns(history_msgs, *, beyond)`. A grounded answer, or a grounded continuation, never sees a
+   beyond round. Both of its rows go: the user row carries `answer_scope` too. A beyond answer sees the whole
+   conversation as it was said, unmarked. The marker constant is deleted. What it costs:
+   - a grounded follow-up that points at a beyond answer ("do those three appear in the paper?") loses that
+     referent;
+   - the grounded window shrinks by the beyond rounds among the last `MAX_CHAT_HISTORY_TURNS × 2` rows.
+   A prompt-only instruction was not tried. An instruction inside the history is what item 8 was, and it is what got
+   copied.
+
+Also in `ac249e5`: `test_chat_summary_routing` had been left expecting the status payload from before `bac0e78`. It
+now expects the code. Backend unit tests: 1103 passed. Frontend: 241. `npm run build` passes. The Arabic reader
+renders 3/3 on the branch's production build.
+
+**Settled since the last write-up:** Fluid compute is on. A preview built with `maxDuration = 120` streamed 75 s past
+the 60 s mark, so the 60 s in `route.ts` is self-imposed. Lifting it is still Fable's call (billing model). The probe
+deployment was removed. `vercel curl` auto-created a Protection Bypass for Automation token on the project; keeping or
+revoking it is the owner's call.
+
+**Open for Fable (not built):** the answer's **Copy** button copies a beyond answer without the label. 07 names share
+and export, not copy. A label in copied text guards against misattribution but lands in the user's own writing.
+
+**Still owed:** the criterion 6 replay (after 09-28, needs production documents) and the Codex review. The review now
+covers deviations 1–8, the Stop behaviour above, and 07 §6.
