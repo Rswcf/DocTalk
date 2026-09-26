@@ -140,7 +140,10 @@ def _minio_client():
     # R2 has one public endpoint (MINIO_ENDPOINT); the old Railway MinIO also
     # needed MINIO_PUBLIC_ENDPOINT to be reached from outside.
     ep = os.environ.get("MINIO_PUBLIC_ENDPOINT") or os.environ["MINIO_ENDPOINT"]
-    secure = ep.startswith("https://")
+    if "://" in ep:
+        secure = ep.startswith("https://")
+    else:
+        secure = os.environ.get("MINIO_SECURE", "").strip().lower() in {"1", "true", "yes", "on"}
     host = ep.split("://", 1)[-1].rstrip("/")
     return Minio(host, access_key=os.environ["MINIO_ACCESS_KEY"],
                  secret_key=os.environ["MINIO_SECRET_KEY"], secure=secure,

@@ -44,11 +44,12 @@ DEMO_DOCS = [
 
 
 def _get_minio_client():
-    """The app-wide object storage client. Kept as a function because the
-    demo-seed tests patch this name."""
+    """The app-wide store's transfer client (minio-py's default HTTP
+    policy, as before). Kept as a function because the demo-seed tests patch
+    this name."""
     from app.services.storage_service import storage_service
 
-    return storage_service.client
+    return storage_service.transfer_client
 
 
 def _ensure_demo_files(docs: list) -> int:

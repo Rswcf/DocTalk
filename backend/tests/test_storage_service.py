@@ -183,3 +183,41 @@ def test_object_exists_is_false_only_for_no_such_key(recording_minio) -> None:
 def test_client_property_is_the_server_side_client(recording_minio) -> None:
     service = _service(public_endpoint="https://minio-v2-production.up.railway.app")
     assert service.client is recording_minio.instances[0]
+
+
+def test_transfer_client_keeps_minio_default_http_policy(recording_minio) -> None:
+    service = _service(endpoint=R2_ENDPOINT, region="auto")
+    transfer = service.transfer_client
+
+    assert transfer is service.transfer_client  # built once
+    assert transfer is not service.client
+    assert (transfer.host, transfer.secure, transfer.region) == (
+        "0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com", True, "auto"
+    )
+    assert transfer.http_client is None  # minio-py builds its own: 5-min timeouts, 5 retries
+
+
+def test_real_sdk_presigns_r2_urls_offline_with_auto_region_scope() -> None:
+    from urllib.parse import parse_qs, urlsplit
+
+    service = storage_module.StorageService(
+        endpoint=R2_ENDPOINT, region="auto", access_key="AKIDEXAMPLE",
+        secret_key="secret", bucket="doctalk-pdfs", default_ttl=300,
+    )
+
+    def no_network(*_args, **_kwargs):
+        raise AssertionError("presigning must not make a request (no GetBucketLocation)")
+
+    service._public_client._http.urlopen = no_network
+    url = urlsplit(service.get_presigned_url("documents/abc/report.pdf"))
+    query = parse_qs(url.query)
+
+    assert (url.scheme, url.netloc, url.path) == (
+        "https", "0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com", "/doctalk-pdfs/documents/abc/report.pdf"
+    )
+    assert query["X-Amz-Algorithm"] == ["AWS4-HMAC-SHA256"]
+    assert query["X-Amz-Credential"][0].startswith("AKIDEXAMPLE/")
+    assert query["X-Amz-Credential"][0].endswith("/auto/s3/aws4_request")
+    assert query["X-Amz-Expires"] == ["300"]
+    assert query["X-Amz-SignedHeaders"] == ["host"]
+    assert len(query["X-Amz-Signature"][0]) == 64

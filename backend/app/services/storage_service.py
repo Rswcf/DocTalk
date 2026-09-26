@@ -54,6 +54,9 @@ class StorageService:
         region = region or settings.MINIO_REGION
 
         host, secure = _parse_minio_endpoint(endpoint, bool(settings.MINIO_SECURE))
+        self._transfer_args = dict(endpoint=host, access_key=access_key, secret_key=secret_key,
+                                   secure=secure, region=region)
+        self._transfer_client: Optional[Minio] = None
         self._client = self._new_client(host, secure, access_key, secret_key, region)
         if public_endpoint:
             public_host, public_secure = _parse_minio_endpoint(public_endpoint, bool(settings.MINIO_SECURE))
@@ -79,9 +82,8 @@ class StorageService:
         if secure:
             import certifi
 
-            # CERT_REQUIRED with no CA bundle fails every TLS handshake. Until
-            # R2, no production request went over TLS (the internal MinIO
-            # endpoint is plain http; the https client only signed URLs).
+            # Explicit trust store, the same one minio-py uses by default.
+            # Until R2 the only TLS client here was the presign-only public one.
             pool_kwargs.update(cert_reqs="CERT_REQUIRED", ca_certs=certifi.where())
         else:
             pool_kwargs["cert_reqs"] = "CERT_NONE"
@@ -97,6 +99,20 @@ class StorageService:
     def client(self) -> Minio:
         """The server-side client, for the few callers that need raw S3 calls."""
         return self._client
+
+    @property
+    def transfer_client(self) -> Minio:
+        """Same endpoint, credentials, TLS and region, but minio-py's own HTTP
+        policy (5-minute timeouts, 5 retries) for worker-side transfers.
+
+        The parse worker streams whole documents; under the request client's
+        10 s read timeout a slow response body would fail the download
+        terminally instead of waiting it out, as it always has.
+        """
+        if self._transfer_client is None:
+            args = dict(self._transfer_args)
+            self._transfer_client = Minio(args.pop("endpoint"), **args)
+        return self._transfer_client
 
     def _storage_unavailable(self, operation: str, exc: Exception) -> StorageUnavailableError:
         logger.warning("Object storage %s failed: %s", operation, exc)

@@ -65,9 +65,9 @@ def _set_doc_error(doc, code: str, human: str | None = None) -> None:
 
 
 def _download_file_bytes(bucket: str, object_key: str) -> bytes:
-    # The app-wide client: same endpoint parsing, region, TLS trust and
-    # timeouts as every other storage call.
-    response = storage_service.client.get_object(bucket, object_key)
+    # The app-wide store's transfer client: same endpoint, region and TLS
+    # trust as every other storage call, with minio-py's long timeouts.
+    response = storage_service.transfer_client.get_object(bucket, object_key)
     try:
         data = response.read()
     finally:

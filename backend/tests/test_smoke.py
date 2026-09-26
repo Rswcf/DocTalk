@@ -44,6 +44,19 @@ async def test_health_deep_with_valid_secret(client):
     assert "components" in data
 
 
+
+async def test_health_deep_reports_a_missing_bucket_as_an_error(client, monkeypatch):
+    """health_check returns False (not an exception) for a missing bucket;
+    deep health must still mark object storage unhealthy."""
+    from app.services.storage_service import storage_service
+
+    monkeypatch.setattr(storage_service, "health_check", lambda: False)
+    resp = await client.get("/health?deep=true", headers={"X-Health-Secret": "test-adapter-secret"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["components"]["minio"]["status"] == "error"
+    assert data["status"] == "degraded"
+
 async def test_version_endpoint(client):
     resp = await client.get("/version")
     assert resp.status_code == 200
