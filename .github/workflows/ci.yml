@@ -54,15 +54,24 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # test_smoke.py's document upload writes to MinIO. minio/minio is gone
+      # from Docker Hub and Quay (and dl.min.io answers 410), so this is
+      # Bitnami's frozen build of the release docker-compose.yml pins
+      # (RELEASE.2024-12-18T13-15-44Z), pinned by digest.
+      minio:
+        image: bitnamilegacy/minio:2024.12.18@sha256:c0ede65eb88e47138470202c517bacf55ab3c27df848030b7b46e69d34b7d192
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -fsS http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
-      # test_smoke.py's document upload writes to MinIO. A service container
-      # cannot take a command and minio/minio needs `server /data`, so it
-      # starts here, on the same image docker-compose.yml pins.
-      - run: |
-          docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -70,12 +79,8 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       # The app creates its bucket in the lifespan hook, which the tests'
-      # httpx.ASGITransport never runs. --retry-all-errors, because while
-      # MinIO boots docker's port proxy answers with an empty reply, not a
-      # refused connection.
-      - run: |
-          curl -fsS --retry 30 --retry-all-errors --retry-delay 1 http://localhost:9000/minio/health/live
-          python -c "from app.services.storage_service import storage_service; storage_service.ensure_bucket()"
+      # httpx.ASGITransport never runs.
+      - run: python -c "from app.services.storage_service import storage_service; storage_service.ensure_bucket()"
       - run: python -m pytest -m integration -v
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/doctalk_ci
