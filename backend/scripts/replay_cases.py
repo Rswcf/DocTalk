@@ -137,11 +137,14 @@ async def manifest(con: asyncpg.Connection) -> None:
 
 def _minio_client():
     from minio import Minio
-    ep = os.environ["MINIO_PUBLIC_ENDPOINT"]
+    # R2 has one public endpoint (MINIO_ENDPOINT); the old Railway MinIO also
+    # needed MINIO_PUBLIC_ENDPOINT to be reached from outside.
+    ep = os.environ.get("MINIO_PUBLIC_ENDPOINT") or os.environ["MINIO_ENDPOINT"]
     secure = ep.startswith("https://")
     host = ep.split("://", 1)[-1].rstrip("/")
     return Minio(host, access_key=os.environ["MINIO_ACCESS_KEY"],
-                 secret_key=os.environ["MINIO_SECRET_KEY"], secure=secure)
+                 secret_key=os.environ["MINIO_SECRET_KEY"], secure=secure,
+                 region=os.environ.get("MINIO_REGION"))
 
 
 async def restore(con: asyncpg.Connection) -> None:

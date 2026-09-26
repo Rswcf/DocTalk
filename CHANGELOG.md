@@ -8,18 +8,36 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-26
+
+Groundwork for moving document storage to Cloudflare R2. On its own this
+release changes nothing users see: storage keeps pointing at the current server
+until a configuration switch. Plan: `.collab/plans/2026-09-26-r2-migration.md`.
+
 ### Changed
+- Document storage now works with Cloudflare R2 as well as MinIO. The backend
+  signs requests for R2's `auto` region, verifies TLS certificates on encrypted
+  connections, and every part of the backend reaches storage through one client.
+- The site's content security policy allows documents to load from DocTalk's
+  R2 storage host.
 - The German and Portuguese home pages' search titles now carry the same
   message as the other translated home pages ("Chat with any PDF in seconds",
   in their own words). They had shown the headline's claim without the word
   "PDF" since those pages launched. The Japanese title loses a stray space.
-  Every other page's search title and description is unchanged.
+  Every other page's search title and description is unchanged. (On the site
+  since 2026-09-22.)
+
+### Removed
+- Uploads no longer ask the storage server for server-side encryption. The
+  request never took effect in production, because that server had no key
+  service configured. R2 encrypts every object at rest automatically.
 
 ### Fixed
 - Pages no longer preload the Fraunces font, which no page shows when it loads
   since the Night theme. That takes 270 KB off every page's critical path and
   about 0.2 s off the largest paint on a throttled phone. The one place that
   still uses it (the quote in a chat citation's popover) loads it on first use.
+  (On the site since 2026-09-22.)
 
 ## [0.32.0] - 2026-09-21
 

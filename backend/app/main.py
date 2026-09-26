@@ -91,9 +91,9 @@ async def lifespan(app: FastAPI):
     def _init_services() -> None:
         try:
             storage_service.ensure_bucket()
-            logger.info("MinIO bucket ready")
+            logger.info("Object storage bucket ready")
         except Exception as e:
-            _alert(e, "MinIO bucket ensure failed at startup")
+            _alert(e, "Object storage bucket ensure failed at startup")
         try:
             embedding_service.ensure_collection()
             logger.info("Qdrant collection ready")

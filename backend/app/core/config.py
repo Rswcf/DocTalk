@@ -46,16 +46,22 @@ class Settings(BaseSettings):
         "openai/gpt-5.2",
     ])
 
-    # Object Storage (MinIO local / S3-compatible in production)
+    # Object storage: any S3-compatible service. Production = Cloudflare R2
+    # (MINIO_ENDPOINT=https://<account>.r2.cloudflarestorage.com,
+    # MINIO_REGION=auto); dev and CI = MinIO. The MINIO_* names are kept for
+    # compatibility with existing deployments.
     MINIO_ENDPOINT: str = Field(default="localhost:9000")
     MINIO_ACCESS_KEY: str = Field(default="minioadmin")
     MINIO_SECRET_KEY: str = Field(default="minioadmin")
     MINIO_BUCKET: str = Field(default="doctalk-pdfs")
     MINIO_PRESIGN_TTL: int = Field(default=300)
+    # TLS for a scheme-less MINIO_ENDPOINT (a scheme in the URL wins).
     MINIO_SECURE: bool = Field(default=False)
-    # Optional browser-facing endpoint used only for presigned file URLs.
-    # Server-side upload/download should use MINIO_ENDPOINT, preferably via
-    # Railway private networking in production.
+    # Signing region; "auto" for R2. Unset = minio-py looks it up per bucket.
+    MINIO_REGION: Optional[str] = None
+    # Legacy: a separate browser-facing endpoint for presigned file URLs, for
+    # stores reached server-side over a private network (the old Railway
+    # MinIO). R2 uses one public endpoint for both, so leave it unset there.
     MINIO_PUBLIC_ENDPOINT: Optional[str] = None
 
     # Celery

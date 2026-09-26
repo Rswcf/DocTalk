@@ -13,6 +13,11 @@ const buildSha =
 const isProduction = process.env.NODE_ENV === "production";
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "";
 const usesLocalApiBase = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(apiBase);
+// Object storage (Cloudflare R2). pdf.js fetches each document through a
+// presigned URL on this exact host, so only connect-src needs it. Pinned to
+// the account host: a *.r2.cloudflarestorage.com wildcard would let injected
+// script send data to any R2 account.
+const objectStorageOrigin = "https://0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com";
 const localDevSources = isProduction && !usesLocalApiBase
   ? ""
   : [
@@ -41,7 +46,7 @@ const cspDirectives = [
   "font-src 'self' data:",
   "worker-src 'self' blob:",
   "media-src 'self' data:",
-  `connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com${localDevSources}`,
+  `connect-src 'self' https://*.up.railway.app ${objectStorageOrigin} https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com${localDevSources}`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",
@@ -104,7 +109,7 @@ const cspReportOnlyDirectives = [
   "font-src 'self' data:",
   "worker-src 'self' blob:",
   "media-src 'self' data:",
-  "connect-src 'self' https://*.up.railway.app https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com",
+  `connect-src 'self' https://*.up.railway.app ${objectStorageOrigin} https://*.sentry.io https://*.ingest.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://*.analytics.google.com`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",
