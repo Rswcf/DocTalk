@@ -216,9 +216,9 @@ Railway는 핵심 서비스인 backend, PostgreSQL, Redis, Qdrant, MinIO를 실�
 ## 테스트
 
 ```bash
-cd backend && python3 -m pytest tests/test_smoke.py -v     # 스모크 테스트
-cd backend && python3 -m pytest -m integration -v           # 통합 테스트
-cd backend && python3 -m ruff check app/ tests/             # 린트
+cd backend && python3 -m pytest tests/test_smoke.py -v                 # 스모크 테스트
+cd backend && SKIP_INTEGRATION=0 python3 -m pytest -m integration -v   # 통합 테스트
+cd backend && python3 -m ruff check app/ tests/                        # 린트
 ```
 
 ## 기여하기

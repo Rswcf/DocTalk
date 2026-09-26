@@ -233,10 +233,10 @@ DocTalk 采用 Semantic Versioning，但在 1.0 之前使用 `0.minor.patch`
 ## 测试
 
 ```bash
-cd backend && python3 -m pytest tests/test_smoke.py -v     # Smoke 测试
-cd backend && python3 -m pytest -m integration -v           # 集成测试
-cd backend && python3 -m ruff check app/ tests/             # 代码检查
-python3 scripts/check_version_consistency.py                # 版本元数据检查
+cd backend && python3 -m pytest tests/test_smoke.py -v                 # Smoke 测试
+cd backend && SKIP_INTEGRATION=0 python3 -m pytest -m integration -v   # 集成测试
+cd backend && python3 -m ruff check app/ tests/                        # 代码检查
+python3 scripts/check_version_consistency.py                           # 版本元数据检查
 ```
 
 ## 参与贡献

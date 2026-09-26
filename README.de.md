@@ -216,9 +216,9 @@ Railway betreibt die Kerndienste: Backend, PostgreSQL, Redis, Qdrant und MinIO; 
 ## Tests
 
 ```bash
-cd backend && python3 -m pytest tests/test_smoke.py -v     # Smoke-Tests
-cd backend && python3 -m pytest -m integration -v           # Integrationstests
-cd backend && python3 -m ruff check app/ tests/             # Lint
+cd backend && python3 -m pytest tests/test_smoke.py -v                 # Smoke-Tests
+cd backend && SKIP_INTEGRATION=0 python3 -m pytest -m integration -v   # Integrationstests
+cd backend && python3 -m ruff check app/ tests/                        # Lint
 ```
 
 ## Mitwirken

@@ -30,8 +30,11 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
 
-  migrations:
-    # Catches broken alembic downgrade() paths, which would silently make
+  integration:
+    # The whole integration suite in ONE pytest process, on purpose: run file
+    # by file it hid 52 of 136 failures (pytest-asyncio 0.24; see
+    # backend/requirements-dev.txt). Includes tests/test_migrations.py, which
+    # catches broken alembic downgrade() paths that would silently make
     # production rollback impossible.
     runs-on: ubuntu-latest
     defaults:
@@ -51,6 +54,22 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # test_smoke.py's document upload writes to MinIO. minio/minio is gone
+      # from Docker Hub and Quay (and dl.min.io answers 410), so this is
+      # Bitnami's frozen build of the release docker-compose.yml pins
+      # (RELEASE.2024-12-18T13-15-44Z), pinned by digest.
+      minio:
+        image: bitnamilegacy/minio:2024.12.18@sha256:c0ede65eb88e47138470202c517bacf55ab3c27df848030b7b46e69d34b7d192
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -fsS http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -59,11 +78,14 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - run: python -m pytest tests/test_migrations.py -v -m integration
+      # The app creates its bucket in the lifespan hook, which the tests'
+      # httpx.ASGITransport never runs.
+      - run: python -c "from app.services.storage_service import storage_service; storage_service.ensure_bucket()"
+      - run: python -m pytest -m integration -v
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/doctalk_ci
           # conftest.py defaults SKIP_INTEGRATION=1 so integration tests skip
-          # locally; this job has a real postgres service and must run them.
+          # locally; this job has real services and must run them.
           SKIP_INTEGRATION: "0"
 
   frontend:
