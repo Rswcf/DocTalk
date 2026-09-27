@@ -417,7 +417,9 @@ export default function DocumentReaderPageClient() {
                   highlightFocus={pdfPreviewMode === 'translated' ? null : highlightFocus}
                   onLayoutTranslate={handleOpenLayoutTranslation}
                   layoutTranslateBusy={layoutTranslationBusy}
-                  layoutTranslateDisabled={documentStatus !== 'ready'}
+                  // Translation needs the original file; a translated preview
+                  // of a file-less document stays viewable but cannot re-run.
+                  layoutTranslateDisabled={documentStatus !== 'ready' || missingFile === 'original'}
                 />
               </div>
             </div>

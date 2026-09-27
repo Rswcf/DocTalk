@@ -52,8 +52,9 @@ have deleted the surviving data before failing to download the file.
   confirmed reachable, so a storage misconfiguration can never be shown to
   users as permanent file loss.
 - A citation link that arrives before a text view has loaded now scrolls to
-  its page once the text appears (this also affects DOCX, PPTX, XLSX, TXT and
-  Markdown documents).
+  its page once the text appears, and page-only links (such as saved quotes'
+  "open at page N") open on that page (this also affects DOCX, PPTX, XLSX,
+  TXT and Markdown documents).
 - The low-quality backfill script skips documents whose original file is
   missing, even with `--force`.
 

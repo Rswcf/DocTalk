@@ -145,6 +145,9 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLElement>>(new Map());
   const highlightRef = useRef<HTMLSpanElement>(null) as React.RefObject<HTMLSpanElement>;
+  // Whether this document's opening page (e.g. `?page=N` from a saved quote)
+  // has been scrolled to; later jumps are driven by scrollNonce.
+  const initialPageApplied = useRef(false);
   const { t } = useLocale();
   const isUrlSource = sourceMeta.isUrlSource || fileType === 'url';
   const isMarkdown = isUrlSource || shouldRenderMarkdown(fileType);
@@ -211,6 +214,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
 
   useEffect(() => {
     let cancelled = false;
+    initialPageApplied.current = false;
     setLoading(true);
     fetch(`${PROXY_BASE}/api/documents/${documentId}/text-content`)
       .then(res => {
@@ -241,11 +245,15 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   // Scroll to target page (and highlight) when citation is clicked. `pages`
   // is a dependency so a target set before the text arrived (a citation deep
   // link, or a click during the fetch) is applied once it renders; the nonce
-  // is reset on every document switch, so no earlier target is replayed.
+  // is reset on every document switch, so no earlier target is replayed. A
+  // page-only link (`?page=N`, no nonce) is honoured once per document.
   useEffect(() => {
-    if (!targetPage || !scrollNonce || pages.length === 0) return;
+    if (!targetPage || pages.length === 0) return;
+    const openingPage = !initialPageApplied.current && targetPage > 1;
+    if (!scrollNonce && !openingPage) return;
     // Use requestAnimationFrame to wait for highlight render
     const frame = requestAnimationFrame(() => {
+      initialPageApplied.current = true;
       if (highlightRef.current) {
         highlightRef.current.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
       } else {
