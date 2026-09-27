@@ -10,6 +10,7 @@ credential for five minutes.
 """
 from __future__ import annotations
 
+import logging
 import os
 import sys
 import urllib.request
@@ -25,39 +26,79 @@ from app.services.storage_service import storage_service
 ORIGIN = "https://www.doctalk.site"
 
 
+def _describe(exc: BaseException) -> str:
+    """Exception class (and HTTP status) only: messages and tracebacks can
+    carry the signed URL, e.g. an HTTPError for a redirect embeds its target."""
+    status = getattr(exc, "code", None)
+    return f"{type(exc).__name__}" + (f" status={status}" if isinstance(status, int) else "")
+
+
+def _emit(line: str) -> None:
+    # A closed stdout must not raise mid-report (its traceback would chain the
+    # exception being reported) or stop the cleanup.
+    try:
+        print(line, flush=True)
+    except OSError:
+        pass
+
+
 def main() -> int:
     key = f"_smoke/{uuid.uuid4()}.txt"
     body = f"doctalk storage smoke {key}".encode()
     failures: list[str] = []
 
     def check(label: str, ok: bool) -> None:
-        print(f"{'PASS' if ok else 'FAIL'} {label}")
+        _emit(f"{'PASS' if ok else 'FAIL'} {label}")
         if not ok:
             failures.append(label)
 
+    def run(label: str, step) -> None:
+        description = None
+        try:
+            step()
+        except Exception as exc:  # noqa: BLE001 - reported without its message, see _describe
+            description = _describe(exc)
+        if description is not None:  # reported outside the handler: no chained context
+            _emit(f"FAIL {label}: {description}")
+            failures.append(label)
+
     endpoint = settings.MINIO_ENDPOINT
-    print(f"endpoint host: {urlsplit(endpoint).netloc or endpoint}  region: {settings.MINIO_REGION}  bucket: {storage_service.bucket}")
-    try:
+    _emit(f"endpoint host: {urlsplit(endpoint).netloc or endpoint}  region: {settings.MINIO_REGION}  bucket: {storage_service.bucket}")
+
+    def round_trip() -> None:
         check("health_check", storage_service.health_check() is True)
         storage_service.upload_file(body, key, "text/plain")
         check("object_exists after upload", storage_service.object_exists(key))
         check("download matches upload", storage_service.download_file(key) == body)
 
+    def browser_fetch() -> None:
         url = storage_service.get_presigned_url(key, 120)
-        print(f"presigned host: {urlsplit(url).netloc}")
+        _emit(f"presigned host: {urlsplit(url).netloc}")
         request = urllib.request.Request(url, headers={"Origin": ORIGIN})
         with urllib.request.urlopen(request, timeout=20) as response:
             fetched = response.read()
             allow_origin = response.headers.get("Access-Control-Allow-Origin")
         check("presigned GET returns the object", fetched == body)
         check(f"CORS allows {ORIGIN}", allow_origin in (ORIGIN, "*"))
-    finally:
+
+    def cleanup() -> None:
         storage_service.delete_file(key)
-    check("canary deleted", not storage_service.object_exists(key))
+        check("canary deleted", not storage_service.object_exists(key))
 
-    print("SMOKE OK" if not failures else f"SMOKE FAILED: {', '.join(failures)}")
+    # Library and app logging would echo raw error text (storage_service logs
+    # the exception it wraps), so it is off for the run.
+    previous_disable = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        run("storage round trip", round_trip)
+        if not failures:
+            run("presigned GET", browser_fetch)
+    finally:
+        run("cleanup", cleanup)
+        logging.disable(previous_disable)
+
+    _emit("SMOKE OK" if not failures else f"SMOKE FAILED: {', '.join(failures)}")
     return 1 if failures else 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

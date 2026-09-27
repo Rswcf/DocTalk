@@ -2,6 +2,8 @@
 sha256, last_modified), streaming each object through SHA-256. Run inside the
 backend container before and after a storage cutover and diff the two
 outputs: the migration is complete when every key matches in size and hash.
+Compare sorted (key, size, sha256) projections; last_modified differs
+between stores. Accept a manifest only if the run exits 0.
 
 ETags are not compared on purpose: minio-py uploads anything over 5 MiB in
 parts, so those ETags are composite and differ between stores.
@@ -20,7 +22,8 @@ from app.services.storage_service import storage_service
 
 
 def main() -> None:
-    client = storage_service.client
+    # Long timeouts: a slow object must not abort the scan halfway.
+    client = storage_service.transfer_client
     bucket = storage_service.bucket
     for obj in client.list_objects(bucket, recursive=True):
         digest = hashlib.sha256()
