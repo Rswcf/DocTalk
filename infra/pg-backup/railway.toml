@@ -1,0 +1,16 @@
+# Railway service `pg-backup`: a run-to-completion job, deployed with
+#   railway up infra/pg-backup --path-as-root -s pg-backup -e production
+# from the main checkout. See README.md.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# No healthcheck: there is no server. One retry covers private-DNS warm-up and
+# transient R2 errors; every run writes new, unique keys, so a retry is safe.
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 1
+
+# Same region as Postgres (see CLAUDE.md "Railway auto region placement drifts").
+[deploy.multiRegionConfig.us-west2]
+numReplicas = 1

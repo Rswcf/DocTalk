@@ -54,7 +54,7 @@ PDF、Wordドキュメント、PowerPoint、スプレッドシート、または
 |----------|------|
 | **フロントエンド** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **バックエンド** | FastAPI, Celery, Redis |
-| **データベース** | PostgreSQL 16, Qdrant（ベクトル検索） |
+| **データベース** | PostgreSQL 17, Qdrant（ベクトル検索） |
 | **ストレージ** | Cloudflare R2（S3互換、ローカルではMinIO） |
 | **認証** | Auth.js v5 — Google OAuth, Microsoft OAuth, Emailマジックリンク |
 | **決済** | Stripe Checkout + Subscriptions |

@@ -54,7 +54,7 @@ Laden Sie PDFs, Word-Dokumente, PowerPoint-Präsentationen, Tabellenkalkulatione
 |---------|-------------|
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
-| **Datenbank** | PostgreSQL 16, Qdrant (Vektorsuche) |
+| **Datenbank** | PostgreSQL 17, Qdrant (Vektorsuche) |
 | **Speicher** | Cloudflare R2 (S3-kompatibel; lokal MinIO) |
 | **Authentifizierung** | Auth.js v5 — Google OAuth, Microsoft OAuth, E-Mail Magic Link |
 | **Zahlungen** | Stripe Checkout + Subscriptions |

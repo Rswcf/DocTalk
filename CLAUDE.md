@@ -8,7 +8,7 @@ DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD 
 |---|---|---|
 | Frontend | Next.js 14 (App Router), Vercel | https://www.doctalk.site |
 | Backend | FastAPI + Celery, Railway | https://backend-production-a62e.up.railway.app |
-| Infra | Postgres 16, Qdrant, Redis; RetainPDF sidecar for layout translation | Railway |
+| Infra | Postgres 17 (dev/CI: 16.6), Qdrant, Redis; RetainPDF sidecar for layout translation; `pg-backup` nightly job → R2 `doctalk-ops` | Railway |
 | Object storage | Cloudflare R2 bucket `doctalk-pdfs` over the S3 API (dev/CI: MinIO) | Cloudflare |
 | Repo | GitHub (public) | https://github.com/Rswcf/DocTalk |
 
@@ -81,7 +81,8 @@ Cross-origin IP trust chain is HMAC-signed with `ADAPTER_SECRET` — frontend an
 ## Avoid (learned the hard way)
 
 - **BSD sed has no `\b` word boundary**. Use `s/pattern\([^a-z]\)/replacement\1/g` or GNU `sed`.
-- **Don't `railway up` from `main`**. Always `git checkout stable` first.
+- **Don't `railway up` from `main`**. Always `git checkout stable` first. Sole exception: the directory-scoped `railway up infra/pg-backup --path-as-root -s pg-backup` (see `infra/pg-backup/README.md`), which ships no app code.
+- **Never print Railway variable values.** List names only (`railway variables --service X --json | python3 -c 'import json,sys;print(sorted(json.load(sys.stdin)))'`). The workspace is on Hobby: Railway volume backups are unavailable, so Postgres backups come from `pg-backup` (and a manual `pg_dump` ≥ 17 before any risky DB operation).
 - **Railway auto region placement drifts.** The 2026-05-23 build fix silently rescheduled the backend to `europe-west4` while all data services sat in `us-west2` — every SQL round trip became ~150ms transatlantic and parse throughput collapsed 60× for 11 weeks (found 2026-08-08). Backend + retainpdf-sidecar + data services are now pinned via `serviceInstanceUpdate(input:{multiRegionConfig:{"us-west2":{"numReplicas":1}}})`; the `region` input field is silently ignored and the instance `region` readback is always null — after any deploy, verify with `RAILWAY_REPLICA_REGION` inside the container. Never migrate the stateful services.
 - **Railway build config must match the Dockerfile's context.** `backend/Dockerfile` uses repo-root paths (`COPY backend/...`, `COPY version.json`), so the service needs `rootDirectory=""` + `dockerfilePath="backend/Dockerfile"` (NOT `rootDirectory=backend`). Set via the GraphQL API `serviceInstanceUpdate` (token in `~/.railway/config.json`), not env vars — `RAILWAY_ROOT_DIRECTORY` is only a reflection. A `"COPY backend/ not found"` / `"failed to compute cache key"` build error = this mismatch + a stale incremental base; the API config change resets the base. `railway up` has no `--no-cache`; keep `test_inputs/` in `.railwayignore` so uploads stay ~10 MB.
 - **Don't set cookies in `middleware.ts`**. Next.js auto-applies `Cache-Control: private, no-store` to the entire response tree, killing SEO. Locale detection already runs client-side in `LocaleProvider`.
@@ -112,3 +113,4 @@ cat prompt.md | codex exec --sandbox workspace-write \
 - `docs/ARCHITECTURE.md` — runtime + operational integrity decisions (§10 is the living one)
 - `.collab/reviews/2026-04-12-final-fix-report.md` — the P1/P2 fix-batch story; templates for how a Codex-reviewed batch reads
 - `AGENTS.md` — mirror of this file for Codex / other agents that don't auto-read `CLAUDE.md`
+- `infra/pg-backup/README.md` — nightly Postgres backup job: variables, retention, restore procedure

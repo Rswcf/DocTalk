@@ -54,7 +54,7 @@ PDF, Word 문서, PowerPoint, 스프레드시트 또는 웹페이지를 업로�
 |-------|------------|
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
-| **Database** | PostgreSQL 16, Qdrant (vector search) |
+| **Database** | PostgreSQL 17, Qdrant (vector search) |
 | **Storage** | Cloudflare R2 (S3-compatible; MinIO locally) |
 | **Auth** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Payments** | Stripe Checkout + Subscriptions |

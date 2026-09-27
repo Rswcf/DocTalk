@@ -54,7 +54,7 @@ Importez des PDF, des documents Word, des PowerPoint, des feuilles de calcul ou 
 |--------|-------------|
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
-| **Base de donnees** | PostgreSQL 16, Qdrant (recherche vectorielle) |
+| **Base de donnees** | PostgreSQL 17, Qdrant (recherche vectorielle) |
 | **Stockage** | Cloudflare R2 (compatible S3 ; MinIO en local) |
 | **Authentification** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Paiements** | Stripe Checkout + Subscriptions |
