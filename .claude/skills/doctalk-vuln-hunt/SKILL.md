@@ -44,7 +44,7 @@ Run `vuln_reconcile.py claude/ codex/ reconcile-raw.yaml`.
 For each disputed cell, run `vuln_tie_break_prompt.py` to generate anonymized prompts. Send to dissenting agent. Max 2 rounds per cell. Outputs under `tie-break/<cell_id>-round<N>-{to,response}-<agent>.md`.
 
 ### `/vuln-hunt compose`
-On post-tiebreak accepted findings, cross-reference shared resources (credit ledger, MinIO object, user record, verification token, session, share token) and emit `composition-candidates.yaml`.
+On post-tiebreak accepted findings, cross-reference shared resources (credit ledger, storage object, user record, verification token, session, share token) and emit `composition-candidates.yaml`.
 
 ### `/vuln-hunt finalize`
 **USER INTERACTION** at Stage 5. Emit `../../plans/<ts>-vuln-hunt-findings.md` + `<ts>-vuln-hunt-findings.yaml`. Split into `actionable_fixes` and `confirmation_needed`. Each finding gets `VHF-YYYY-MM-DD-NNN` stable ID.

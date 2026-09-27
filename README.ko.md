@@ -55,7 +55,7 @@ PDF, Word 문서, PowerPoint, 스프레드시트 또는 웹페이지를 업로�
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
 | **Database** | PostgreSQL 16, Qdrant (vector search) |
-| **Storage** | MinIO / S3-compatible |
+| **Storage** | Cloudflare R2 (S3-compatible; MinIO locally) |
 | **Auth** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Payments** | Stripe Checkout + Subscriptions |
 | **AI** | 채팅은 DeepSeek V4 Flash/Pro, embeddings 및 fallback 모델은 OpenRouter |
@@ -69,7 +69,7 @@ PDF, Word 문서, PowerPoint, 스프레드시트 또는 웹페이지를 업로�
 Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
                 │                       │                Qdrant
                 │                       │                Redis
-                └── API Proxy ──────────┘                MinIO
+                └── API Proxy ──────────┘                Cloudflare R2
                    (JWT injection)
 ```
 
@@ -211,7 +211,7 @@ DocTalk/
 | **Frontend** (Vercel) | `stable`로 푸시 → 자동 배포. 루트 디렉토리: `frontend/`. |
 | **Backend** (Railway) | `git checkout stable && railway up --detach` |
 
-Railway는 핵심 서비스인 backend, PostgreSQL, Redis, Qdrant, MinIO를 실행합니다. 레이아웃 보존 PDF 번역을 활성화하면 RetainPDF sidecar도 필요합니다.
+Railway는 핵심 서비스인 backend, PostgreSQL, Redis, Qdrant를 실행하며, 문서는 Cloudflare R2에 저장됩니다. 레이아웃 보존 PDF 번역을 활성화하면 RetainPDF sidecar도 필요합니다.
 
 ## 테스트
 

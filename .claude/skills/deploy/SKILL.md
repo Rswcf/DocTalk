@@ -34,7 +34,7 @@ tree has no `0043`) crash-loops. Safe options:
 2. `alembic downgrade 20260808_0039` first, then deploy the older image — this DROPS the
    `checkout_attempts` and `feature_trial_usages` tables and their rows.
 
-CI proves the downgrade path on every run (the `migrations` job does
+CI proves the downgrade path on every run (the `integration` job runs tests/test_migrations.py, which does
 `upgrade head -> downgrade base -> upgrade head` on Postgres 16.6), so option 2 works, but it is
 destructive. Never assume "just redeploy the previous version" is safe after a migration.
 

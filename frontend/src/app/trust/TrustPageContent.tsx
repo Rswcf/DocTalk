@@ -22,7 +22,7 @@ import { localizedHrefIfAvailable } from "../../i18n/routing";
 import MarketingLocaleLinks from "../../components/marketing/MarketingLocaleLinks";
 
 /* Trust Center content is intentionally specific and hand-maintained here
- * because the technical claims (SSE-S3, SSRF, RFC 7748) need precise English
+ * because the technical claims (AES-256 at rest, SSRF, RFC 7748) need precise English
  * terminology to be credible. The copy now renders via i18n (namespace
  * `trust`), but the English source remains the canonical, audited wording.
  *

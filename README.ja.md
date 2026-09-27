@@ -55,7 +55,7 @@ PDF、Wordドキュメント、PowerPoint、スプレッドシート、または
 | **フロントエンド** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **バックエンド** | FastAPI, Celery, Redis |
 | **データベース** | PostgreSQL 16, Qdrant（ベクトル検索） |
-| **ストレージ** | MinIO / S3互換 |
+| **ストレージ** | Cloudflare R2（S3互換、ローカルではMinIO） |
 | **認証** | Auth.js v5 — Google OAuth, Microsoft OAuth, Emailマジックリンク |
 | **決済** | Stripe Checkout + Subscriptions |
 | **AI** | チャットは DeepSeek V4 Flash/Pro、embeddings と fallback モデルは OpenRouter |
@@ -69,7 +69,7 @@ PDF、Wordドキュメント、PowerPoint、スプレッドシート、または
 Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
                 │                       │                Qdrant
                 │                       │                Redis
-                └── API Proxy ──────────┘                MinIO
+                └── API Proxy ──────────┘                Cloudflare R2
                    (JWT注入)
 ```
 
@@ -211,7 +211,7 @@ DocTalk/
 | **フロントエンド** (Vercel) | `stable` にpush → 自動デプロイ。ルートディレクトリ: `frontend/` |
 | **バックエンド** (Railway) | `git checkout stable && railway up --detach` |
 
-Railwayはコアサービス（バックエンド、PostgreSQL、Redis、Qdrant、MinIO）を実行します。レイアウト保持PDF翻訳を有効にする場合はRetainPDF sidecarも必要です。
+Railwayはコアサービス（バックエンド、PostgreSQL、Redis、Qdrant）を実行し、ドキュメントはCloudflare R2に保存されます。レイアウト保持PDF翻訳を有効にする場合はRetainPDF sidecarも必要です。
 
 ## テスト
 

@@ -327,7 +327,7 @@ user must leave chat.
 **Implementation (Phase 3 scope: preparation only)**:
 - ~~Audit logging: Log all data access, auth events, admin actions to structured log store~~ **DONE** — `security_log.py` emits structured JSON for auth failures, rate limits, SSRF blocks, uploads, deletions, account deletions
 - Access control documentation
-- ~~Data encryption verification (at rest and in transit)~~ **DONE** — SSE-S3 encryption on all MinIO objects + bucket default policy; HTTPS enforced in transit
+- ~~Data encryption verification (at rest and in transit)~~ **DONE** — at-rest encryption is provided by Cloudflare R2 (AES-256 on every object, automatic); HTTPS enforced in transit. (The earlier claim of "SSE-S3 encryption on all MinIO objects" never held in production: no KMS was configured, and the SSE-S3 upload path was removed in 0.33.0.)
 - ~~SSRF protection~~ **DONE** — `url_validator.py` validates all URL imports against private IP ranges and internal ports
 - ~~Non-root container~~ **DONE** — Docker runs as `app` user (UID 1001)
 - ~~GDPR data portability~~ **DONE** — `GET /api/users/me/export` endpoint

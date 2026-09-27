@@ -28,7 +28,10 @@ graph TB
         PG["PostgreSQL 16"]
         Qdrant["Qdrant<br/>向量搜索"]
         Redis["Redis<br/>Celery 消息队列 + 缓存"]
-        MinIO["MinIO / S3<br/>PDF 存储"]
+    end
+
+    subgraph Cloudflare["Cloudflare"]
+        R2["Cloudflare R2<br/>对象存储（S3 API）"]
     end
 
     subgraph External["外部服务"]
@@ -50,13 +53,13 @@ graph TB
     FastAPI --> PG
     FastAPI --> Qdrant
     FastAPI --> Redis
-    FastAPI --> MinIO
+    FastAPI --> R2
     FastAPI --> DeepSeek
     FastAPI --> OpenRouter
     FastAPI --> Stripe
     Celery --> PG
     Celery --> Qdrant
-    Celery --> MinIO
+    Celery --> R2
     Celery --> RetainPDF
     Celery --> DeepSeek
     Celery --> OpenRouter
@@ -68,7 +71,7 @@ graph TB
     AuthJS --> Resend
     FastAPI --> Sentry
     NextJS --> Sentry
-    Browser -->|Presigned URL| MinIO
+    Browser -->|Presigned URL| R2
 ```
 
 **各组件职责：**
@@ -84,7 +87,7 @@ graph TB
 | **PostgreSQL** | 主数据存储：用户、文档、页面、文本块、会话、消息、积分 |
 | **Qdrant** | 向量数据库，语义搜索（COSINE 相似度，1536 维） |
 | **Redis** | Celery 任务代理和结果后端 |
-| **MinIO** | S3 兼容对象存储，用于上传的文件，SSE-S3 静态加密 |
+| **Cloudflare R2** | S3 兼容对象存储，存放上传的文件和生成的产物（bucket `doctalk-pdfs`），通过 R2 的 S3 API、用 minio-py 客户端访问。每个对象都由 Cloudflare 以 AES-256 静态加密。浏览器查看文档 PDF 时，只能通过预签名 GET URL（有效期 300 秒）读取，该 URL 由 `GET /api/documents/{id}/file-url` 在访问校验后签发；翻译后的 PDF 等生成产物由后端在访问校验后直接传输。开发和 CI 环境仍使用 MinIO |
 | **DeepSeek** | 主要对话与 PDF 翻译模型 provider |
 | **OpenRouter** | Embedding 与 fallback 模型网关 |
 | **OCR providers** | RetainPDF 在保留排版翻译中使用的 Paddle、MinerU 或 Datalab 凭证 |
@@ -100,7 +103,7 @@ sequenceDiagram
     participant B as 浏览器
     participant T as 上传令牌路由
     participant API as FastAPI
-    participant S3 as MinIO
+    participant S3 as Cloudflare R2
     participant R as Redis
     participant W as Celery Worker
     participant DB as PostgreSQL
@@ -141,7 +144,7 @@ sequenceDiagram
 
 **逐步说明：**
 
-1. **上传**：浏览器先从轻量的 Next.js `/api/upload-token` 路由获取一个五分钟有效、后端兼容的 HS256 JWT，再携带该 Bearer Token 将 multipart 请求体直接 POST 到 `${NEXT_PUBLIC_API_BASE}/api/documents/upload`。这是为避开 Vercel 4.5MB serverless 请求体上限而有意绕过代理；所有实际经过 `/api/proxy/*` 的请求仍由代理注入 JWT。后端在写入对象存储和创建文档记录之前，校验按套餐的文档数量、文件大小和逻辑页数限制，执行 magic-byte 文件验证（PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护），清洗文件名（Unicode 规范化、控制字符剥离、双扩展名阻断），将文件以 SSE-S3 加密存储到 MinIO，直接以 `status=parsing` 创建文档、分发解析任务并返回 HTTP 202。直接上传使用 50/100/200MB 套餐上限；所有 URL 响应（包括 PDF）无论套餐均限制为 10MB。抓取器分别限制原始传输字节和安全解码后的输出，压缩膨胀不能绕过上限。
+1. **上传**：浏览器先从轻量的 Next.js `/api/upload-token` 路由获取一个五分钟有效、后端兼容的 HS256 JWT，再携带该 Bearer Token 将 multipart 请求体直接 POST 到 `${NEXT_PUBLIC_API_BASE}/api/documents/upload`。这是为避开 Vercel 4.5MB serverless 请求体上限而有意绕过代理；所有实际经过 `/api/proxy/*` 的请求仍由代理注入 JWT。后端在写入对象存储和创建文档记录之前，校验按套餐的文档数量、文件大小和逻辑页数限制，执行 magic-byte 文件验证（PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护），清洗文件名（Unicode 规范化、控制字符剥离、双扩展名阻断），将文件存入对象存储（生产环境为 Cloudflare R2，所有对象均静态加密），直接以 `status=parsing` 创建文档、分发解析任务并返回 HTTP 202。直接上传使用 50/100/200MB 套餐上限；所有 URL 响应（包括 PDF）无论套餐均限制为 10MB。抓取器分别限制原始传输字节和安全解码后的输出，压缩膨胀不能绕过上限。
 
 2. **文本提取**：Celery Worker 下载 PDF，使用 **PyMuPDF (fitz)** 按页提取文本及边界框坐标。坐标归一化到 `[0, 1]` 范围（左上角原点）。
 
@@ -177,7 +180,7 @@ sequenceDiagram
     participant P as API 代理
     participant API as FastAPI
     participant DB as PostgreSQL
-    participant S3 as MinIO
+    participant S3 as Cloudflare R2
     participant R as Redis
     participant W as Celery Worker
     participant RP as RetainPDF Sidecar
@@ -860,20 +863,20 @@ PDF 引用仅使用一套覆盖层：完整、唯一且属于引用页/区域的
 |------|------|
 | **SSRF 防护** | `url_validator.py` — DNS 解析 + 私有 IP 阻断（RFC 1918、链路本地、云元数据 `169.254.169.254`），内部端口封锁（5432/6379/6333/9000），手动重定向跟踪（最多 3 跳）并逐跳验证 |
 | **文件验证** | Magic-byte 检查：PDF `%PDF` 头、Office ZIP 结构 + `[Content_Types].xml`、500MB zip bomb 防护。双扩展名阻断（`.pdf.exe` → `_pdf.exe`） |
-| **静态加密** | MinIO SSE-S3 应用于所有 `put_object()` 调用 + bucket 级默认加密策略 |
+| **静态加密** | 上传和生成的文件存放在 Cloudflare R2，R2 使用 Cloudflare 管理的密钥以 AES-256 对每个对象做静态加密；加密自动进行，无法关闭。原先的 MinIO SSE-S3 上传路径在生产环境从未生效（未配置 KMS，没有任何对象带 SSE 头），已在 0.33.0 移除 |
 | **限制** | FREE: 3 文档 / 直接上传 50MB / 750 页，PLUS: 20 文档 / 直接上传 100MB / 1,500 页，PRO: 999 文档 / 直接上传 200MB / 3,000 页。所有套餐的 URL 导入均限制为 10MB；全部上限都在持久化之前强制执行。 |
 | **文件名清洗** | Unicode NFC 规范化、控制字符剥离、双扩展名阻断、200 字符截断 — 前端（`utils.ts`）和后端同时执行 |
 | **速率限制** | 内存级 token-bucket 限制匿名 chat（10 req/min/IP），bucket 字典超 10K 条目时自动清理 |
 | **OAuth 令牌清理** | `link_account()` 剥离 access_token、refresh_token 和 id_token — DocTalk 仅存储身份绑定信息（provider + provider_account_id） |
 | **非 root Docker** | 容器以 `app` 用户（UID 1001）运行，非 root |
-| **删除验证** | MinIO/Qdrant 清理失败时排入 Celery 重试任务（`deletion_worker.py`，3 次重试，指数退避）；结构化安全日志替代静默异常吞没 |
+| **删除验证** | 对象存储/Qdrant 清理失败时排入 Celery 重试任务（`deletion_worker.py`，3 次重试，指数退避）；结构化安全日志替代静默异常吞没 |
 | **安全事件日志** | `security_log.py` 输出结构化 JSON 日志：认证失败、速率限制命中、SSRF 阻断、文件上传、文档删除、账户删除 |
 
 ### 隐私与合规
 
 | 要求 | 实现 |
 |------|------|
-| **GDPR Art. 17（被遗忘权）** | `DELETE /api/users/me` — 级联删除所有用户数据，取消 Stripe 订阅，清理 MinIO + Qdrant |
+| **GDPR Art. 17（被遗忘权）** | `DELETE /api/users/me` — 级联删除所有用户数据，取消 Stripe 订阅，清理对象存储 + Qdrant |
 | **GDPR Art. 20（数据可携带性）** | `GET /api/users/me/export` — JSON 导出所有用户数据（个人信息、文档、会话、消息、积分、使用记录） |
 | **GDPR ePrivacy（Cookie）** | `CookieConsentBanner.tsx` — Accept/Decline 横栏；`AnalyticsWrapper.tsx` 仅在同意后条件加载 Vercel Analytics；consent 存储在 localStorage |
 | **AI 处理披露** | `AuthModal` 显示 `auth.aiDisclosure` 通知：文档由第三方 AI 服务（OpenRouter）处理 |
@@ -907,8 +910,11 @@ graph LR
             RPG["PostgreSQL"]
             RRedis["Redis"]
             RQdrant["Qdrant"]
-            RMinIO["MinIO"]
         end
+    end
+
+    subgraph CloudflareDeploy["Cloudflare"]
+        R2["R2 bucket<br/>doctalk-pdfs"]
     end
 
     Repo -->|"push stable<br/>（自动部署）"| VBuild
@@ -917,6 +923,8 @@ graph LR
     RBuild --> Alembic --> CeleryW --> Uvicorn
     Uvicorn --> RServices
     CeleryW --> RServices
+    Uvicorn --> R2
+    CeleryW --> R2
 ```
 
 **分支策略**：`main`（开发）/ `stable`（生产）。推送 `main` → 仅 Vercel Preview。推送 `stable` → 生产部署。
@@ -986,7 +994,7 @@ Celery Beat 调度定期任务（目前：每日清理过期验证令牌）。**
 
 ### 深度健康检查端点
 
-`GET /health?deep=true`（由 `X-Health-Secret` HMAC 守护）**并发**探活所有四个数据存储 —— Postgres、Redis、Qdrant、MinIO，每个 probe 5s 超时。总响应时间受限于**最慢单项**，不是各项之和。任一 probe 失败会把 `status` 标为 `degraded`，但不返回 error 状态码；调用方必须检查 `components`。
+`GET /health?deep=true`（由 `X-Health-Secret` HMAC 守护）**并发**探活所有四个数据存储 —— Postgres、Redis、Qdrant 和对象存储（生产环境为 Cloudflare R2；组件键名仍为 `minio`），每个 probe 5s 超时。总响应时间受限于**最慢单项**，不是各项之和。任一 probe 失败会把 `status` 标为 `degraded`，但不返回 error 状态码；调用方必须检查 `components`。
 
 ### 预扣积分退款不变量
 
@@ -1051,7 +1059,9 @@ Quote Finder 产品契约:引文卡绝不渲染 LLM 生成文本——`verify_qu
 
 ### Demo 存储自愈(2026-08 MinIO 事故)
 
-MinIO→minio-v2 迁移悄悄丢失约 106/108 个存储对象:聊天正常(Postgres/Qdrant 完好)但受影响文档的 PDF 面板全部失败,而 demo 自愈只检查 Qdrant 向量所以从未察觉。启动播种现在校验两个存储:`_ensure_demo_files` 对每个 demo 文档的 `storage_key` 执行 stat,缺失则按原 id/key 从 seed_data 重传。种子资产按 slug 不可变;stat→put 的 TOCTOU 基于该书面不变量被接受。事故前的用户文档文件不可恢复(当时无存储备份——运维风险仍开放)。
+2026-08 发现约 106/108 个存储对象缺失,当时归因于 MinIO→minio-v2 迁移:聊天正常(Postgres/Qdrant 完好)但受影响文档的 PDF 面板全部失败,而 demo 自愈只检查 Qdrant 向量所以从未察觉。启动播种现在校验两个存储:`_ensure_demo_files` 对每个 demo 文档的 `storage_key` 执行 stat,缺失则按原 id/key 从 seed_data 重传。种子资产按 slug 不可变;stat→put 的 TOCTOU 基于该书面不变量被接受。事故前的用户文档文件不可恢复(当时无存储备份——运维风险仍开放)。
+
+**根因更正(2026-09-26)**:迁移并不是原因。`minio-v2` 和 `qdrant-v2` 都没有挂载卷,数据落在容器的临时 overlay 盘上;2026-06-19 对 `minio-v2` 的重新部署清空了此前上传的全部文件。截至 2026-09-26,148 个文档文件引用中有 109 个指向已缺失的对象。生产文档存储已迁到 Cloudflare R2;`qdrant-v2` 仍没有挂载卷(持久化修复在后续阶段)。任何有状态的 Railway 服务都必须挂载卷,并通过 `railway ssh` 查看 `/proc/mounts` 核实,不能只看控制台。
 
 ### 集成测试隔离(2026-08)
 
