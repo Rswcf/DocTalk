@@ -13,7 +13,8 @@ DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD 
 |---|---|---|
 | Frontend | Next.js 14 (App Router), Vercel | https://www.doctalk.site |
 | Backend | FastAPI + Celery, Railway | https://backend-production-a62e.up.railway.app |
-| Infra | Postgres 16, Qdrant, MinIO, Redis; RetainPDF sidecar for layout translation | Railway |
+| Infra | Postgres 16, Qdrant, Redis; RetainPDF sidecar for layout translation | Railway |
+| Object storage | Cloudflare R2 bucket `doctalk-pdfs` over the S3 API (dev/CI: MinIO) | Cloudflare |
 | Repo | GitHub (public) | https://github.com/Rswcf/DocTalk |
 
 LLM chat modes use DeepSeek V4 — internal `quick` = Flash, internal `balanced` = Pro. OpenRouter remains the embedding/fallback gateway. Layout PDF translation uses RetainPDF + DeepSeek translation + one OCR provider (`datalab`, `paddle`, or `mineru`). Auth.js v5 (Google / Microsoft / email magic link). Stripe billing is live in production; local/test environments may still use `sk_test_*`.

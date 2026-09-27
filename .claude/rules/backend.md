@@ -6,8 +6,13 @@ paths:
 # Backend Conventions
 
 ## Async Safety
-- **MinIO calls MUST use `asyncio.to_thread()`** in async endpoints. MinIO client is sync (urllib3). Direct calls block event loop; when MinIO is unreachable, blocks ALL requests for 30+s. Client configured with short timeouts (connect=5s, read=10s, 2 retries)
+- **Object storage calls MUST use `asyncio.to_thread()`** in async endpoints. The client is minio-py, which is sync (urllib3). Direct calls block the event loop; when storage is unreachable, they block ALL requests for 30+s. The request-path client (`storage_service.client`) is configured with short timeouts (connect=5s, read=10s, 2 retries). Workers that move whole documents (`parse_worker`, `demo_seed`) use `storage_service.transfer_client` instead: same endpoint, credentials, TLS and region, but minio-py's default policy (5-minute timeouts, 5 retries), so a slow body is waited out rather than failed at 10s.
 - **Celery uses sync DB** (`psycopg`), API uses async (`asyncpg`). Never mix.
+
+## Object Storage (R2, 2026-09-26)
+- **Production = Cloudflare R2** (bucket `doctalk-pdfs`, location hint WNAM) over R2's S3 API with the same minio-py client: `MINIO_ENDPOINT=https://<account>.r2.cloudflarestorage.com`, `MINIO_REGION=auto`, an R2 API token's S3 credentials in `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY`, `MINIO_PUBLIC_ENDPOINT` unset (legacy, only for MinIO-on-a-private-network setups). The `MINIO_*` names are kept for compatibility. Dev and CI still run MinIO. Never presign on an R2 custom domain — presigned URLs are not supported there; always use the `r2.cloudflarestorage.com` S3 endpoint.
+- **Browser access** is only via presigned GET URLs (`MINIO_PRESIGN_TTL=300`) issued by `GET /api/documents/{id}/file-url` after the access check. pdf.js fetches them cross-origin, so two things must both name the exact R2 host: `objectStorageOrigin` in `frontend/next.config.mjs` (in `connect-src` of both `cspDirectives` and `cspReportOnlyDirectives`) and the bucket's CORS rule (GET/HEAD from www/apex doctalk.site and the project's Vercel preview hosts). Changing the R2 account or host means changing both. Never widen the CSP entry to `*.r2.cloudflarestorage.com`.
+- **Any stateful Railway service MUST have a mounted volume.** Verify with `/proc/mounts` via `railway ssh` inside the running container — never trust the dashboard alone. minio-v2 and qdrant-v2 ran without one (data on the container's ephemeral overlay disk); the 2026-06-19 redeploy of minio-v2 wiped every file uploaded before it. qdrant-v2 still has no volume; its durability fix is a later phase.
 
 ## Credits & Billing
 - **Two-stage debit**: ① Pre-check balance (402 if insufficient) → ② `debit_credits()` pre-debits estimated cost (returns ledger ID) → stream → `reconcile_credits()` UPDATEs same ledger entry to actual cost. Single ledger record per chat. LLM failure → DELETE entry + full refund
@@ -51,7 +56,7 @@ paths:
 - Lifespan pattern (`@asynccontextmanager`) instead of deprecated `@app.on_event`
 
 ## Demo System
-- 3 seed PDFs auto-deployed at startup from `backend/seed_data/`. Self-healing covers BOTH stores: Qdrant vector loss → full re-seed; missing MinIO objects → `_ensure_demo_files` stats each doc's `storage_key` and re-uploads from seed_data (id/key-preserving). Added after the 2026-08 MinIO-v2 migration silently lost ~106/108 stored files (chat worked, PDF pane didn't). Seed assets are immutable per slug — the stat→put TOCTOU is accepted on that invariant.
+- 3 seed PDFs auto-deployed at startup from `backend/seed_data/`. Self-healing covers BOTH stores: Qdrant vector loss → full re-seed; missing storage objects → `_ensure_demo_files` stats each doc's `storage_key` and re-uploads from seed_data (id/key-preserving). Added in 2026-08 when ~106/108 stored files turned out to be missing (chat worked, PDF pane didn't). Root cause (found 2026-09-26): minio-v2 ran without a mounted volume, and its 2026-06-19 redeploy wiped every file uploaded before it — not the MinIO→minio-v2 migration, as first assumed. Seed assets are immutable per slug — the stat→put TOCTOU is accepted on that invariant.
 - Anonymous limits (v0.23.0): **5 msgs per (IP, document) per 24h** (matches marketing copy), session cap = 500 per doc counted over a **24h rolling window of anonymous sessions only**, 10 req/min/IP, forced DeepSeek V4 Flash. Nightly beat task prunes empty demo sessions >7d (anon AND authed).
 - Free-plan authed users get a per-user session cap on demo docs (`FREE_MAX_SESSIONS_PER_DOC`, own sessions only) — closes the row-spam DoS on the anonymous cap.
 - Logged-in users accessing demo docs use their credits with no message limit
