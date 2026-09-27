@@ -10,6 +10,8 @@ dockerfilePath = "Dockerfile"
 # transient R2 errors; every run writes new, unique keys, so a retry is safe.
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 1
+# Nightly at 09:15 UTC. Config-as-code: change it here, not in the dashboard.
+cronSchedule = "15 9 * * *"
 
 # Same region as Postgres (see CLAUDE.md "Railway auto region placement drifts").
 [deploy.multiRegionConfig.us-west2]
