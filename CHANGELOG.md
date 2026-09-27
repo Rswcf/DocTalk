@@ -42,6 +42,16 @@ have deleted the surviving data before failing to download the file.
   vectors, pages and chunks, so a failed download (`DOWNLOAD_FAILED`) leaves
   everything intact. Previously any reparse of a file-less document erased
   the only remaining copy of its content.
+- A failed download is classified instead of always ending in an error: if
+  the file is confirmed gone and the previous parse is complete, the document
+  stays ready; transient storage errors now go through the normal automatic
+  retries instead of failing the document on the first attempt.
+- A missing object is only reported as missing after the bucket itself is
+  confirmed reachable, so a storage misconfiguration can never be shown to
+  users as permanent file loss.
+- A citation link that arrives before a text view has loaded now scrolls to
+  its page once the text appears (this also affects DOCX, PPTX, XLSX, TXT and
+  Markdown documents).
 - The low-quality backfill script skips documents whose original file is
   missing, even with `--force`.
 

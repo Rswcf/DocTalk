@@ -177,14 +177,25 @@ class StorageService:
             response.release_conn()
 
     def object_exists(self, storage_key: str) -> bool:
-        """True if the object exists; False only for NoSuchKey."""
+        """True if the object exists; False only when the bucket is reachable
+        and the key is not in it. Anything else raises.
+
+        minio-py turns every bodyless 404 on an object HEAD into a synthesized
+        NoSuchKey, whatever the cause, so a missing or misconfigured bucket
+        looks exactly like a missing object. Callers treat False as permanent
+        loss (410 FILE_MISSING), so a miss is confirmed against the bucket
+        first, and an unreachable bucket raises instead of returning False.
+        """
         try:
             self._client.stat_object(self._bucket, storage_key)
         except S3Error as exc:
-            if exc.code == "NoSuchKey":
-                return False
-            raise
-        return True
+            if exc.code != "NoSuchKey":
+                raise
+        else:
+            return True
+        if not self._bucket_reachable():
+            raise StorageUnavailableError("Object storage bucket is not reachable")
+        return False
 
     def delete_file(self, storage_key: str) -> None:
         """Delete an object. No-op if not found."""

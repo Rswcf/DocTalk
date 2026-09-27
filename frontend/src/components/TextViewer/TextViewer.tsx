@@ -238,22 +238,25 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
     return () => { cancelled = true; };
   }, [documentId, fileType]);
 
-  // Scroll to target page (and highlight) when citation is clicked
+  // Scroll to target page (and highlight) when citation is clicked. `pages`
+  // is a dependency so a target set before the text arrived (a citation deep
+  // link, or a click during the fetch) is applied once it renders; the nonce
+  // is reset on every document switch, so no earlier target is replayed.
   useEffect(() => {
-    if (targetPage && scrollNonce) {
-      // Use requestAnimationFrame to wait for highlight render
-      requestAnimationFrame(() => {
-        if (highlightRef.current) {
-          highlightRef.current.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
-        } else {
-          const el = pageRefs.current.get(targetPage);
-          if (el) {
-            el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
-          }
+    if (!targetPage || !scrollNonce || pages.length === 0) return;
+    // Use requestAnimationFrame to wait for highlight render
+    const frame = requestAnimationFrame(() => {
+      if (highlightRef.current) {
+        highlightRef.current.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+      } else {
+        const el = pageRefs.current.get(targetPage);
+        if (el) {
+          el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
         }
-      });
-    }
-  }, [targetPage, scrollNonce]);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [targetPage, scrollNonce, pages]);
 
   // Compute which page has a highlight match
   const highlightMatch = useMemo(() => {

@@ -45,4 +45,10 @@ async def require_stored_file(
     except Exception:
         raise HTTPException(status_code=unavailable_status, detail=unavailable_detail)
     if not exists:
-        raise HTTPException(status_code=410, detail=file_missing_detail(variant))
+        # 410 is heuristically cacheable; a cached answer would keep reporting
+        # the loss after the object is restored.
+        raise HTTPException(
+            status_code=410,
+            detail=file_missing_detail(variant),
+            headers={"Cache-Control": "private, no-store"},
+        )

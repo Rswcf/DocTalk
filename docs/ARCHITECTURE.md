@@ -1476,15 +1476,22 @@ Quote Finder read only Postgres and Qdrant. Three rules keep it that way:
    (`app/api/file_presence.py`) HEADs the object before `/file-url` presigns,
    before reparse claims (after the locked status check, before the `users`
    lock), and before layout translation touches any limit or trial. Only
-   `NoSuchKey` means gone (410 `FILE_MISSING`, with `variant`); every other
+   `NoSuchKey` from a bucket confirmed reachable means gone (410
+   `FILE_MISSING`, with `variant`, sent `Cache-Control: private, no-store`).
+   The bucket check matters because minio-py synthesizes `NoSuchKey` for every
+   bodyless 404 on an object HEAD, including a missing bucket. Every other
    storage error keeps its 5xx, so an outage is never reported as permanent
    loss, and a restored object is served again on the next request.
 2. **The worker downloads before it destroys.** `parse_document` fetches the
-   file before deleting Qdrant vectors or any page/chunk/element/brief row. A
-   failed download marks `DOWNLOAD_FAILED` and returns with everything intact;
-   the backfill script also skips file-less documents.
+   file before deleting Qdrant vectors or any page/chunk/element/brief row,
+   and classifies a failed download without touching them: confirmed missing
+   with a complete previous parse (every chunk indexed) → back to `ready`;
+   confirmed missing otherwise → `DOWNLOAD_FAILED`; anything else → the
+   generic autoretry path (`parsing` until the final attempt writes
+   `PARSE_FAILED`). The backfill script also skips file-less documents.
 3. **The reader treats the loss as a state, not an error.** On `FILE_MISSING`
-   the loader leaves `pdfUrl` empty, stops polling and sets `missingFile`; the
+   the loader (initial load or a URL renewal, one poll at a time) clears any
+   error, leaves `pdfUrl` empty, stops polling and sets `missingFile`; the
    reader shows `TextViewer` (which accepts the same page + snippet targets as
    citations) under `MissingFileNotice`. A missing converted PDF drops the
    page view and keeps the text view.

@@ -50,6 +50,10 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
   const [convertedPdfUrl, setConvertedPdfUrl] = useState<string | null>(null);
   const [missingFile, setMissingFile] = useState<MissingFileVariant | null>(null);
   const [customInstructions, setCustomInstructions] = useState<string | null>(null);
+  // One transition for every place that learns the stored file is gone
+  // (initial load or a later URL renewal): clear any error the reader would
+  // otherwise show instead, drop the dead URL, and switch to the text view.
+  const markFileMissingRef = useRef<(variant: MissingFileVariant) => void>(() => {});
 
   const {
     setDocument,
@@ -63,6 +67,18 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     clearDocumentTransientState,
   } = useDocTalkStore();
 
+  markFileMissingRef.current = (variant: MissingFileVariant) => {
+    setError(null);
+    setErrorCode(null);
+    if (variant === 'original') {
+      setPdfUrl(null);
+    } else {
+      setHasConvertedPdf(false);
+      setConvertedPdfUrl(null);
+    }
+    setMissingFile(variant);
+  };
+
   const reload = useCallback(() => {
     setReloadKey((current) => current + 1);
   }, []);
@@ -70,7 +86,18 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
   const refreshFileUrl = useCallback(async (converted: boolean) => {
     if (!documentId) return;
     const generation = documentGeneration.current;
-    const file = await (converted ? getConvertedFileUrl(documentId) : getDocumentFileUrl(documentId));
+    let file: { url: string };
+    try {
+      file = await (converted ? getConvertedFileUrl(documentId) : getDocumentFileUrl(documentId));
+    } catch (e: unknown) {
+      // A renewal can be the first to learn the file is gone; the reader
+      // then switches to the text view instead of the PDF's error state.
+      if (isFileMissing(e) && generation === documentGeneration.current) {
+        markFileMissingRef.current(converted ? 'converted' : 'original');
+        return;
+      }
+      throw e;
+    }
     if (generation !== documentGeneration.current) return;
     if (converted) setConvertedPdfUrl(file.url);
     else setPdfUrl(file.url);
@@ -98,8 +125,11 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
 
     let intervalId: NodeJS.Timeout | null = null;
     let cancelled = false;
+    // One poll at a time: a slow storage check can outlast the 3 s interval,
+    // and an older poll finishing late must not overwrite a newer outcome.
+    let polling = false;
 
-    const fetchStatus = async () => {
+    const pollStatus = async () => {
       const { t, tOr } = copyRef.current;
       let info: DocumentResponse;
       try {
@@ -163,9 +193,8 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
               if (cancelled) return;
               if (isFileMissing(e)) {
                 // Not an error state: the reader falls back to the extracted
-                // text, and chat keeps working. Polling stops below.
-                setPdfUrl(null);
-                setMissingFile('original');
+                // text, and chat keeps working.
+                markFileMissingRef.current('original');
                 if (intervalId) clearInterval(intervalId);
                 return;
               }
@@ -188,9 +217,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
               if (cancelled) return;
               if (isFileMissing(e)) {
                 // Without its converted PDF the document shows as text only.
-                setHasConvertedPdf(false);
-                setConvertedPdfUrl(null);
-                setMissingFile('converted');
+                markFileMissingRef.current('converted');
                 if (intervalId) clearInterval(intervalId);
                 return;
               }
@@ -211,6 +238,16 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
         setError(t('doc.loadError'));
         setErrorCode(null);
         if (intervalId) clearInterval(intervalId);
+      }
+    };
+
+    const fetchStatus = async () => {
+      if (polling || cancelled) return;
+      polling = true;
+      try {
+        await pollStatus();
+      } finally {
+        polling = false;
       }
     };
 

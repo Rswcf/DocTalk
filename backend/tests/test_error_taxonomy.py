@@ -783,6 +783,7 @@ async def test_document_file_url_missing_object_is_410(
 
     detail = _assert_error(response, 410, "FILE_MISSING")
     assert detail["variant"] == expected_variant
+    assert response.headers["cache-control"] == "private, no-store"
     assert checked == [expected_key]
     presign.assert_not_called()
 
