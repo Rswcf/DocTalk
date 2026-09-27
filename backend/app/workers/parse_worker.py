@@ -327,6 +327,22 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 )
             locale = doc.parse_requested_locale
 
+            # Download the file BEFORE any destructive cleanup: a document whose
+            # original is gone (the 2026-06 storage wipe) must keep its pages,
+            # chunks and vectors, since they are all that is left of it. A
+            # failed download therefore marks DOWNLOAD_FAILED and returns with
+            # every existing row and vector intact.
+            try:
+                file_bytes = _download_file_bytes(settings.MINIO_BUCKET, doc.storage_key)
+            except SoftTimeLimitExceeded:
+                raise
+            except Exception as e:
+                logger.exception("Failed to download file for %s: %s", document_id, e)
+                _set_doc_error(doc, "DOWNLOAD_FAILED", "Failed to download document file")
+                db.add(doc)
+                db.commit()
+                return
+
             # Delete stale Qdrant vectors BEFORE deleting any DB rows (R2b ordering fix).
             # Doing Qdrant first means a Qdrant outage leaves the document's existing
             # Pages/Chunks intact (we only set an error + return) instead of committing the
@@ -383,18 +399,6 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             db.add(doc)
             db.commit()
             logger.info("Cleaned up partial data for %s, starting fresh parse", document_id)
-
-            # Download file
-            try:
-                file_bytes = _download_file_bytes(settings.MINIO_BUCKET, doc.storage_key)
-            except SoftTimeLimitExceeded:
-                raise
-            except Exception as e:
-                logger.exception("Failed to download file for %s: %s", document_id, e)
-                _set_doc_error(doc, "DOWNLOAD_FAILED", "Failed to download document file")
-                db.add(doc)
-                db.commit()
-                return
 
             file_type = getattr(doc, "file_type", "pdf") or "pdf"
 

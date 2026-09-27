@@ -13,6 +13,7 @@ import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from minio.error import S3Error
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -150,3 +151,35 @@ class TestEnsureDemoFiles:
 
         assert restored == 1
         assert [c[1] for c in client.put_calls] == [healthy_doc.storage_key]
+
+
+@pytest.mark.asyncio
+async def test_public_demo_list_only_advertises_seeded_slugs(monkeypatch) -> None:
+    """Retired demo rows (nvidia-10k, nda-contract) lost their files in
+    2026-06 and nothing reseeds them; the public list must not offer them."""
+    from unittest.mock import AsyncMock
+
+    from sqlalchemy.dialects import postgresql
+
+    from app.api import documents as documents_api
+
+    seeded = SimpleNamespace(
+        demo_slug="alphabet-earnings", id=uuid.uuid4(), filename="a.pdf", status="ready"
+    )
+    result = SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: [seeded]))
+    db = SimpleNamespace(execute=AsyncMock(return_value=result))
+    monkeypatch.setattr(documents_api, "cache_get", AsyncMock(return_value=None))
+    monkeypatch.setattr(documents_api, "cache_set", AsyncMock())
+
+    payload = await documents_api.get_demo_documents(db)
+
+    assert [item["slug"] for item in payload] == ["alphabet-earnings"]
+    sql = str(
+        db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    for spec in demo_seed.DEMO_DOCS:
+        assert f"'{spec['slug']}'" in sql
+    assert "documents.demo_slug IN (" in sql
+    assert "nvidia-10k" not in sql

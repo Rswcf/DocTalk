@@ -14,6 +14,10 @@ const SLUG_MAP: Record<string, string> = {
   // Legacy redirects
   '10k': 'alphabet-earnings',
   'contract': 'court-filing',
+  // Retired samples: their files were lost in 2026-06 and the API no longer
+  // lists them, so old links land on the closest current sample.
+  'nvidia-10k': 'alphabet-earnings',
+  'nda-contract': 'court-filing',
 };
 
 export default function DemoRedirectPageClient() {

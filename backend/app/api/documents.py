@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.file_presence import require_stored_file
 from app.core.cache import cache_get, cache_set
 from app.core.config import settings
 from app.core.deps import get_current_user_optional, get_db_session, require_auth
@@ -182,10 +183,14 @@ async def get_demo_documents(
     from sqlalchemy import select
 
     from app.models.tables import Document
+    from app.services.demo_seed import DEMO_DOCS
 
+    # Only the slugs still seeded are listed. Rows of retired samples
+    # (nvidia-10k, nda-contract) remain in the table, but their files were
+    # lost in 2026-06 and nothing reseeds them, so they are not advertised.
     result = await db.execute(
         select(Document)
-        .where(Document.demo_slug.isnot(None))
+        .where(Document.demo_slug.in_([spec["slug"] for spec in DEMO_DOCS]))
         .order_by(Document.demo_slug)
     )
     docs = result.scalars().all()
@@ -735,8 +740,18 @@ async def get_document_file_url(
     if variant == "converted" and not doc.converted_storage_key:
         raise HTTPException(status_code=404, detail=DOCUMENT_NOT_FOUND_DETAIL)
 
-    # Run synchronous MinIO call in a thread to avoid blocking the event loop.
-    # When MinIO is unreachable, urllib3 retries can block for seconds.
+    # A presigned URL is minted without contacting storage, so a lost object
+    # would otherwise surface as a failed PDF load. One HEAD per reader open
+    # (and per 5-minute renewal) turns it into a 410 the reader can explain.
+    await require_stored_file(
+        storage_key,
+        variant="converted" if variant == "converted" else "original",
+        unavailable_status=502,
+        unavailable_detail={"error": "STORAGE_UNAVAILABLE", "message": "Storage service unavailable"},
+    )
+
+    # Run synchronous storage calls in a thread to avoid blocking the event
+    # loop: when storage is unreachable, urllib3 retries can block for seconds.
     try:
         url = await asyncio.to_thread(
             storage_service.get_presigned_url, storage_key, settings.MINIO_PRESIGN_TTL
@@ -919,6 +934,24 @@ async def reparse_document(
                 "status": locked_status,
             },
         )
+
+    # The worker needs the original file, and dispatching without it would
+    # only end in DOWNLOAD_FAILED: refuse with 410 FILE_MISSING instead. The
+    # HEAD runs under the document lock (which only same-document delete and
+    # reparse contend for; child inserts take FOR KEY SHARE) and before the
+    # users lock, so no slot accounting is touched for a refused reparse.
+    # Read into a local first: the rollback below expires ORM attributes.
+    storage_key = doc.storage_key
+    try:
+        await require_stored_file(
+            storage_key,
+            variant="original",
+            unavailable_status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            unavailable_detail=STORAGE_UNAVAILABLE_DETAIL,
+        )
+    except HTTPException:
+        await db.rollback()
+        raise
 
     if locked_status == "error":
         # Returning an errored document to the live set consumes a slot. Lock

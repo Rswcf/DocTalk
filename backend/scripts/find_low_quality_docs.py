@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import asyncpg  # noqa: E402
 
 from app.services.parse_service import PARSE_PIPELINE_VERSION  # noqa: E402
+from app.services.storage_service import storage_service  # noqa: E402
 
 
 def _dsn() -> str:
@@ -45,7 +46,7 @@ async def main() -> None:
         rows = await con.fetch(
             """
             SELECT id::text, left(filename, 50) AS fn, file_type, status,
-                   parse_version, parse_method, text_quality
+                   parse_version, parse_method, text_quality, storage_key
             FROM documents
             WHERE demo_slug IS NULL
               AND status = 'ready'
@@ -68,8 +69,16 @@ async def main() -> None:
             # Only OLD-version or never-versioned docs auto-enqueue; current-version low-quality
             # docs are listed for manual review and need --force.
             at_current = (m["parse_version"] or 0) >= PARSE_PIPELINE_VERSION
-            skip = at_current and not args.force
-            flag = " SKIP(processed@current; --force to override)" if skip else ""
+            # A document whose original file is gone can only lose data by
+            # being re-parsed; --force does not override this.
+            file_missing = not storage_service.object_exists(m["storage_key"])
+            skip = file_missing or (at_current and not args.force)
+            if file_missing:
+                flag = " SKIP(original file missing)"
+            elif skip:
+                flag = " SKIP(processed@current; --force to override)"
+            else:
+                flag = ""
             print(f"  {m['id']} v={m['parse_version']} m={m['parse_method']} "
                   f"q={m['text_quality']} {m['file_type']:4} {m['fn']}{flag}")
             if not skip:

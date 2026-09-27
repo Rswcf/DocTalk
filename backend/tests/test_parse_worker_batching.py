@@ -522,6 +522,72 @@ class TestBatchedInsertsAgainstRealPostgres:
             db.commit()
 
 
+class TestDownloadBeforeCleanup:
+    """Documents whose original file was lost (2026-06 storage wipe) keep
+    their pages, chunks and vectors. The worker must fetch the file before
+    it deletes anything, so a failed download destroys nothing."""
+
+    def test_download_failure_leaves_vectors_and_rows_intact(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        session = _RecordingSession(doc)
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+        qdrant_deletes: list[dict] = []
+        collection_checks: list[int] = []
+
+        class _RecordingQdrant:
+            def delete(self, *_a, **kwargs):
+                qdrant_deletes.append(kwargs)
+
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "get_qdrant_client", lambda *_a, **_k: _RecordingQdrant()
+        )
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "ensure_collection", lambda *_a, **_k: collection_checks.append(1)
+        )
+
+        def _object_gone(*_a, **_k):
+            raise RuntimeError("NoSuchKey")
+
+        monkeypatch.setattr(parse_worker, "_download_file_bytes", _object_gone)
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert qdrant_deletes == []
+        assert collection_checks == []
+        assert session.executed == []  # no DELETE of briefs, elements, chunks or pages
+        assert doc.status == "error"
+        assert doc.error_msg.startswith("ERR_CODE:DOWNLOAD_FAILED")
+
+    def test_download_happens_before_the_vector_delete(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        session = _RecordingSession(doc)
+        calls = {"n": 0}
+
+        def _factory():
+            calls["n"] += 1
+            return session if calls["n"] == 1 else _RecordingSession(doc)
+
+        _wire_minimal_pdf_parse(monkeypatch, _factory)
+        order: list[str] = []
+
+        def _download(*_a, **_k):
+            order.append("download")
+            return b"%PDF-1.4\nfake"
+
+        class _RecordingQdrant:
+            def delete(self, *_a, **_k):
+                order.append("qdrant_delete")
+
+        monkeypatch.setattr(parse_worker, "_download_file_bytes", _download)
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "get_qdrant_client", lambda *_a, **_k: _RecordingQdrant()
+        )
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert order[:2] == ["download", "qdrant_delete"]
+
+
 class _RecordingSession:
     def __init__(self, doc: SimpleNamespace | None) -> None:
         self._doc = doc

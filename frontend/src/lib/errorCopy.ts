@@ -303,6 +303,13 @@ const CODE_TABLE: Record<string, Handler> = {
     body: tOr('errors.STORAGE_UNAVAILABLE.body', 'Document storage is temporarily unavailable. Please try again shortly.'),
     severity: 'error',
   }),
+  // 410 from reparse / layout translation for a document whose stored file
+  // was lost. The document itself still works, so the copy never says delete.
+  FILE_MISSING: (_d, tOr) => ({
+    title: tOr('errors.FILE_MISSING.title', 'Original file not in storage'),
+    body: tOr('errors.FILE_MISSING.body', "This document's file is no longer stored, so it cannot be re-processed or translated. Chat and citations still work; upload the file again for a fresh copy."),
+    severity: 'warning',
+  }),
   QDRANT_CLEANUP_FAILED: parseWorkerCopy(
     'QDRANT_CLEANUP_FAILED',
     'Search index cleanup failed',

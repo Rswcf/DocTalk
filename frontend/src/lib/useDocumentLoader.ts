@@ -13,6 +13,14 @@ function shouldRetryLoaderError(error: unknown): boolean {
   return error.status === 408 || error.status === 429 || error.status >= 500;
 }
 
+/** The stored file is permanently gone (410 FILE_MISSING); the document's
+ *  extracted text, chat and citations still work. */
+function isFileMissing(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'FILE_MISSING';
+}
+
+export type MissingFileVariant = 'original' | 'converted';
+
 interface UseDocumentLoaderResult {
   error: string | null;
   errorCode: string | null;
@@ -23,6 +31,7 @@ interface UseDocumentLoaderResult {
   fileType: string;
   hasConvertedPdf: boolean;
   convertedPdfUrl: string | null;
+  missingFile: MissingFileVariant | null;
   customInstructions: string | null;
   setCustomInstructions: (instructions: string | null) => void;
 }
@@ -39,6 +48,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
   const [fileType, setFileType] = useState<string>('pdf');
   const [hasConvertedPdf, setHasConvertedPdf] = useState(false);
   const [convertedPdfUrl, setConvertedPdfUrl] = useState<string | null>(null);
+  const [missingFile, setMissingFile] = useState<MissingFileVariant | null>(null);
   const [customInstructions, setCustomInstructions] = useState<string | null>(null);
 
   const {
@@ -77,6 +87,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     setFileType('pdf');
     setHasConvertedPdf(false);
     setConvertedPdfUrl(null);
+    setMissingFile(null);
     setCustomInstructions(null);
     // When switching between documents (e.g. inside a Collection), wipe the
     // per-document viewer overlays so doc B doesn't inherit doc A's active
@@ -150,6 +161,14 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
               setPdfUrl(file.url);
             } catch (e: unknown) {
               if (cancelled) return;
+              if (isFileMissing(e)) {
+                // Not an error state: the reader falls back to the extracted
+                // text, and chat keeps working. Polling stops below.
+                setPdfUrl(null);
+                setMissingFile('original');
+                if (intervalId) clearInterval(intervalId);
+                return;
+              }
               const copy = errorCopy(e, t, tOr);
               console.error('Failed to load PDF:', e);
               setError(copy.body || t('doc.loadError'));
@@ -167,6 +186,14 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
               setConvertedPdfUrl(file.url);
             } catch (e: unknown) {
               if (cancelled) return;
+              if (isFileMissing(e)) {
+                // Without its converted PDF the document shows as text only.
+                setHasConvertedPdf(false);
+                setConvertedPdfUrl(null);
+                setMissingFile('converted');
+                if (intervalId) clearInterval(intervalId);
+                return;
+              }
               const copy = errorCopy(e, t, tOr);
               console.error('Failed to load converted PDF:', e);
               setError(copy.body || t('doc.loadError'));
@@ -207,6 +234,7 @@ export function useDocumentLoader(documentId: string | undefined): UseDocumentLo
     fileType,
     hasConvertedPdf,
     convertedPdfUrl,
+    missingFile,
     customInstructions,
     setCustomInstructions,
   };

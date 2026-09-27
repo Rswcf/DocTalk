@@ -67,6 +67,9 @@ def _clear_dependency_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
         "layout_translation_config_status",
         lambda: SimpleNamespace(ready=True, missing=()),
     )
+    # No object store in unit tests: the stored-file HEAD reports present
+    # unless a test says otherwise.
+    monkeypatch.setattr(layout_api.storage_service, "object_exists", lambda _key: True)
     yield
     api_app.dependency_overrides.clear()
 
@@ -283,4 +286,57 @@ async def test_layout_translation_does_not_consume_trial_when_sidecar_not_config
     detail = response.json()["detail"]
     assert detail["error"] == "LAYOUT_TRANSLATION_NOT_CONFIGURED"
     assert detail["missing"] == ["RETAINPDF_API_BASE_URL"]
+    db.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_layout_translation_refuses_missing_file_before_trial_is_consumed(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = _make_user("free")
+    doc = _make_doc(user.id)
+    db = _fake_db(doc, used=0)
+    _override_dependencies(db, user)
+    checked: list[str] = []
+
+    def _missing(key: str) -> bool:
+        checked.append(key)
+        return False
+
+    monkeypatch.setattr(layout_api.storage_service, "object_exists", _missing)
+
+    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+
+    assert response.status_code == 410
+    assert response.json()["detail"] == {
+        "error": "FILE_MISSING",
+        "message": "The stored file for this document no longer exists",
+        "variant": "original",
+    }
+    assert checked == [doc.storage_key]
+    # Refused before any job lookup, trial count or job insert.
+    db.execute.assert_not_awaited()
+    db.scalar.assert_not_awaited()
+    db.add.assert_not_called()
+    db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_layout_translation_storage_outage_is_not_reported_as_missing(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = _make_user("free")
+    doc = _make_doc(user.id)
+    db = _fake_db(doc, used=0)
+    _override_dependencies(db, user)
+
+    def _down(_key: str) -> bool:
+        raise RuntimeError("storage down")
+
+    monkeypatch.setattr(layout_api.storage_service, "object_exists", _down)
+
+    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "STORAGE_UNAVAILABLE"
     db.add.assert_not_called()

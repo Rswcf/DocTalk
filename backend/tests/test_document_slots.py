@@ -38,12 +38,30 @@ async def test_errored_document_is_excluded_from_live_slot_count() -> None:
     assert "documents.status = 'error'" in error_sql
 
 
+@pytest.fixture
+def stored_file_present(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """No object store in unit tests: report the original as present and
+    record which keys were checked."""
+    checked: list[str] = []
+
+    def _present(key: str) -> bool:
+        checked.append(key)
+        return True
+
+    monkeypatch.setattr(documents_api.storage_service, "object_exists", _present)
+    return checked
+
+
 @pytest.mark.asyncio
-async def test_reparse_refuses_error_when_live_slots_are_full_and_preserves_status() -> None:
+async def test_reparse_refuses_error_when_live_slots_are_full_and_preserves_status(
+    stored_file_present: list[str],
+) -> None:
     # The auth dependency loaded Plus before a concurrent downgrade committed.
     # Capacity must use the Free plan read while acquiring the user-row lock.
     user = SimpleNamespace(id=uuid.uuid4(), plan="plus")
-    doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="error")
+    doc = SimpleNamespace(
+        id=uuid.uuid4(), user_id=user.id, status="error", storage_key="documents/a.pdf"
+    )
     db = SimpleNamespace(
         scalar=AsyncMock(
             side_effect=[doc, "free", settings.FREE_MAX_DOCUMENTS, 1]
@@ -82,9 +100,12 @@ async def test_reparse_refuses_error_when_live_slots_are_full_and_preserves_stat
 @pytest.mark.asyncio
 async def test_reparse_winner_keeps_conditional_claim_and_dispatch_order(
     monkeypatch: pytest.MonkeyPatch,
+    stored_file_present: list[str],
 ) -> None:
     user = SimpleNamespace(id=uuid.uuid4(), plan="free")
-    doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="error")
+    doc = SimpleNamespace(
+        id=uuid.uuid4(), user_id=user.id, status="error", storage_key="documents/a.pdf"
+    )
     db = SimpleNamespace(
         scalar=AsyncMock(
             side_effect=[doc, "free", settings.FREE_MAX_DOCUMENTS - 1, 1]
@@ -116,9 +137,12 @@ async def test_reparse_winner_keeps_conditional_claim_and_dispatch_order(
 @pytest.mark.asyncio
 async def test_ready_reparse_skips_user_lock(
     monkeypatch: pytest.MonkeyPatch,
+    stored_file_present: list[str],
 ) -> None:
     user = SimpleNamespace(id=uuid.uuid4(), plan="free")
-    doc = SimpleNamespace(id=uuid.uuid4(), user_id=user.id, status="ready")
+    doc = SimpleNamespace(
+        id=uuid.uuid4(), user_id=user.id, status="ready", storage_key="documents/a.pdf"
+    )
     db = SimpleNamespace(
         scalar=AsyncMock(return_value=doc),
         rollback=AsyncMock(),
@@ -133,6 +157,7 @@ async def test_ready_reparse_skips_user_lock(
     result = await documents_api.reparse_document(doc.id, None, user, db)
 
     assert result == {"status": "reparsing"}
+    assert stored_file_present == ["documents/a.pdf"]
     assert db.scalar.await_count == 1
     lock_sql = str(
         db.scalar.await_args.args[0].compile(
@@ -160,6 +185,74 @@ async def test_reparse_locked_processing_status_returns_409() -> None:
 
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail["error"] == "DOCUMENT_PROCESSING"
+    db.execute.assert_not_awaited()
+    db.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("locked_status", ["ready", "error"])
+async def test_reparse_refuses_missing_original_before_claim(
+    monkeypatch: pytest.MonkeyPatch,
+    locked_status: str,
+) -> None:
+    user = SimpleNamespace(id=uuid.uuid4(), plan="free")
+    doc = SimpleNamespace(
+        id=uuid.uuid4(), user_id=user.id, status=locked_status, storage_key="documents/gone.pdf"
+    )
+    db = SimpleNamespace(
+        scalar=AsyncMock(return_value=doc),
+        rollback=AsyncMock(),
+        execute=AsyncMock(),
+        commit=AsyncMock(),
+    )
+    monkeypatch.setattr(documents_api.storage_service, "object_exists", lambda _key: False)
+    dispatched: list[str] = []
+    monkeypatch.setattr(
+        "app.workers.parse_worker.parse_document.delay",
+        lambda document_id, **_kwargs: dispatched.append(document_id),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await documents_api.reparse_document(doc.id, None, user, db)
+
+    assert exc_info.value.status_code == 410
+    assert exc_info.value.detail["error"] == "FILE_MISSING"
+    assert exc_info.value.detail["variant"] == "original"
+    # Only the document lock was taken: no users lock, no slot count, no
+    # claim UPDATE, no commit and no dispatch.
+    assert db.scalar.await_count == 1
+    db.execute.assert_not_awaited()
+    db.commit.assert_not_awaited()
+    db.rollback.assert_awaited_once()
+    assert dispatched == []
+    assert doc.status == locked_status
+
+
+@pytest.mark.asyncio
+async def test_reparse_storage_outage_is_503_not_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = SimpleNamespace(id=uuid.uuid4(), plan="free")
+    doc = SimpleNamespace(
+        id=uuid.uuid4(), user_id=user.id, status="ready", storage_key="documents/a.pdf"
+    )
+    db = SimpleNamespace(
+        scalar=AsyncMock(return_value=doc),
+        rollback=AsyncMock(),
+        execute=AsyncMock(),
+        commit=AsyncMock(),
+    )
+
+    def _down(_key: str) -> bool:
+        raise RuntimeError("storage down")
+
+    monkeypatch.setattr(documents_api.storage_service, "object_exists", _down)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await documents_api.reparse_document(doc.id, None, user, db)
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail["error"] == "STORAGE_UNAVAILABLE"
     db.execute.assert_not_awaited()
     db.rollback.assert_awaited_once()
 

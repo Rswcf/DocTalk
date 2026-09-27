@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PdfViewer } from '../../../components/PdfViewer';
 import TextViewer from '../../../components/TextViewer/TextViewer';
+import MissingFileNotice from '../../../components/PdfViewer/MissingFileNotice';
 import { ChatPanel } from '../../../components/Chat';
 import Header from '../../../components/Header';
 import CustomInstructionsModal from '../../../components/CustomInstructionsModal';
@@ -95,6 +96,7 @@ export default function DocumentReaderPageClient() {
     fileType,
     hasConvertedPdf,
     convertedPdfUrl,
+    missingFile,
     customInstructions,
     setCustomInstructions,
   } = useDocumentLoader(documentId);
@@ -348,7 +350,17 @@ export default function DocumentReaderPageClient() {
         </div>
       ) : null}
       <div className="flex-1 min-h-0">
-        {fileType === 'pdf' ? (
+        {missingFile ? (
+          // The stored file is gone (410 FILE_MISSING). Show what was
+          // extracted at upload time; citations and Quote Finder jumps still
+          // land in it, because TextViewer takes the same page + snippet.
+          <div className="h-full min-h-0 flex flex-col">
+            <MissingFileNotice variant={missingFile} />
+            <div className="flex-1 min-h-0">
+              <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+            </div>
+          </div>
+        ) : fileType === 'pdf' ? (
           pdfUrl ? (
             <div className="h-full min-h-0 flex flex-col">
               {translatedPreview ? (

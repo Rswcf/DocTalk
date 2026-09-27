@@ -23,6 +23,10 @@ async def test_two_concurrent_error_reparses_cannot_both_claim_last_slot(
         "app.workers.parse_worker.parse_document.delay",
         lambda *_args, **_kwargs: None,
     )
+    # The rows point at no real object; these tests are about row locks.
+    monkeypatch.setattr(
+        "app.services.storage_service.storage_service.object_exists", lambda _key: True
+    )
     async with AsyncSessionLocal() as db:
         user = User(
             email=f"document-slots-{uuid.uuid4()}@example.com",
@@ -101,6 +105,10 @@ async def test_two_concurrent_reparses_of_same_document_claim_once_and_loser_409
     monkeypatch.setattr(
         "app.workers.parse_worker.parse_document.delay",
         lambda document_id, **_kwargs: dispatched.append(document_id),
+    )
+    # The row points at no real object; this test is about row locks.
+    monkeypatch.setattr(
+        "app.services.storage_service.storage_service.object_exists", lambda _key: True
     )
     async with AsyncSessionLocal() as db:
         user = User(

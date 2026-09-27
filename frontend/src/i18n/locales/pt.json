@@ -3969,5 +3969,11 @@
   "evidence.return": "Voltar à resposta",
   "evidence.fitWidth": "Ajustar à largura",
   "evidence.unavailable": "Página de origem indisponível",
-  "billing.subscribePlan": "Assinar {plan}"
+  "billing.subscribePlan": "Assinar {plan}",
+  "doc.fileMissing.title": "O PDF original não está mais disponível",
+  "doc.fileMissing.body": "Este arquivo foi perdido em uma falha de armazenamento em junho de 2026 e não pode ser recuperado. Tudo o que o DocTalk extraiu dele no envio continua aqui: você pode continuar conversando, seguir as citações e usar o Localizador de citações. A visualização de páginas, a tradução e o reprocessamento precisam do próprio arquivo. Envie-o novamente como um novo documento para recuperá-los.",
+  "doc.fileMissing.convertedTitle": "A visualização de páginas deste arquivo não está mais disponível",
+  "doc.fileMissing.convertedBody": "A visualização de páginas deste arquivo foi perdida em uma falha de armazenamento em junho de 2026 e não pode ser recuperada. O texto extraído é exibido no lugar, e o chat, as citações e o Localizador de citações funcionam como antes. Envie o arquivo novamente como um novo documento para recuperar a visualização de páginas.",
+  "errors.FILE_MISSING.title": "Arquivo original não está no armazenamento",
+  "errors.FILE_MISSING.body": "O arquivo deste documento não está mais armazenado, por isso não pode ser reprocessado nem traduzido. O chat e as citações continuam funcionando; envie o arquivo novamente para obter uma nova cópia."
 }
