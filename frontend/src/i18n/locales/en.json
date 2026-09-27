@@ -3977,5 +3977,17 @@
   "doc.fileMissing.convertedTitle": "The page view of this file is no longer available",
   "doc.fileMissing.convertedBody": "The page view of this file was lost in a storage failure in June 2026 and cannot be recovered. Its extracted text is shown instead, and chat, citations and Quote Finder work as before. Upload the file again as a new document to get the page view back.",
   "errors.FILE_MISSING.title": "Original file not in storage",
-  "errors.FILE_MISSING.body": "This document's file is no longer stored, so it cannot be re-processed or translated. Chat and citations still work; upload the file again for a fresh copy."
+  "errors.FILE_MISSING.body": "This document's file is no longer stored, so it cannot be re-processed or translated. Chat and citations still work; upload the file again for a fresh copy.",
+  "admin.backups.title": "Postgres backups",
+  "admin.backups.status.ok": "Healthy",
+  "admin.backups.status.stale": "Stale",
+  "admin.backups.status.small": "Too small",
+  "admin.backups.status.unverified": "Unverified",
+  "admin.backups.status.missing": "Missing",
+  "admin.backups.status.unreachable": "Storage unreachable",
+  "admin.backups.status.disabled": "Monitor off",
+  "admin.backups.age": "{hours} h ago",
+  "admin.backups.restoreOk": "restore test passed",
+  "admin.backups.restoreNotOk": "restore test not passed",
+  "admin.backups.none": "No backup found"
 }

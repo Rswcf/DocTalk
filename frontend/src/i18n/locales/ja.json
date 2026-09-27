@@ -3975,5 +3975,17 @@
   "doc.fileMissing.convertedTitle": "このファイルのページ表示は利用できなくなりました",
   "doc.fileMissing.convertedBody": "このファイルのページ表示は 2026 年 6 月のストレージ障害で失われ、復元できません。代わりに抽出したテキストを表示しており、チャット、引用、引用ファインダーはこれまでどおり利用できます。ページ表示を戻すには、ファイルを新しいドキュメントとして再アップロードしてください。",
   "errors.FILE_MISSING.title": "元のファイルはストレージにありません",
-  "errors.FILE_MISSING.body": "このドキュメントのファイルは保存されていないため、再処理や翻訳はできません。チャットと引用は引き続き利用できます。新しいコピーが必要な場合はファイルを再アップロードしてください。"
+  "errors.FILE_MISSING.body": "このドキュメントのファイルは保存されていないため、再処理や翻訳はできません。チャットと引用は引き続き利用できます。新しいコピーが必要な場合はファイルを再アップロードしてください。",
+  "admin.backups.title": "Postgres バックアップ",
+  "admin.backups.status.ok": "正常",
+  "admin.backups.status.stale": "古い",
+  "admin.backups.status.small": "サイズ不足",
+  "admin.backups.status.unverified": "未検証",
+  "admin.backups.status.missing": "なし",
+  "admin.backups.status.unreachable": "ストレージに接続できません",
+  "admin.backups.status.disabled": "監視オフ",
+  "admin.backups.age": "{hours} 時間前",
+  "admin.backups.restoreOk": "復元テスト成功",
+  "admin.backups.restoreNotOk": "復元テスト未通過",
+  "admin.backups.none": "バックアップが見つかりません"
 }

@@ -3975,5 +3975,17 @@
   "doc.fileMissing.convertedTitle": "L’affichage des pages de ce fichier n’est plus disponible",
   "doc.fileMissing.convertedBody": "L’affichage des pages de ce fichier a été perdu lors d’une panne de stockage en juin 2026 et ne peut pas être récupéré. Le texte extrait s’affiche à la place, et la discussion, les citations et la Recherche de citations fonctionnent comme avant. Importez à nouveau le fichier comme nouveau document pour retrouver l’affichage des pages.",
   "errors.FILE_MISSING.title": "Fichier d’origine absent du stockage",
-  "errors.FILE_MISSING.body": "Le fichier de ce document n’est plus stocké : il ne peut donc être ni retraité ni traduit. La discussion et les citations fonctionnent toujours ; importez à nouveau le fichier pour en obtenir une nouvelle copie."
+  "errors.FILE_MISSING.body": "Le fichier de ce document n’est plus stocké : il ne peut donc être ni retraité ni traduit. La discussion et les citations fonctionnent toujours ; importez à nouveau le fichier pour en obtenir une nouvelle copie.",
+  "admin.backups.title": "Sauvegardes Postgres",
+  "admin.backups.status.ok": "Saine",
+  "admin.backups.status.stale": "Périmée",
+  "admin.backups.status.small": "Trop petite",
+  "admin.backups.status.unverified": "Non vérifiée",
+  "admin.backups.status.missing": "Absente",
+  "admin.backups.status.unreachable": "Stockage inaccessible",
+  "admin.backups.status.disabled": "Surveillance désactivée",
+  "admin.backups.age": "il y a {hours} h",
+  "admin.backups.restoreOk": "test de restauration réussi",
+  "admin.backups.restoreNotOk": "test de restauration non réussi",
+  "admin.backups.none": "Aucune sauvegarde trouvée"
 }

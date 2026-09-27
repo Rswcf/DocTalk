@@ -37,6 +37,7 @@ from app.schemas.admin import (
     AdminTrendsResponse,
     AdminUserActivityResponse,
 )
+from app.services.backup_status_service import get_postgres_backup_status
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -1992,6 +1993,14 @@ async def admin_billing_health(
         "has_mode_mismatch": has_mode_mismatch,
         "prices": price_statuses,
     }
+
+
+@router.get("/ops-health")
+async def admin_ops_health(
+    _admin: User = Depends(require_admin),
+):
+    """Operational health: currently the nightly Postgres backup (read-only)."""
+    return {"postgres_backup": await asyncio.to_thread(get_postgres_backup_status)}
 
 
 @router.get("/funnel")

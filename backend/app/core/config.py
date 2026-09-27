@@ -126,6 +126,14 @@ class Settings(BaseSettings):
     }
     PREMIUM_MODES: list[str] = Field(default=[])
 
+    # Postgres backup watcher (infra/pg-backup writes the artifacts; this only
+    # reads the ops bucket). Off by default: dev and CI have no ops bucket.
+    OPS_BUCKET: str = Field(default="doctalk-ops")
+    PG_BACKUP_PREFIX: str = Field(default="postgres/")
+    PG_BACKUP_MAX_AGE_HOURS: int = Field(default=30)
+    PG_BACKUP_MIN_BYTES: int = Field(default=5_000_000)
+    PG_BACKUP_MONITOR_ENABLED: bool = Field(default=False)
+
     # Sentry
     SENTRY_DSN: Optional[str] = None
     SENTRY_ENVIRONMENT: str = Field(default="production")
