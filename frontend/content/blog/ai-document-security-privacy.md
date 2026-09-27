@@ -104,7 +104,7 @@ Transparency matters, so here is how DocTalk handles the concerns above. We are 
 ### Encryption
 
 - **In transit:** All connections use TLS 1.3. Backend served via Railway's HTTPS proxy. Frontend served via Vercel's edge network with automatic TLS.
-- **At rest:** Documents are stored in Cloudflare R2 (S3-compatible object storage), which encrypts every object at rest with AES-256 by default. Database encrypted at rest by Railway's managed PostgreSQL. Vector embeddings stored in Qdrant with encrypted storage.
+- **At rest:** Documents are stored in Cloudflare R2 (S3-compatible object storage), which encrypts every object at rest with AES-256 by default. PostgreSQL and the vector index run on Railway, which encrypts its underlying storage at rest at the disk level.
 
 ### Data Retention and Deletion
 

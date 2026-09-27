@@ -3203,7 +3203,7 @@
   "trust.stats.retention.value": "DocTalk does not train models on your data",
   "trust.encryption.heading": "Encryption & transit",
   "trust.encryption.rest.title": "AES-256 encryption at rest",
-  "trust.encryption.rest.detail": "Uploaded documents and generated files are stored in Cloudflare R2, which encrypts every object at rest with AES-256 using keys managed by Cloudflare. This encryption is automatic and cannot be turned off, and DocTalk never handles the storage encryption keys. Your browser receives a file only through a signed link that expires after five minutes, issued after the backend has checked that you may access it.",
+  "trust.encryption.rest.detail": "Uploaded documents and generated files are stored in Cloudflare R2, which encrypts every object at rest with AES-256 using keys managed by Cloudflare. This encryption is automatic and cannot be turned off, and DocTalk never handles the storage encryption keys. The document viewer loads a file only through a signed link that expires after five minutes, issued after the backend has checked that you may access it; generated files such as translated PDFs are downloaded through the backend, also after an access check.",
   "trust.encryption.rest.evidence": "Cloudflare R2 data security · backend/app/api/documents.py · get_document_file_url()",
   "trust.encryption.transit.title": "TLS 1.2+ in transit",
   "trust.encryption.transit.detail": "Public web access uses HTTPS. Internal service connections may use private platform networking. Processing services can read the content needed to provide the requested features; this is not end-to-end encryption that hides content from those services.",

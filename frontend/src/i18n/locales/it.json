@@ -3201,7 +3201,7 @@
   "trust.stats.retention.value": "DocTalk non addestra modelli con i tuoi dati",
   "trust.encryption.heading": "Crittografia e trasmissione",
   "trust.encryption.rest.title": "Crittografia AES-256 a riposo",
-  "trust.encryption.rest.detail": "I documenti caricati e i file generati sono archiviati in Cloudflare R2, che cifra a riposo ogni oggetto con AES-256 usando chiavi gestite da Cloudflare. Questa cifratura è automatica e non può essere disattivata, e DocTalk non gestisce mai le chiavi di cifratura dell'archiviazione. Il tuo browser riceve un file solo tramite un link firmato, emesso dopo che il backend ha verificato che puoi accedervi, che scade dopo cinque minuti.",
+  "trust.encryption.rest.detail": "I documenti caricati e i file generati sono archiviati in Cloudflare R2, che cifra a riposo ogni oggetto con AES-256 usando chiavi gestite da Cloudflare. Questa cifratura è automatica e non può essere disattivata, e DocTalk non gestisce mai le chiavi di cifratura dell'archiviazione. Il visualizzatore di documenti carica un file solo tramite un link firmato, emesso dopo che il backend ha verificato che puoi accedervi, che scade dopo cinque minuti; i file generati, come i PDF tradotti, si scaricano tramite il backend, sempre dopo un controllo dell'accesso.",
   "trust.encryption.rest.evidence": "Cloudflare R2 data security · backend/app/api/documents.py · get_document_file_url()",
   "trust.encryption.transit.title": "TLS 1.2+ in transito",
   "trust.encryption.transit.detail": "L’accesso web pubblico usa HTTPS. Le connessioni interne possono usare reti private della piattaforma. I servizi di elaborazione possono leggere i contenuti necessari alle funzioni richieste; non è una crittografia end-to-end che nasconde i contenuti a tali servizi.",

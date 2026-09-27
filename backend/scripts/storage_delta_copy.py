@@ -5,13 +5,20 @@ container during the R2 cutover (see .collab/plans/2026-09-26-r2-migration.md).
 Source: LEGACY_MINIO_* if set (after the flip), else MINIO_* (before it).
 Target: R2_ENDPOINT (default: DocTalk's R2 account endpoint), region "auto",
 R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY, bucket R2_BUCKET or MINIO_BUCKET.
-Prints counts and keys only; never credentials or URLs. Exits non-zero if any
-copy fails verification. Existing target objects are never overwritten.
+Prints counts and keys only; never credentials, URLs or exception messages
+(only exception classes). Exits non-zero if anything fails.
+
+Existing target objects are not overwritten: the target listing is re-checked
+with a HEAD right before each write. That leaves a window between HEAD and
+PUT, accepted because every key is UUID-scoped (documents/{uuid}/...,
+layout-translations/{uuid}/...) and nothing else writes a given key during a
+cutover.
 """
 from __future__ import annotations
 
 import hashlib
 import io
+import logging
 import os
 import sys
 
@@ -43,7 +50,7 @@ def _read(client: Minio, bucket: str, key: str) -> bytes:
         response.release_conn()
 
 
-def main() -> int:
+def _run() -> int:
     env = os.environ
     prefix = "LEGACY_MINIO_" if env.get("LEGACY_MINIO_ENDPOINT") else "MINIO_"
     source = _client(env[f"{prefix}ENDPOINT"], env[f"{prefix}ACCESS_KEY"], env[f"{prefix}SECRET_KEY"],
@@ -62,6 +69,9 @@ def main() -> int:
     failures = 0
     for key in missing:
         try:
+            if _exists(target, target_bucket, key):
+                print(f"SKIPPED {key}: appeared in target meanwhile")
+                continue
             stat = source.stat_object(source_bucket, key)
             data = _read(source, source_bucket, key)
             expected = hashlib.sha256(data).hexdigest()
@@ -83,6 +93,32 @@ def main() -> int:
     print(f"target-only objects (left untouched): {len(extra)}")
     print("DELTA OK" if not failures else f"DELTA FAILED: {failures}")
     return 1 if failures else 0
+
+
+def _exists(client: Minio, bucket: str, key: str) -> bool:
+    try:
+        client.stat_object(bucket, key)
+    except S3Error as exc:
+        if exc.code in ("NoSuchKey", "NoSuchObject", "ResourceNotFound"):
+            return False
+        raise
+    return True
+
+
+def main() -> int:
+    # Library logging would echo raw request details; exceptions are reported
+    # by class only, outside the handler so no traceback chains them.
+    previous = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    failure = None
+    try:
+        return _run()
+    except Exception as exc:  # noqa: BLE001 - class only, see docstring
+        failure = f"{type(exc).__name__}" + (f" {exc.code}" if isinstance(exc, S3Error) else "")
+    finally:
+        logging.disable(previous)
+    print(f"DELTA FAILED: {failure}")
+    return 1
 
 
 if __name__ == "__main__":

@@ -87,7 +87,7 @@ graph TB
 | **PostgreSQL** | 主数据存储：用户、文档、页面、文本块、会话、消息、积分 |
 | **Qdrant** | 向量数据库，语义搜索（COSINE 相似度，1536 维） |
 | **Redis** | Celery 任务代理和结果后端 |
-| **Cloudflare R2** | S3 兼容对象存储，存放上传的文件和生成的产物（bucket `doctalk-pdfs`），通过 R2 的 S3 API、用 minio-py 客户端访问。每个对象都由 Cloudflare 以 AES-256 静态加密。浏览器只能通过预签名 GET URL（有效期 300 秒）读取文件，该 URL 由 `GET /api/documents/{id}/file-url` 在访问校验后签发。开发和 CI 环境仍使用 MinIO |
+| **Cloudflare R2** | S3 兼容对象存储，存放上传的文件和生成的产物（bucket `doctalk-pdfs`），通过 R2 的 S3 API、用 minio-py 客户端访问。每个对象都由 Cloudflare 以 AES-256 静态加密。浏览器查看文档 PDF 时，只能通过预签名 GET URL（有效期 300 秒）读取，该 URL 由 `GET /api/documents/{id}/file-url` 在访问校验后签发；翻译后的 PDF 等生成产物由后端在访问校验后直接传输。开发和 CI 环境仍使用 MinIO |
 | **DeepSeek** | 主要对话与 PDF 翻译模型 provider |
 | **OpenRouter** | Embedding 与 fallback 模型网关 |
 | **OCR providers** | RetainPDF 在保留排版翻译中使用的 Paddle、MinerU 或 Datalab 凭证 |

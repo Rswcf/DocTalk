@@ -87,7 +87,7 @@ graph TB
 | **PostgreSQL** | Primary data store for users, documents, pages, chunks, sessions, messages, credits |
 | **Qdrant** | Vector database for semantic search (COSINE similarity, 1536 dimensions) |
 | **Redis** | Celery task broker and result backend |
-| **Cloudflare R2** | S3-compatible object storage for uploaded files and generated artifacts (bucket `doctalk-pdfs`), reached over R2's S3 API with the minio-py client. Every object is encrypted at rest with AES-256 by Cloudflare. Browsers read files only through presigned GET URLs (300 s TTL) issued by `GET /api/documents/{id}/file-url` after an access check. Dev and CI run MinIO instead |
+| **Cloudflare R2** | S3-compatible object storage for uploaded files and generated artifacts (bucket `doctalk-pdfs`), reached over R2's S3 API with the minio-py client. Every object is encrypted at rest with AES-256 by Cloudflare. Browsers read document PDFs only through presigned GET URLs (300 s TTL) issued by `GET /api/documents/{id}/file-url` after an access check; generated artifacts such as translated PDFs are streamed by the backend after an access check. Dev and CI run MinIO instead |
 | **DeepSeek** | Primary chat and PDF translation model provider |
 | **OpenRouter** | Embedding and fallback model gateway |
 | **OCR providers** | Paddle, MinerU, or Datalab credentials used by RetainPDF during layout translation |

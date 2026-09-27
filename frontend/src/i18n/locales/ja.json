@@ -3201,7 +3201,7 @@
   "trust.stats.retention.value": "DocTalk はデータをモデル学習に使用しません",
   "trust.encryption.heading": "暗号化と転送",
   "trust.encryption.rest.title": "AES-256による保存時暗号化",
-  "trust.encryption.rest.detail": "アップロードされたドキュメントと生成されたファイルは Cloudflare R2 に保存されます。R2 は Cloudflare が管理する鍵を使い、すべてのオブジェクトを AES-256 で保存時に暗号化します。この暗号化は自動的に適用され、無効にはできません。DocTalk がストレージの暗号鍵を扱うことはありません。ブラウザがファイルを受け取れるのは、バックエンドがアクセス権を確認したうえで発行する署名付きリンクだけで、このリンクは 5 分で失効します。",
+  "trust.encryption.rest.detail": "アップロードされたドキュメントと生成されたファイルは Cloudflare R2 に保存されます。R2 は Cloudflare が管理する鍵を使い、すべてのオブジェクトを AES-256 で保存時に暗号化します。この暗号化は自動的に適用され、無効にはできません。DocTalk がストレージの暗号鍵を扱うことはありません。ドキュメントビューアーがファイルを読み込むのは、バックエンドがアクセス権を確認したうえで発行する署名付きリンクだけで、このリンクは 5 分で失効します。翻訳済み PDF などの生成ファイルは、同じくアクセス権を確認したうえでバックエンドから直接ダウンロードされます。",
   "trust.encryption.rest.evidence": "Cloudflare R2 data security · backend/app/api/documents.py · get_document_file_url()",
   "trust.encryption.transit.title": "転送中のTLS 1.2+",
   "trust.encryption.transit.detail": "公開ウェブアクセスには HTTPS を使用します。内部サービス間の接続にはプラットフォームのプライベートネットワークを使用する場合があります。処理サービスは機能の提供に必要な内容を読み取れます。これらのサービスからも内容を隠すエンドツーエンド暗号化ではありません。",
