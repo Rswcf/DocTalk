@@ -8,6 +8,23 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-09-27
+
+Copy and documentation for document storage on Cloudflare R2, released after
+the storage cutover.
+
+### Changed
+- The trust page describes storage encryption accurately in all 11 languages:
+  documents are stored in Cloudflare R2, which encrypts every object at rest
+  with AES-256. It previously claimed KMS-backed SSE-S3 encryption on MinIO,
+  which never applied in production. The Arabic text also had the evidence
+  path glued onto the end of it.
+- The security blog post and the project documentation describe Cloudflare R2
+  as production storage. MinIO remains the store for local development and CI.
+
+### Removed
+- The Dockerfile for the retired MinIO storage service.
+
 ## [0.33.0] - 2026-09-26
 
 Groundwork for moving document storage to Cloudflare R2. On its own this
