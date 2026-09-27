@@ -86,7 +86,9 @@ List variable names only, never values:
    Keep the credentials off every command line: write a password file
    (`host:port:db:user:password`, `chmod 600`) and export `PGHOST`, `PGPORT`,
    `PGUSER` and `PGDATABASE` in your shell, then pass them by name:
-   `docker run --rm -v "$PWD:/b:ro" -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE -e PGPASSFILE=/b/.pgpass postgres:17.11-bookworm pg_restore --no-owner --no-privileges -j 4 -d "$PGDATABASE" /b/<key>.dump`
+   `docker run --rm -v "$PWD:/b:ro" -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE -e PGSSLMODE -e PGPASSFILE=/b/.pgpass postgres:17.11-bookworm pg_restore --no-owner --no-privileges -j 4 -d "$PGDATABASE" /b/<key>.dump`
+   Export `PGSSLMODE=require` (or `verify-full`, mounting the root certificate
+   and passing `-e PGSSLROOTCERT`) when restoring over Railway's public proxy.
    Never paste the password or URL into chat.
 5. Point `backend` and `pg-backup` at the new database, redeploy, then check
    `/health?deep=true`, a login and a chat with a citation jump.

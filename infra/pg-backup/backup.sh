@@ -193,7 +193,7 @@ counts_sql() {
 
 STAGE=source_facts
 # Through run (not $(...)) so a TERM during a slow query is handled at once.
-PGOPTIONS="$SOURCE_PGOPTIONS" run timeout 330 psql -X -v ON_ERROR_STOP=1 -Atc "$(counts_sql)" -o "$WORK/source_facts"
+PGOPTIONS="$SOURCE_PGOPTIONS" run timeout -k 5 330 psql -X -v ON_ERROR_STOP=1 -Atc "$(counts_sql)" -o "$WORK/source_facts"
 IFS='|' read -r -a SOURCE < "$WORK/source_facts"
 SERVER_VERSION_NUM=${SOURCE[0]}
 ALEMBIC=${SOURCE[1]}
@@ -205,7 +205,7 @@ fi
 
 STAGE=dump
 t0=$SECONDS
-PGOPTIONS="$SOURCE_PGOPTIONS" run timeout 1500 pg_dump -Fc --lock-wait-timeout=120s -f "$DUMP"
+PGOPTIONS="$SOURCE_PGOPTIONS" run timeout -k 5 1500 pg_dump -Fc --lock-wait-timeout=120s -f "$DUMP"
 T_DUMP=$((SECONDS - t0))
 DUMP_BYTES=$(stat -c %s "$DUMP")
 if (( DUMP_BYTES < MIN_DUMP_BYTES )); then
@@ -239,7 +239,7 @@ if [[ "$RESTORE_TEST" == 1 ]]; then
     start >/dev/null
   PGTEST_STARTED=1
   local_pg createdb restore_test
-  local_pg run timeout 1800 pg_restore -d restore_test --no-owner --no-privileges --exit-on-error -j 2 "$DUMP"
+  local_pg run timeout -k 5 1800 pg_restore -d restore_test --no-owner --no-privileges --exit-on-error -j 2 "$DUMP"
   restored_line=$(local_pg psql -X -v ON_ERROR_STOP=1 -Atc "$(counts_sql)")
   IFS='|' read -r -a RESTORED <<<"$restored_line"
   pg_ctl -D "$PGTEST" -m immediate stop >/dev/null
@@ -306,10 +306,10 @@ if [[ "$RESTORE_RESULT" == ok ]]; then RESTORED_COUNTS=$(counts_json "${RESTORED
 # ---- upload + verify -----------------------------------------------------------
 STAGE=upload
 remote_matches() {  # $1: remote path. Size and MD5 must equal the local artifact.
-  local listing
-  listing=$(timeout 120 rclone lsjson --hash --files-only "${RCLONE_FLAGS[@]}" "r2:$1")
-  [[ $(jq -r '.[0].Size' <<<"$listing") == "$ARTIFACT_BYTES" ]] \
-    && [[ $(jq -r '.[0].Hashes.md5 // empty' <<<"$listing") == "$ARTIFACT_MD5" ]]
+  local listing="$WORK/listing.json"
+  run timeout -k 5 120 rclone lsjson --hash --files-only "${RCLONE_FLAGS[@]}" "r2:$1" > "$listing" || return 1
+  [[ $(jq -r '.[0].Size' "$listing") == "$ARTIFACT_BYTES" ]] \
+    && [[ $(jq -r '.[0].Hashes.md5 // empty' "$listing") == "$ARTIFACT_MD5" ]]
 }
 write_manifest() {  # $1: artifact key the manifest points at; $2: output file
   jq -n \
@@ -334,27 +334,27 @@ write_manifest() {  # $1: artifact key the manifest points at; $2: output file
 
 DAILY_KEY="$BACKUP_PREFIX/$ARTIFACT_NAME"
 t0=$SECONDS
-run timeout 900 rclone copyto "${RCLONE_FLAGS[@]}" "$ARTIFACT" "r2:$R2_BUCKET/$DAILY_KEY"
+run timeout -k 5 900 rclone copyto "${RCLONE_FLAGS[@]}" "$ARTIFACT" "r2:$R2_BUCKET/$DAILY_KEY"
 if ! remote_matches "$R2_BUCKET/$DAILY_KEY"; then
   log "FAIL uploaded object does not match the local artifact (size or MD5)"
   exit 1
 fi
 T_UPLOAD=$((SECONDS - t0))
 write_manifest "$DAILY_KEY" "$WORK/daily.manifest.json"
-timeout 120 rclone copyto "${RCLONE_FLAGS[@]}" "$WORK/daily.manifest.json" "r2:$R2_BUCKET/$BACKUP_PREFIX/$KEY_BASE.manifest.json"
+run timeout -k 5 120 rclone copyto "${RCLONE_FLAGS[@]}" "$WORK/daily.manifest.json" "r2:$R2_BUCKET/$BACKUP_PREFIX/$KEY_BASE.manifest.json"
 
 # On the first of the month, keep a long-lived copy with its own manifest
 # (the daily objects expire long before the monthly ones).
 if [[ $(date -u +%d) == 01 ]]; then
   STAGE=monthly_copy
   MONTHLY_KEY="$MONTHLY_PREFIX/$ARTIFACT_NAME"
-  run timeout 900 rclone copyto "${RCLONE_FLAGS[@]}" "r2:$R2_BUCKET/$DAILY_KEY" "r2:$R2_BUCKET/$MONTHLY_KEY"
+  run timeout -k 5 900 rclone copyto "${RCLONE_FLAGS[@]}" "r2:$R2_BUCKET/$DAILY_KEY" "r2:$R2_BUCKET/$MONTHLY_KEY"
   if ! remote_matches "$R2_BUCKET/$MONTHLY_KEY"; then
     log "FAIL monthly copy does not match the local artifact"
     exit 1
   fi
   write_manifest "$MONTHLY_KEY" "$WORK/monthly.manifest.json"
-  timeout 120 rclone copyto "${RCLONE_FLAGS[@]}" "$WORK/monthly.manifest.json" "r2:$R2_BUCKET/$MONTHLY_PREFIX/$KEY_BASE.manifest.json"
+  run timeout -k 5 120 rclone copyto "${RCLONE_FLAGS[@]}" "$WORK/monthly.manifest.json" "r2:$R2_BUCKET/$MONTHLY_PREFIX/$KEY_BASE.manifest.json"
 fi
 
 STAGE=finished
