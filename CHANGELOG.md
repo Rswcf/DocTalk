@@ -19,6 +19,9 @@ the storage cutover.
   with AES-256. It previously claimed KMS-backed SSE-S3 encryption on MinIO,
   which never applied in production. The Arabic text also had the evidence
   path glued onto the end of it.
+- Comparison, alternatives and use-case pages (10 passages in each of the 11
+  languages) no longer name "SSE-S3" as DocTalk's encryption; they say AES-256
+  at rest, which is what R2 provides.
 - The security blog post and the project documentation describe Cloudflare R2
   as production storage. MinIO remains the store for local development and CI.
 
