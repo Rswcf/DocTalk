@@ -21,7 +21,10 @@ Cloudflare R2 bucket `doctalk-ops`. Plan and rationale:
    dump hash in the manifest; counts restored equal the source. A forced
    failure (size floor) ended as `BACKUP FAILED stage=dump` and a CRASHED
    deployment.
-4. `cronSchedule` set in `railway.toml`; first unattended run (G3) pending.
+4. Schedule `15 9 * * *` UTC is set on the service instance (API; Railway
+   does not read `railway.toml` for directory uploads), restart policy
+   ON_FAILURE with 1 retry, region us-west2. First unattended run (G3) is
+   2026-09-28 09:15 UTC.
 5. Owner drill (G2): decryption is proven; the owner should still restore
    one artifact once themselves (quarterly thereafter).
 
@@ -117,4 +120,5 @@ throwaway `age` key from `docker run --rm --entrypoint age-keygen doctalk-pg-bac
 
 | Date | Commit | Image digest | Notes |
 |---|---|---|---|
+| 2026-09-27 | 3d0bfef7 | same | Redeploy 4b0f3f6a (ran once: `BACKUP OK`); schedule and restart policy then set on the instance via API. |
 | 2026-09-27 | 20f878b1 | Railway build of `postgres:17.11-bookworm@sha256:639ab7ce…` | Service `pg-backup` (ed8cd926…), region us-west2. Smoke run e3bf63b9: `BACKUP OK`, 51.5 MB, restore test 8 s, users 183. Forced failure 7c6f8585: CRASHED as expected. |
