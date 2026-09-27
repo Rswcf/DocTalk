@@ -55,7 +55,7 @@ Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask q
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
 | **Database** | PostgreSQL 16, Qdrant (vector search) |
-| **Storage** | MinIO / S3-compatible |
+| **Storage** | Cloudflare R2 (S3-compatible; MinIO locally) |
 | **Auth** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Payments** | Stripe Checkout + Subscriptions |
 | **AI** | DeepSeek V4 Flash/Pro for chat; OpenRouter for embeddings and fallback models |
@@ -69,7 +69,7 @@ Upload PDFs, Word docs, PowerPoints, spreadsheets, or any webpage — then ask q
 Browser ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
                 │                       │                Qdrant
                 │                       │                Redis
-                └── API Proxy ──────────┘                MinIO
+                └── API Proxy ──────────┘                Cloudflare R2
                    (JWT injection)
 ```
 
@@ -241,7 +241,8 @@ git checkout main
 | **Backend** (Railway) | `git checkout stable && git merge main && railway up --detach` (deploy FIRST) |
 | **Frontend** (Vercel) | After Railway is healthy, `git push origin stable` → auto-deploys. Root directory: `frontend/`. |
 
-Railway runs the core services: backend, PostgreSQL, Redis, Qdrant, and MinIO.
+Railway runs the core services: backend, PostgreSQL, Redis, and Qdrant.
+Documents are stored in Cloudflare R2.
 Layout-preserving PDF translation additionally requires the RetainPDF sidecar.
 
 ## Versioning

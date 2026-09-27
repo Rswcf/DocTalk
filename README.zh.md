@@ -55,7 +55,7 @@
 | **前端** | Next.js 14 (App Router)、Auth.js v5、react-pdf v9、Tailwind CSS、Radix UI、Zustand |
 | **后端** | FastAPI、Celery、Redis |
 | **数据库** | PostgreSQL 16、Qdrant（向量搜索） |
-| **存储** | MinIO / S3 兼容 |
+| **存储** | Cloudflare R2（S3 兼容；本地开发用 MinIO） |
 | **认证** | Auth.js v5 — Google OAuth、Microsoft OAuth、Email Magic Link |
 | **支付** | Stripe Checkout + Subscriptions |
 | **AI** | DeepSeek V4 Flash/Pro 用于聊天；OpenRouter 用于 embeddings 和 fallback 模型 |
@@ -69,7 +69,7 @@
 浏览器 ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
                 │                       │                Qdrant
                 │                       │                Redis
-                └── API 代理 ───────────┘                MinIO
+                └── API 代理 ───────────┘                Cloudflare R2
                    (JWT 注入)
 ```
 
@@ -211,7 +211,7 @@ DocTalk/
 | **前端** (Vercel) | 推送 `stable` → 自动部署。Root Directory: `frontend/`。 |
 | **后端** (Railway) | `git checkout stable && railway up --detach` |
 
-Railway 运行核心服务：backend、PostgreSQL、Redis、Qdrant、MinIO；启用保留排版 PDF 翻译时还需要 RetainPDF sidecar。
+Railway 运行核心服务：backend、PostgreSQL、Redis、Qdrant；文档存储在 Cloudflare R2；启用保留排版 PDF 翻译时还需要 RetainPDF sidecar。
 
 ## 版本号规范
 

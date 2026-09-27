@@ -55,7 +55,7 @@ Sube archivos PDF, documentos de Word, presentaciones de PowerPoint, hojas de c�
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
 | **Base de Datos** | PostgreSQL 16, Qdrant (búsqueda vectorial) |
-| **Almacenamiento** | MinIO / Compatible con S3 |
+| **Almacenamiento** | Cloudflare R2 (compatible con S3; MinIO en local) |
 | **Autenticación** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Pagos** | Stripe Checkout + Subscriptions |
 | **IA** | DeepSeek V4 Flash/Pro para chat; OpenRouter para embeddings y modelos de respaldo |
@@ -69,7 +69,7 @@ Sube archivos PDF, documentos de Word, presentaciones de PowerPoint, hojas de c�
 Navegador ──→ Vercel (Next.js) ──→ Railway (FastAPI) ──→ PostgreSQL
                 │                       │                  Qdrant
                 │                       │                  Redis
-                └── API Proxy ──────────┘                  MinIO
+                └── API Proxy ──────────┘                  Cloudflare R2
                    (inyección de JWT)
 ```
 
@@ -211,7 +211,7 @@ DocTalk/
 | **Frontend** (Vercel) | Push a `stable` → despliegue automático. Directorio raíz: `frontend/`. |
 | **Backend** (Railway) | `git checkout stable && railway up --detach` |
 
-Railway ejecuta los servicios principales: backend, PostgreSQL, Redis, Qdrant y MinIO; la traducción PDF conservando el diseño añade el sidecar RetainPDF.
+Railway ejecuta los servicios principales: backend, PostgreSQL, Redis y Qdrant; los documentos se almacenan en Cloudflare R2; la traducción PDF conservando el diseño añade el sidecar RetainPDF.
 
 ## Pruebas
 

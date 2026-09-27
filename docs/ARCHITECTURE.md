@@ -28,7 +28,10 @@ graph TB
         PG["PostgreSQL 16"]
         Qdrant["Qdrant<br/>Vector Search"]
         Redis["Redis<br/>Celery Broker + Cache"]
-        MinIO["MinIO / S3<br/>PDF Storage"]
+    end
+
+    subgraph Cloudflare["Cloudflare"]
+        R2["Cloudflare R2<br/>Object Storage (S3 API)"]
     end
 
     subgraph External["External Services"]
@@ -50,13 +53,13 @@ graph TB
     FastAPI --> PG
     FastAPI --> Qdrant
     FastAPI --> Redis
-    FastAPI --> MinIO
+    FastAPI --> R2
     FastAPI --> DeepSeek
     FastAPI --> OpenRouter
     FastAPI --> Stripe
     Celery --> PG
     Celery --> Qdrant
-    Celery --> MinIO
+    Celery --> R2
     Celery --> RetainPDF
     Celery --> DeepSeek
     Celery --> OpenRouter
@@ -68,7 +71,7 @@ graph TB
     AuthJS --> Resend
     FastAPI --> Sentry
     NextJS --> Sentry
-    Browser -->|Presigned URL| MinIO
+    Browser -->|Presigned URL| R2
 ```
 
 **Component roles:**
@@ -84,7 +87,7 @@ graph TB
 | **PostgreSQL** | Primary data store for users, documents, pages, chunks, sessions, messages, credits |
 | **Qdrant** | Vector database for semantic search (COSINE similarity, 1536 dimensions) |
 | **Redis** | Celery task broker and result backend |
-| **MinIO** | S3-compatible object storage for uploaded files with SSE-S3 encryption at rest |
+| **Cloudflare R2** | S3-compatible object storage for uploaded files and generated artifacts (bucket `doctalk-pdfs`), reached over R2's S3 API with the minio-py client. Every object is encrypted at rest with AES-256 by Cloudflare. Browsers read files only through presigned GET URLs (300 s TTL) issued by `GET /api/documents/{id}/file-url` after an access check. Dev and CI run MinIO instead |
 | **DeepSeek** | Primary chat and PDF translation model provider |
 | **OpenRouter** | Embedding and fallback model gateway |
 | **OCR providers** | Paddle, MinerU, or Datalab credentials used by RetainPDF during layout translation |
@@ -100,7 +103,7 @@ sequenceDiagram
     participant B as Browser
     participant T as Upload Token Route
     participant API as FastAPI
-    participant S3 as MinIO
+    participant S3 as Cloudflare R2
     participant R as Redis
     participant W as Celery Worker
     participant DB as PostgreSQL
@@ -141,7 +144,7 @@ sequenceDiagram
 
 **Step-by-step:**
 
-1. **Upload**: Browser first obtains a five-minute backend-compatible HS256 JWT from the lightweight `/api/upload-token` Next.js route, then sends the multipart body directly to `${NEXT_PUBLIC_API_BASE}/api/documents/upload` with that bearer token. This deliberate proxy bypass avoids Vercel's 4.5 MB serverless body limit; every request that does use `/api/proxy/*` still receives JWT injection there. Backend validates per-plan document count, file size, and logical page-count limits before object storage or document-row creation, performs magic-byte file validation (PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml`, 500MB zip bomb protection), sanitizes the filename (Unicode normalization, control char stripping, double-extension blocking), stores the file in MinIO with SSE-S3 encryption, creates the document directly in `status=parsing`, dispatches parsing, and returns HTTP 202. Direct uploads use the 50/100/200 MB plan caps. Every URL response, including PDFs, is capped at 10 MB regardless of plan; the fetcher bounds raw chunks and decoded output independently so compressed expansion cannot bypass the cap.
+1. **Upload**: Browser first obtains a five-minute backend-compatible HS256 JWT from the lightweight `/api/upload-token` Next.js route, then sends the multipart body directly to `${NEXT_PUBLIC_API_BASE}/api/documents/upload` with that bearer token. This deliberate proxy bypass avoids Vercel's 4.5 MB serverless body limit; every request that does use `/api/proxy/*` still receives JWT injection there. Backend validates per-plan document count, file size, and logical page-count limits before object storage or document-row creation, performs magic-byte file validation (PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml`, 500MB zip bomb protection), sanitizes the filename (Unicode normalization, control char stripping, double-extension blocking), stores the file in object storage (Cloudflare R2 in production, which encrypts every object at rest), creates the document directly in `status=parsing`, dispatches parsing, and returns HTTP 202. Direct uploads use the 50/100/200 MB plan caps. Every URL response, including PDFs, is capped at 10 MB regardless of plan; the fetcher bounds raw chunks and decoded output independently so compressed expansion cannot bypass the cap.
 
 2. **Text Extraction**: Celery worker downloads the PDF and uses **PyMuPDF (fitz)** to extract text with bounding-box coordinates per page. Coordinates are normalized to `[0, 1]` range (top-left origin).
 
@@ -179,7 +182,7 @@ sequenceDiagram
     participant P as API Proxy
     participant API as FastAPI
     participant DB as PostgreSQL
-    participant S3 as MinIO
+    participant S3 as Cloudflare R2
     participant R as Redis
     participant W as Celery Worker
     participant RP as RetainPDF Sidecar
@@ -975,20 +978,20 @@ PDF citation evidence uses one overlay: a complete unique quote, restricted to t
 |-------|-----------|
 | **SSRF Protection** | `url_validator.py` — DNS resolution + private IP blocking (RFC 1918, link-local, cloud metadata `169.254.169.254`), internal port blocking (5432/6379/6333/9000), manual redirect following (max 3 hops) with per-hop validation |
 | **File Validation** | Magic-byte checks: PDF `%PDF` header, Office ZIP structure + `[Content_Types].xml` presence, 500MB zip bomb protection. Double-extension blocking (`.pdf.exe` becomes `_pdf.exe`) |
-| **Encryption at Rest** | MinIO SSE-S3 on all `put_object()` calls + bucket-level default encryption policy |
+| **Encryption at Rest** | Uploaded and generated files are stored in Cloudflare R2, which encrypts every object at rest with AES-256 using Cloudflare-managed keys; this is automatic and cannot be disabled. The former MinIO SSE-S3 upload path never took effect in production (no KMS was configured, so no object carried the SSE header) and was removed in 0.33.0 |
 | **Limits** | FREE: 3 docs / 50MB direct upload / 750 pages, PLUS: 20 docs / 100MB direct upload / 1,500 pages, PRO: 999 docs / 200MB direct upload / 3,000 pages. Every URL import is capped at 10MB regardless of plan. All limits are enforced before persistence. |
 | **Filename Sanitization** | Unicode NFC normalization, control character stripping, double-extension blocking, 200 character truncation — applied in both frontend (`utils.ts`) and backend |
 | **Rate Limiting** | In-memory token-bucket for anonymous chat (10 req/min/IP), automatic cleanup when bucket dict exceeds 10K entries |
 | **OAuth Token Cleanup** | `link_account()` strips access_token, refresh_token, and id_token — DocTalk stores only identity binding (provider + provider_account_id) |
 | **Non-Root Docker** | Container runs as `app` user (UID 1001), not root |
-| **Deletion Verification** | Failed MinIO/Qdrant cleanup queued as Celery retry task (`deletion_worker.py`, 3 retries with exponential backoff); structured security logging replaces silent exception swallowing |
+| **Deletion Verification** | Failed object storage/Qdrant cleanup queued as Celery retry task (`deletion_worker.py`, 3 retries with exponential backoff); structured security logging replaces silent exception swallowing |
 | **Security Event Logging** | `security_log.py` emits structured JSON logs for: auth failures, rate limit hits, SSRF blocks, file uploads, document deletions, account deletions |
 
 ### Privacy & Compliance
 
 | Requirement | Implementation |
 |-------------|---------------|
-| **GDPR Art. 17 (Right to Erasure)** | `DELETE /api/users/me` — cascading deletion of all user data, Stripe subscription cancellation, MinIO + Qdrant cleanup |
+| **GDPR Art. 17 (Right to Erasure)** | `DELETE /api/users/me` — cascading deletion of all user data, Stripe subscription cancellation, object storage + Qdrant cleanup |
 | **GDPR Art. 20 (Data Portability)** | `GET /api/users/me/export` — JSON export of all user data (profile, documents, sessions, messages, credits, usage) |
 | **GDPR ePrivacy (Cookies)** | `CookieConsentBanner.tsx` — Accept/Decline banner; `AnalyticsWrapper.tsx` conditionally loads Vercel Analytics only on consent; consent stored in localStorage |
 | **AI Processing Disclosure** | `AuthModal` displays `auth.aiDisclosure` notice: documents are processed by third-party AI services (OpenRouter) |
@@ -1022,8 +1025,11 @@ graph LR
             RPG["PostgreSQL"]
             RRedis["Redis"]
             RQdrant["Qdrant"]
-            RMinIO["MinIO"]
         end
+    end
+
+    subgraph CloudflareDeploy["Cloudflare"]
+        R2["R2 bucket<br/>doctalk-pdfs"]
     end
 
     Repo -->|"push stable<br/>(auto-deploy)"| VBuild
@@ -1032,6 +1038,8 @@ graph LR
     RBuild --> Alembic --> CeleryW --> Uvicorn
     Uvicorn --> RServices
     CeleryW --> RServices
+    Uvicorn --> R2
+    CeleryW --> R2
 ```
 
 **Branching**: `main` (development) / `stable` (production). Push `main` → Vercel Preview only. Push `stable` → production deploy.
@@ -1108,7 +1116,7 @@ The rate limiter and demo-message tracker both have an in-memory fallback when R
 
 ### Deep health endpoint
 
-`GET /health?deep=true` (guarded by `X-Health-Secret` HMAC) probes all four data stores — Postgres, Redis, Qdrant, MinIO — concurrently with a 5 s per-probe timeout. Total response time is bounded by the slowest single probe, not by the sum of probes. Any probe failure flips `status` to `degraded` but does not return an error status code; callers must inspect `components`.
+`GET /health?deep=true` (guarded by `X-Health-Secret` HMAC) probes all four data stores — Postgres, Redis, Qdrant, and object storage (Cloudflare R2 in production; its component key is still `minio`) — concurrently with a 5 s per-probe timeout. Total response time is bounded by the slowest single probe, not by the sum of probes. Any probe failure flips `status` to `degraded` but does not return an error status code; callers must inspect `components`.
 
 ### Pre-debit refund invariant
 
@@ -1437,15 +1445,25 @@ unwinnable across three review rounds.
 
 ### Demo storage self-heal (2026-08 MinIO incident)
 
-The MinIO→minio-v2 migration silently lost ~106/108 stored objects; chat kept
-working (Postgres/Qdrant intact) while every affected document's PDF pane
-failed, and the demo self-heal never noticed because it only checked Qdrant
-vectors. Startup seeding now verifies BOTH stores: `_ensure_demo_files` stats
-each demo doc's `storage_key` and re-uploads the seed asset (id- and
-key-preserving) when missing. Seed assets are immutable per slug; the
-stat→put TOCTOU is accepted on that documented invariant. Pre-incident user
-document files were unrecoverable (no storage backup existed — open ops
-risk).
+In 2026-08, ~106/108 stored objects were found missing, which at the time was
+attributed to the MinIO→minio-v2 migration; chat kept working (Postgres/Qdrant
+intact) while every affected document's PDF pane failed, and the demo self-heal
+never noticed because it only checked Qdrant vectors. Startup seeding now
+verifies BOTH stores: `_ensure_demo_files` stats each demo doc's `storage_key`
+and re-uploads the seed asset (id- and key-preserving) when missing. Seed
+assets are immutable per slug; the stat→put TOCTOU is accepted on that
+documented invariant. Pre-incident user document files were unrecoverable (no
+storage backup existed — open ops risk).
+
+**Corrected root cause (2026-09-26)**: the migration was not the cause.
+`minio-v2` and `qdrant-v2` ran without a mounted volume, so their data lived on
+the container's ephemeral overlay disk, and the 2026-06-19 redeploy of
+`minio-v2` wiped every file uploaded before it. As of 2026-09-26, 109 of 148
+document file references point at missing objects. Production document storage
+has since moved to Cloudflare R2; `qdrant-v2` still has no volume (its
+durability fix is a later phase). Any stateful Railway service must have a
+mounted volume, verified with `/proc/mounts` via `railway ssh` rather than from
+the dashboard alone.
 
 ### Cross-region topology + parse recovery lifecycle (2026-08-08, v0.28.1)
 

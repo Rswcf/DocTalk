@@ -23,7 +23,7 @@ also become a new DocTalk document.
 5. Celery submits the source PDF to RetainPDF's full API on port `41000`.
 6. RetainPDF owns OCR, translation orchestration, and translated PDF rendering.
 7. DocTalk polls the job and stores the translated PDF, Markdown, and optional
-   bundle artifacts in MinIO.
+   bundle artifacts in object storage (Cloudflare R2 in production).
 8. The chat artifact card lets the user preview the translated PDF in the right
    reader, download PDF/Markdown/bundle files, and optionally import the
    translated PDF as a new DocTalk document.
