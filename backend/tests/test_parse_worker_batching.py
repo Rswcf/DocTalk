@@ -522,6 +522,180 @@ class TestBatchedInsertsAgainstRealPostgres:
             db.commit()
 
 
+class TestDownloadBeforeCleanup:
+    """Documents whose original file was lost (2026-06 storage wipe) keep
+    their pages, chunks and vectors. The worker must fetch the file before
+    it deletes anything, and classify a failed download:
+
+    - confirmed missing + complete previous parse -> stays ready (usable);
+    - confirmed missing + nothing complete -> DOWNLOAD_FAILED;
+    - anything else -> re-raised for autoretry (terminal only on the final
+      attempt, via the generic handler)."""
+
+    @staticmethod
+    def _wire_failed_download(monkeypatch, session, *, object_exists):
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+        destructive: list[str] = []
+
+        class _RecordingQdrant:
+            def delete(self, *_a, **_k):
+                destructive.append("qdrant_delete")
+
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "get_qdrant_client", lambda *_a, **_k: _RecordingQdrant()
+        )
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "ensure_collection", lambda *_a, **_k: destructive.append("ensure")
+        )
+
+        def _download_fails(*_a, **_k):
+            raise RuntimeError("download failed")
+
+        monkeypatch.setattr(parse_worker, "_download_file_bytes", _download_fails)
+        monkeypatch.setattr(parse_worker.storage_service, "object_exists", object_exists)
+        return destructive
+
+    def test_missing_file_without_a_complete_parse_is_download_failed(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())  # counters 0: nothing complete to keep
+        session = _RecordingSession(doc)
+        destructive = self._wire_failed_download(monkeypatch, session, object_exists=lambda _k: False)
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert destructive == []
+        assert session.executed == []  # no DELETE of briefs, elements, chunks or pages
+        assert doc.status == "error"
+        assert doc.error_msg.startswith("ERR_CODE:DOWNLOAD_FAILED")
+
+    def test_missing_file_with_a_complete_parse_stays_ready(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        doc.chunks_total = 12
+        doc.chunks_indexed = 12
+        session = _RecordingSession(doc)
+        destructive = self._wire_failed_download(monkeypatch, session, object_exists=lambda _k: False)
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert destructive == []
+        assert session.executed == []
+        assert doc.status == "ready"
+        assert doc.error_msg is None
+        assert (doc.chunks_total, doc.chunks_indexed) == (12, 12)
+
+    def test_partially_indexed_parse_is_not_promoted_to_ready(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        doc.chunks_total = 12
+        doc.chunks_indexed = 7
+        session = _RecordingSession(doc)
+        self._wire_failed_download(monkeypatch, session, object_exists=lambda _k: False)
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert doc.status == "error"
+        assert doc.error_msg.startswith("ERR_CODE:DOWNLOAD_FAILED")
+
+    @pytest.mark.parametrize("probe", ["present", "probe_fails"])
+    def test_transient_download_failure_is_left_to_autoretry(self, monkeypatch, probe):
+        doc = _make_doc(uuid.uuid4())
+        doc.chunks_total = 12
+        doc.chunks_indexed = 12
+        session = _RecordingSession(doc)
+
+        def _probe_fails(_key):
+            raise RuntimeError("storage down")
+
+        destructive = self._wire_failed_download(
+            monkeypatch, session, object_exists=(lambda _k: True) if probe == "present" else _probe_fails
+        )
+
+        with pytest.raises(RuntimeError, match="download failed"):
+            parse_worker.parse_document.run(str(doc.id))  # attempt 1 of 3: non-final
+
+        assert destructive == []
+        assert session.executed == []
+        assert session.commits == 0
+        assert doc.status == "parsing"  # non-terminal while retries remain
+        assert doc.error_msg is None
+
+    def test_completion_marker_is_cleared_durably_before_vectors_are_deleted(self, monkeypatch):
+        """A run that dies after the vector delete must leave counters that no
+        longer claim a complete parse (else a later missing-file download
+        would restore 'ready' over deleted vectors)."""
+        doc = _make_doc(uuid.uuid4())
+        doc.chunks_total = 12
+        doc.chunks_indexed = 12
+        events: list[tuple] = []
+
+        class _EventSession(_RecordingSession):
+            def commit(self) -> None:
+                super().commit()
+                events.append(("commit", self._doc.chunks_indexed))
+
+            def execute(self, stmt, params=None):
+                raise RuntimeError("row cleanup interrupted")
+
+        session = _EventSession(doc)
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+
+        class _RecordingQdrant:
+            def delete(self, *_a, **_k):
+                events.append(("qdrant_delete",))
+
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "get_qdrant_client", lambda *_a, **_k: _RecordingQdrant()
+        )
+
+        with pytest.raises(RuntimeError, match="row cleanup interrupted"):
+            parse_worker.parse_document.run(str(doc.id))
+
+        assert events[:2] == [("commit", 0), ("qdrant_delete",)]
+        assert parse_worker._previous_parse_complete(doc) is False
+
+    def test_soft_limit_during_the_missing_file_probe_keeps_timeout_taxonomy(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        session = _RecordingSession(doc)
+
+        def _probe_times_out(_key):
+            raise SoftTimeLimitExceeded()
+
+        self._wire_failed_download(monkeypatch, session, object_exists=_probe_times_out)
+
+        with pytest.raises(SoftTimeLimitExceeded):
+            parse_worker.parse_document.run(str(doc.id))
+
+        assert session.executed == []
+        assert doc.status == "parsing"  # attempt 1 of 3: the timeout handler writes nothing yet
+
+    def test_download_happens_before_the_vector_delete(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        session = _RecordingSession(doc)
+        calls = {"n": 0}
+
+        def _factory():
+            calls["n"] += 1
+            return session if calls["n"] == 1 else _RecordingSession(doc)
+
+        _wire_minimal_pdf_parse(monkeypatch, _factory)
+        order: list[str] = []
+
+        def _download(*_a, **_k):
+            order.append("download")
+            return b"%PDF-1.4\nfake"
+
+        class _RecordingQdrant:
+            def delete(self, *_a, **_k):
+                order.append("qdrant_delete")
+
+        monkeypatch.setattr(parse_worker, "_download_file_bytes", _download)
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "get_qdrant_client", lambda *_a, **_k: _RecordingQdrant()
+        )
+
+        parse_worker.parse_document.run(str(doc.id))
+
+        assert order[:2] == ["download", "qdrant_delete"]
+
+
 class _RecordingSession:
     def __init__(self, doc: SimpleNamespace | None) -> None:
         self._doc = doc

@@ -3971,5 +3971,11 @@
   "evidence.return": "Back to answer",
   "evidence.fitWidth": "Fit width",
   "evidence.unavailable": "Source page unavailable",
-  "billing.subscribePlan": "Subscribe to {plan}"
+  "billing.subscribePlan": "Subscribe to {plan}",
+  "doc.fileMissing.title": "The original PDF is no longer available",
+  "doc.fileMissing.body": "This file was lost in a storage failure in June 2026 and cannot be recovered. Everything DocTalk extracted from it at upload time is still here: you can keep chatting, follow citations and use Quote Finder. Page view, translation and re-processing need the file itself. Upload it again as a new document to get them back.",
+  "doc.fileMissing.convertedTitle": "The page view of this file is no longer available",
+  "doc.fileMissing.convertedBody": "The page view of this file was lost in a storage failure in June 2026 and cannot be recovered. Its extracted text is shown instead, and chat, citations and Quote Finder work as before. Upload the file again as a new document to get the page view back.",
+  "errors.FILE_MISSING.title": "Original file not in storage",
+  "errors.FILE_MISSING.body": "This document's file is no longer stored, so it cannot be re-processed or translated. Chat and citations still work; upload the file again for a fresh copy."
 }

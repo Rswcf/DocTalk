@@ -1460,10 +1460,47 @@ storage backup existed — open ops risk).
 the container's ephemeral overlay disk, and the 2026-06-19 redeploy of
 `minio-v2` wiped every file uploaded before it. As of 2026-09-26, 109 of 148
 document file references point at missing objects. Production document storage
-has since moved to Cloudflare R2; `qdrant-v2` still has no volume (its
-durability fix is a later phase). Any stateful Railway service must have a
-mounted volume, verified with `/proc/mounts` via `railway ssh` rather than from
-the dashboard alone.
+has since moved to Cloudflare R2. `qdrant-v2` got a volume on 2026-09-27: it
+was restored from a fresh snapshot (16,583 points) and its service source is
+now the pinned image `qdrant/qdrant:v1.16.3`, because attaching the volume
+rebuilt the old `FROM qdrant/qdrant:latest` Dockerfile into 1.19.1. Any
+stateful Railway service must have a mounted volume, verified with
+`/proc/mounts` via `railway ssh` rather than from the dashboard alone.
+
+**Documents without their file (v0.34.0)**: the wipe left 102 documents with
+pages, chunks and vectors but no object (88 ready, 14 error; 7 of them also
+lost a converted PDF). They remain first-class documents: chat, citations and
+Quote Finder read only Postgres and Qdrant. Three rules keep it that way:
+
+1. **Presence is checked, never assumed or cached.** `require_stored_file`
+   (`app/api/file_presence.py`) HEADs the object before `/file-url` presigns,
+   before reparse claims (after the locked status check, before the `users`
+   lock), and before layout translation touches any limit or trial. Only
+   `NoSuchKey` from a bucket confirmed reachable means gone (410
+   `FILE_MISSING`, with `variant`, sent `Cache-Control: private, no-store`).
+   The bucket check matters because minio-py synthesizes `NoSuchKey` for every
+   bodyless 404 on an object HEAD, including a missing bucket. Every other
+   storage error keeps its 5xx, so an outage is never reported as permanent
+   loss, and a restored object is served again on the next request.
+2. **The worker downloads before it destroys.** `parse_document` fetches the
+   file before deleting Qdrant vectors or any page/chunk/element/brief row,
+   and classifies a failed download without touching them: confirmed missing
+   with a complete previous parse (every chunk indexed; `chunks_indexed` is
+   zeroed and committed before the vector delete, so an interrupted cleanup
+   never looks complete) → back to `ready`;
+   confirmed missing otherwise → `DOWNLOAD_FAILED`; anything else → the
+   generic autoretry path (`parsing` until the final attempt writes
+   `PARSE_FAILED`). The backfill script also skips file-less documents.
+3. **The reader treats the loss as a state, not an error.** On `FILE_MISSING`
+   the loader (initial load or a URL renewal, one poll at a time) clears any
+   error, leaves `pdfUrl` empty, stops polling and sets `missingFile`; the
+   reader shows `TextViewer` (which accepts the same page + snippet targets as
+   citations) under `MissingFileNotice`. A missing converted PDF drops the
+   page view and keeps the text view.
+
+The two retired demo rows (`nvidia-10k`, `nda-contract`) are among them; the
+public demo list now returns only the slugs in `DEMO_DOCS`, and their old
+`/demo/<slug>` links redirect to the closest current sample.
 
 ### Cross-region topology + parse recovery lifecycle (2026-08-08, v0.28.1)
 

@@ -3969,5 +3969,11 @@
   "evidence.return": "답변으로 돌아가기",
   "evidence.fitWidth": "너비에 맞춤",
   "evidence.unavailable": "출처 페이지를 표시할 수 없습니다",
-  "billing.subscribePlan": "{plan} 구독"
+  "billing.subscribePlan": "{plan} 구독",
+  "doc.fileMissing.title": "원본 PDF를 더 이상 사용할 수 없습니다",
+  "doc.fileMissing.body": "이 파일은 2026년 6월 저장소 장애로 손실되어 복구할 수 없습니다. 업로드 당시 DocTalk가 추출한 내용은 모두 남아 있으므로 채팅, 인용 확인, 인용문 파인더를 계속 사용할 수 있습니다. 페이지 보기, 번역, 재처리에는 파일 자체가 필요합니다. 새 문서로 다시 업로드하면 이 기능을 다시 사용할 수 있습니다.",
+  "doc.fileMissing.convertedTitle": "이 파일의 페이지 보기를 더 이상 사용할 수 없습니다",
+  "doc.fileMissing.convertedBody": "이 파일의 페이지 보기는 2026년 6월 저장소 장애로 손실되어 복구할 수 없습니다. 대신 추출된 텍스트가 표시되며, 채팅, 인용, 인용문 파인더는 이전과 같이 작동합니다. 페이지 보기를 되살리려면 파일을 새 문서로 다시 업로드하세요.",
+  "errors.FILE_MISSING.title": "원본 파일이 저장소에 없음",
+  "errors.FILE_MISSING.body": "이 문서의 파일이 더 이상 저장되어 있지 않아 재처리하거나 번역할 수 없습니다. 채팅과 인용은 계속 사용할 수 있으며, 새 사본이 필요하면 파일을 다시 업로드하세요."
 }

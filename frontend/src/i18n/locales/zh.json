@@ -4008,5 +4008,11 @@
   "evidence.return": "返回刚才回答",
   "evidence.fitWidth": "适合宽度",
   "evidence.unavailable": "来源页不可用",
-  "billing.subscribePlan": "订阅 {plan}"
+  "billing.subscribePlan": "订阅 {plan}",
+  "doc.fileMissing.title": "原始 PDF 已无法获取",
+  "doc.fileMissing.body": "该文件在 2026 年 6 月的一次存储故障中丢失，无法恢复。DocTalk 在上传时从中提取的全部内容仍然保留：你可以继续对话、查看引用并使用引用查找器。页面视图、翻译和重新处理需要原文件本身。将其作为新文档重新上传即可恢复这些功能。",
+  "doc.fileMissing.convertedTitle": "此文件的页面视图已无法获取",
+  "doc.fileMissing.convertedBody": "此文件的页面视图在 2026 年 6 月的一次存储故障中丢失，无法恢复。现改为显示提取的文本，对话、引用和引用查找器照常可用。将文件作为新文档重新上传即可恢复页面视图。",
+  "errors.FILE_MISSING.title": "原始文件已不在存储中",
+  "errors.FILE_MISSING.body": "此文档的文件已不再存储，因此无法重新处理或翻译。对话和引用仍可正常使用；重新上传文件即可获得新的副本。"
 }

@@ -8,6 +8,56 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-27
+
+Documents whose original file was lost stay usable, and nothing can erase
+what is left of them.
+
+About a hundred documents uploaded before 2026-06-19 lost their original file
+when the old storage service restarted on an ephemeral disk. Their extracted
+text, chunks and search vectors survived, so chat and citations kept working,
+but the reader showed a generic "Unable to load PDF" error and a reparse would
+have deleted the surviving data before failing to download the file.
+
+### Changed
+- The reader shows the document's extracted text with a notice explaining that
+  the original file is gone, instead of an error. Chat, citations and Quote
+  Finder keep working; page view, translation and reprocessing need the file
+  to be uploaded again. Documents whose converted page view (DOCX/PPTX) was
+  lost fall back to their text view with the same kind of notice. The copy is
+  translated into all 11 languages.
+- The signed-link endpoint answers `410 FILE_MISSING` (with `variant`
+  `original` or `converted`) when the stored object no longer exists, instead
+  of handing out a link that fails. Storage outages still answer
+  `502 STORAGE_UNAVAILABLE`, never 410.
+- Reparse and layout-preserving translation refuse a document whose original
+  file is missing with `410 FILE_MISSING`, before any slot, trial or credit
+  accounting.
+- The public demo list only includes the three current samples. The two
+  retired samples lost their files; their old `/demo/nvidia-10k` and
+  `/demo/nda-contract` links now open the closest current sample.
+
+### Fixed
+- The parse worker downloads the file before it deletes a document's old
+  vectors, pages and chunks, so a failed download (`DOWNLOAD_FAILED`) leaves
+  everything intact. Previously any reparse of a file-less document erased
+  the only remaining copy of its content.
+- A failed download is classified instead of always ending in an error: if
+  the file is confirmed gone and the previous parse is complete, the document
+  stays ready; transient storage errors now go through the normal automatic
+  retries instead of failing the document on the first attempt.
+- A translated PDF can still be previewed from its chat card when the original
+  file is missing.
+- A missing object is only reported as missing after the bucket itself is
+  confirmed reachable, so a storage misconfiguration can never be shown to
+  users as permanent file loss.
+- A citation link that arrives before a text view has loaded now scrolls to
+  its page once the text appears, and page-only links (such as saved quotes'
+  "open at page N") open on that page (this also affects DOCX, PPTX, XLSX,
+  TXT and Markdown documents).
+- The low-quality backfill script skips documents whose original file is
+  missing, even with `--force`.
+
 ## [0.33.1] - 2026-09-27
 
 Copy and documentation for document storage on Cloudflare R2, released after

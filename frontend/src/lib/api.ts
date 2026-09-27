@@ -153,13 +153,15 @@ export async function getDocumentBrief(docId: string): Promise<DocumentHierarchi
   return handle(res);
 }
 
+// no-store: a signed link must never come from the HTTP cache, and neither
+// may a 410 FILE_MISSING once the object has been restored.
 export async function getDocumentFileUrl(docId: string): Promise<{ url: string; expires_in: number }> {
-  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/file-url`);
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/file-url`, { cache: 'no-store' });
   return handle(res);
 }
 
 export async function getConvertedFileUrl(docId: string): Promise<{ url: string; expires_in: number }> {
-  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/file-url?variant=converted`);
+  const res = await fetch(`${PROXY_BASE}/api/documents/${docId}/file-url?variant=converted`, { cache: 'no-store' });
   return handle(res);
 }
 

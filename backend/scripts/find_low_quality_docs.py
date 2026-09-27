@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import asyncpg  # noqa: E402
 
 from app.services.parse_service import PARSE_PIPELINE_VERSION  # noqa: E402
+from app.services.storage_service import storage_service  # noqa: E402
 
 
 def _dsn() -> str:
@@ -34,7 +35,7 @@ def _dsn() -> str:
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quality", type=float, default=0.70, help="text_quality below this is a candidate")
-    ap.add_argument("--limit", type=int, default=100)
+    ap.add_argument("--limit", type=int, default=100, help="max documents to list as enqueue candidates")
     ap.add_argument("--enqueue", action="store_true", help="re-dispatch parse_document for candidates")
     ap.add_argument("--force", action="store_true", help="include docs already OCR'd at current version")
     ap.add_argument("--locale", default=None, help="optional OCR locale hint (OSD self-detects otherwise)")
@@ -45,22 +46,26 @@ async def main() -> None:
         rows = await con.fetch(
             """
             SELECT id::text, left(filename, 50) AS fn, file_type, status,
-                   parse_version, parse_method, text_quality
+                   parse_version, parse_method, text_quality, storage_key
             FROM documents
             WHERE demo_slug IS NULL
               AND status = 'ready'
               AND (parse_version IS NULL
                    OR parse_version < $1
                    OR (text_quality IS NOT NULL AND text_quality < $2))
-            ORDER BY text_quality NULLS FIRST, created_at
-            LIMIT $3
+            ORDER BY text_quality NULLS FIRST, created_at, id
             """,
-            PARSE_PIPELINE_VERSION, args.quality, args.limit,
+            PARSE_PIPELINE_VERSION, args.quality,
         )
         print(f"PARSE_PIPELINE_VERSION={PARSE_PIPELINE_VERSION}  candidates={len(rows)}  "
               f"(quality<{args.quality})")
         enqueue: list[str] = []
+        # --limit counts documents that can actually be enqueued, not rows
+        # scanned: skipped rows (file missing, already current) must not fill
+        # the window and hide eligible documents behind them.
         for r in rows:
+            if len(enqueue) >= args.limit:
+                break
             m = dict(r)
             # A doc already processed at the current pipeline version won't improve by
             # re-running the same pipeline — skip ALL such rows (not just OCR'd ones) to avoid
@@ -68,8 +73,16 @@ async def main() -> None:
             # Only OLD-version or never-versioned docs auto-enqueue; current-version low-quality
             # docs are listed for manual review and need --force.
             at_current = (m["parse_version"] or 0) >= PARSE_PIPELINE_VERSION
-            skip = at_current and not args.force
-            flag = " SKIP(processed@current; --force to override)" if skip else ""
+            # A document whose original file is gone can only lose data by
+            # being re-parsed; --force does not override this.
+            file_missing = not storage_service.object_exists(m["storage_key"])
+            skip = file_missing or (at_current and not args.force)
+            if file_missing:
+                flag = " SKIP(original file missing)"
+            elif skip:
+                flag = " SKIP(processed@current; --force to override)"
+            else:
+                flag = ""
             print(f"  {m['id']} v={m['parse_version']} m={m['parse_method']} "
                   f"q={m['text_quality']} {m['file_type']:4} {m['fn']}{flag}")
             if not skip:

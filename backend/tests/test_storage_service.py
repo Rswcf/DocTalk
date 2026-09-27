@@ -173,11 +173,71 @@ def test_object_exists_is_false_only_for_no_such_key(recording_minio) -> None:
     client = recording_minio.instances[0]
 
     assert service.object_exists("documents/a.pdf") is True
+    assert ("bucket_exists", "bucket") not in client.calls  # a hit needs no bucket probe
     client.stat_error = _s3_error("NoSuchKey")
     assert service.object_exists("documents/a.pdf") is False
+    assert client.calls[-1] == ("bucket_exists", "bucket")  # the miss was confirmed
     client.stat_error = _s3_error("AccessDenied")
     with pytest.raises(S3Error):
         service.object_exists("documents/a.pdf")
+
+
+def test_object_miss_in_an_unreachable_bucket_raises_instead_of_false(recording_minio) -> None:
+    service = _service()
+    client = recording_minio.instances[0]
+    client.stat_error = _s3_error("NoSuchKey")
+
+    client.bucket_exists_result = False
+    with pytest.raises(storage_module.StorageUnavailableError):
+        service.object_exists("documents/a.pdf")
+
+    client.bucket_exists_result = _s3_error("InvalidAccessKeyId")
+    with pytest.raises(S3Error):
+        service.object_exists("documents/a.pdf")
+
+
+def _real_sdk_service_with_http(statuses: dict[tuple[str, str], int]):
+    """A real StorageService whose minio-py client answers from `statuses`
+    with bodyless responses, the way R2 answers HEAD requests."""
+    from urllib.parse import urlsplit
+
+    from urllib3.response import HTTPResponse
+
+    service = storage_module.StorageService(
+        endpoint=R2_ENDPOINT, region="auto", access_key="AKIDEXAMPLE",
+        secret_key="secret", bucket="doctalk-pdfs", default_ttl=300,
+    )
+    calls: list[tuple[str, str]] = []
+
+    def urlopen(method, url, **_kwargs):
+        path = urlsplit(url).path
+        calls.append((method, path))
+        return HTTPResponse(body=b"", status=statuses[(method, path)], headers={}, preload_content=True)
+
+    service.client._http.urlopen = urlopen
+    return service, calls
+
+
+def test_real_sdk_bodyless_404_for_a_key_in_a_live_bucket_is_missing() -> None:
+    service, calls = _real_sdk_service_with_http({
+        ("HEAD", "/doctalk-pdfs/documents/gone.pdf"): 404,
+        ("HEAD", "/doctalk-pdfs"): 200,
+    })
+
+    assert service.object_exists("documents/gone.pdf") is False
+    assert calls == [("HEAD", "/doctalk-pdfs/documents/gone.pdf"), ("HEAD", "/doctalk-pdfs")]
+
+
+def test_real_sdk_bodyless_404_with_the_bucket_gone_is_not_reported_missing() -> None:
+    # minio-py synthesizes NoSuchKey for the object HEAD here too; only the
+    # bucket probe tells the two apart.
+    service, _calls = _real_sdk_service_with_http({
+        ("HEAD", "/doctalk-pdfs/documents/gone.pdf"): 404,
+        ("HEAD", "/doctalk-pdfs"): 404,
+    })
+
+    with pytest.raises(storage_module.StorageUnavailableError):
+        service.object_exists("documents/gone.pdf")
 
 
 def test_client_property_is_the_server_side_client(recording_minio) -> None:

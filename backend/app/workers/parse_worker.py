@@ -64,6 +64,27 @@ def _set_doc_error(doc, code: str, human: str | None = None) -> None:
     doc.error_msg = payload
 
 
+def _object_confirmed_missing(storage_key: str) -> bool:
+    """True only when storage confirms the key is gone from a reachable
+    bucket; any doubt (an outage, a probe error) counts as not missing."""
+    try:
+        return not storage_service.object_exists(storage_key)
+    except SoftTimeLimitExceeded:
+        raise
+    except Exception as exc:
+        if _chain_has_soft_limit(exc):
+            raise SoftTimeLimitExceeded() from exc
+        return False
+
+
+def _previous_parse_complete(doc) -> bool:
+    """The last parse indexed every chunk it wrote. The counters are reset
+    only by this task's cleanup, which runs after the download, so at download
+    time they still describe the previous run."""
+    total = int(getattr(doc, "chunks_total", 0) or 0)
+    return total > 0 and int(getattr(doc, "chunks_indexed", 0) or 0) == total
+
+
 def _download_file_bytes(bucket: str, object_key: str) -> bytes:
     # The app-wide store's transfer client: same endpoint, region and TLS
     # trust as every other storage call, with minio-py's long timeouts.
@@ -327,6 +348,49 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 )
             locale = doc.parse_requested_locale
 
+            # Download the file BEFORE any destructive cleanup: a document whose
+            # original is gone (the 2026-06 storage wipe) must keep its pages,
+            # chunks and vectors, since they are all that is left of it. Every
+            # failed download returns or raises with rows and vectors intact.
+            try:
+                file_bytes = _download_file_bytes(settings.MINIO_BUCKET, doc.storage_key)
+            except SoftTimeLimitExceeded:
+                raise
+            except Exception as e:
+                if _chain_has_soft_limit(e):
+                    raise SoftTimeLimitExceeded() from e
+                if not _object_confirmed_missing(doc.storage_key):
+                    # Transient (or unclassifiable): the outer handler keeps the
+                    # doc 'parsing' for autoretry and writes PARSE_FAILED only on
+                    # the final attempt, like every other generic failure.
+                    logger.warning("Download failed for %s; leaving it to autoretry: %s", document_id, e)
+                    raise
+                if _previous_parse_complete(doc):
+                    # Nothing a retry could fix, and the last parse is whole:
+                    # the document stays usable for chat and citations.
+                    logger.warning(
+                        "Original file missing for %s; previous parse is complete, keeping it ready",
+                        document_id,
+                    )
+                    doc.status = "ready"
+                    doc.error_msg = None
+                    db.add(doc)
+                    db.commit()
+                    return
+                logger.error("Original file missing for %s and no complete parse to keep", document_id)
+                _set_doc_error(doc, "DOWNLOAD_FAILED", "Failed to download document file")
+                db.add(doc)
+                db.commit()
+                return
+
+            # From here on the previous index is being destroyed: clear the
+            # completion marker durably FIRST, so a run that dies between the
+            # vector delete and the row cleanup can never later be mistaken
+            # for a complete parse by the download handler above.
+            doc.chunks_indexed = 0
+            db.add(doc)
+            db.commit()
+
             # Delete stale Qdrant vectors BEFORE deleting any DB rows (R2b ordering fix).
             # Doing Qdrant first means a Qdrant outage leaves the document's existing
             # Pages/Chunks intact (we only set an error + return) instead of committing the
@@ -383,18 +447,6 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             db.add(doc)
             db.commit()
             logger.info("Cleaned up partial data for %s, starting fresh parse", document_id)
-
-            # Download file
-            try:
-                file_bytes = _download_file_bytes(settings.MINIO_BUCKET, doc.storage_key)
-            except SoftTimeLimitExceeded:
-                raise
-            except Exception as e:
-                logger.exception("Failed to download file for %s: %s", document_id, e)
-                _set_doc_error(doc, "DOWNLOAD_FAILED", "Failed to download document file")
-                db.add(doc)
-                db.commit()
-                return
 
             file_type = getattr(doc, "file_type", "pdf") or "pdf"
 

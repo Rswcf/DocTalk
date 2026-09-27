@@ -111,3 +111,13 @@ test('every terminal parse-worker code has specific copy in every locale', () =>
     }
   }
 });
+
+test('FILE_MISSING explains the lost file without telling the user to delete the document', () => {
+  const { errorCopy } = loadErrorCopyModule();
+  const copy = errorCopy({ code: 'FILE_MISSING', detail: { variant: 'original' } }, t, tOr);
+
+  assert.equal(copy.severity, 'warning');
+  assert.match(copy.title, /Original file/);
+  assert.match(copy.body, /Chat and citations still work/);
+  assert.doesNotMatch(`${copy.title} ${copy.body}`, /delete/i);
+});

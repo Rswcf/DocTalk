@@ -3969,5 +3969,11 @@
   "evidence.return": "Torna alla risposta",
   "evidence.fitWidth": "Adatta alla larghezza",
   "evidence.unavailable": "Pagina di origine non disponibile",
-  "billing.subscribePlan": "Abbonati a {plan}"
+  "billing.subscribePlan": "Abbonati a {plan}",
+  "doc.fileMissing.title": "Il PDF originale non è più disponibile",
+  "doc.fileMissing.body": "Questo file è andato perso in un guasto dell’archiviazione nel giugno 2026 e non può essere recuperato. Tutto ciò che DocTalk ne ha estratto al caricamento è ancora qui: puoi continuare a chattare, seguire le citazioni e usare Ricerca citazioni. La vista delle pagine, la traduzione e la rielaborazione richiedono il file stesso. Caricalo di nuovo come nuovo documento per riaverle.",
+  "doc.fileMissing.convertedTitle": "La vista delle pagine di questo file non è più disponibile",
+  "doc.fileMissing.convertedBody": "La vista delle pagine di questo file è andata persa in un guasto dell’archiviazione nel giugno 2026 e non può essere recuperata. Al suo posto viene mostrato il testo estratto, e chat, citazioni e Ricerca citazioni funzionano come prima. Carica di nuovo il file come nuovo documento per riavere la vista delle pagine.",
+  "errors.FILE_MISSING.title": "File originale non presente nell’archivio",
+  "errors.FILE_MISSING.body": "Il file di questo documento non è più archiviato, quindi non può essere rielaborato né tradotto. Chat e citazioni funzionano ancora; carica di nuovo il file per averne una copia nuova."
 }

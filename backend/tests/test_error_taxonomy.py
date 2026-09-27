@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import fitz
 import pytest
@@ -734,6 +734,7 @@ async def test_document_file_url_storage_unavailable(
     doc = SimpleNamespace(storage_key="documents/key.pdf", converted_storage_key=None)
     monkeypatch.setattr(documents_api.doc_service, "get_document", AsyncMock(return_value=doc))
     monkeypatch.setattr(documents_api, "can_access_document", lambda _doc, _user: True)
+    monkeypatch.setattr(documents_api.storage_service, "object_exists", lambda _key: True)
     monkeypatch.setattr(
         documents_api.storage_service,
         "get_presigned_url",
@@ -742,6 +743,75 @@ async def test_document_file_url_storage_unavailable(
 
     response = await client.get(f"/api/documents/{document_id}/file-url")
     _assert_error(response, 502, "STORAGE_UNAVAILABLE")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("query", "expected_key", "expected_variant"),
+    [
+        ("", "documents/key.pdf", "original"),
+        ("?variant=converted", "documents/key.converted.pdf", "converted"),
+    ],
+)
+async def test_document_file_url_missing_object_is_410(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    query: str,
+    expected_key: str,
+    expected_variant: str,
+) -> None:
+    document_id = uuid.uuid4()
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    doc = SimpleNamespace(
+        storage_key="documents/key.pdf",
+        converted_storage_key="documents/key.converted.pdf",
+    )
+    monkeypatch.setattr(documents_api.doc_service, "get_document", AsyncMock(return_value=doc))
+    monkeypatch.setattr(documents_api, "can_access_document", lambda _doc, _user: True)
+    checked: list[str] = []
+
+    def _missing(key: str) -> bool:
+        checked.append(key)
+        return False
+
+    presign = Mock(return_value="https://storage.example/signed")
+    monkeypatch.setattr(documents_api.storage_service, "object_exists", _missing)
+    monkeypatch.setattr(documents_api.storage_service, "get_presigned_url", presign)
+
+    response = await client.get(f"/api/documents/{document_id}/file-url{query}")
+
+    detail = _assert_error(response, 410, "FILE_MISSING")
+    assert detail["variant"] == expected_variant
+    assert response.headers["cache-control"] == "private, no-store"
+    assert checked == [expected_key]
+    presign.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_document_file_url_head_failure_is_storage_unavailable(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document_id = uuid.uuid4()
+    db = _make_db()
+    _override_dependencies(db, optional_user=None)
+    doc = SimpleNamespace(storage_key="documents/key.pdf", converted_storage_key=None)
+    monkeypatch.setattr(documents_api.doc_service, "get_document", AsyncMock(return_value=doc))
+    monkeypatch.setattr(documents_api, "can_access_document", lambda _doc, _user: True)
+
+    def _down(_key: str) -> bool:
+        raise RuntimeError("storage down")
+
+    presign = Mock(return_value="https://storage.example/signed")
+    monkeypatch.setattr(documents_api.storage_service, "object_exists", _down)
+    monkeypatch.setattr(documents_api.storage_service, "get_presigned_url", presign)
+
+    response = await client.get(f"/api/documents/{document_id}/file-url")
+
+    # An outage must never be reported as permanent loss.
+    _assert_error(response, 502, "STORAGE_UNAVAILABLE")
+    presign.assert_not_called()
 
 
 @pytest.mark.asyncio

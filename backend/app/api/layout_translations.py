@@ -16,6 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.document_jobs import DocumentJobDetailResponse, _artifact_for_job
+from app.api.file_presence import require_stored_file
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import Document, DocumentJob, ProductEvent, User
 from app.services.doc_service import can_access_document, doc_service, sanitize_filename
@@ -160,6 +161,17 @@ async def _get_owned_ready_pdf(document_id: uuid.UUID, user: User, db: AsyncSess
                 "message": "Layout-preserving translation currently supports PDF files only",
             },
         )
+    # Checked before any limit or trial accounting so a document whose file
+    # was lost never consumes a translation attempt.
+    await require_stored_file(
+        doc.storage_key,
+        variant="original",
+        unavailable_status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        unavailable_detail={
+            "error": "STORAGE_UNAVAILABLE",
+            "message": "Document storage is temporarily unavailable",
+        },
+    )
     return doc
 
 

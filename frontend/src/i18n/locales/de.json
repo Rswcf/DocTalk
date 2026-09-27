@@ -3969,5 +3969,11 @@
   "evidence.return": "Zurück zur Antwort",
   "evidence.fitWidth": "An Breite anpassen",
   "evidence.unavailable": "Quellseite nicht verfügbar",
-  "billing.subscribePlan": "{plan} abonnieren"
+  "billing.subscribePlan": "{plan} abonnieren",
+  "doc.fileMissing.title": "Die Original-PDF ist nicht mehr verfügbar",
+  "doc.fileMissing.body": "Diese Datei ging im Juni 2026 bei einem Speicherausfall verloren und lässt sich nicht wiederherstellen. Alles, was DocTalk beim Hochladen daraus extrahiert hat, ist noch vorhanden: Sie können weiter chatten, Zitaten folgen und die Zitatsuche nutzen. Seitenansicht, Übersetzung und erneute Verarbeitung benötigen die Datei selbst. Laden Sie sie als neues Dokument erneut hoch, um diese Funktionen zurückzubekommen.",
+  "doc.fileMissing.convertedTitle": "Die Seitenansicht dieser Datei ist nicht mehr verfügbar",
+  "doc.fileMissing.convertedBody": "Die Seitenansicht dieser Datei ging im Juni 2026 bei einem Speicherausfall verloren und lässt sich nicht wiederherstellen. Stattdessen wird der extrahierte Text angezeigt; Chat, Zitate und Zitatsuche funktionieren wie bisher. Laden Sie die Datei als neues Dokument erneut hoch, um die Seitenansicht zurückzubekommen.",
+  "errors.FILE_MISSING.title": "Originaldatei nicht im Speicher",
+  "errors.FILE_MISSING.body": "Die Datei dieses Dokuments ist nicht mehr gespeichert und kann daher weder erneut verarbeitet noch übersetzt werden. Chat und Zitate funktionieren weiterhin; laden Sie die Datei erneut hoch, um eine neue Kopie zu erhalten."
 }
