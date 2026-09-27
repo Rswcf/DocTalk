@@ -1067,12 +1067,12 @@ Quote Finder 产品契约:引文卡绝不渲染 LLM 生成文本——`verify_qu
 
 2026-09-27 之前,生产 Postgres(17.11,约 200 MB)没有任何备份:Railway 工作区是 Hobby 套餐,卷备份接口直接拒绝("Not Authorized"),唯一一份 Railway 自动快照也已过期。当天做了一次手工 `pg_dump`,并在临时容器里完成了恢复验证。
 
-周期性备份由 Railway 定时服务 `pg-backup` 完成(`infra/pg-backup/`,运维手册见其 README,方案见 `.collab/plans/2026-09-27-postgres-backups.md`)。它的不变量:
+周期性备份由 Railway 定时服务 `pg-backup` 完成(`infra/pg-backup/`,运维手册见其 README,方案见 `.collab/plans/2026-09-27-postgres-backups.md`)。代码已完成,但只有在验收关口全部通过后才算真正受保护(owner 的 age 公钥和告警渠道已配置、R2 生命周期与锁规则已验证、冒烟产物已核验、强制失败能触发告警、定时已开启、owner 完成一次恢复演练);README 跟踪这些关口。它的不变量:
 
-- **没恢复成功的不上传。** 每次运行都把自己的 dump 恢复到容器内的临时集群,并与源库比对关键表行数和 alembic 版本。
+- **没恢复成功的不上传。** 每次运行都把自己的 dump 恢复到容器内的临时集群,并与源库比对关键表行数和 alembic 版本。唯一的绕过方式是显式设置 `RESTORE_TEST=0`,此时运行结果报告为 `BACKUP OK UNVERIFIED`。
 - **加密缺失即拒绝运行。** dump 用 owner 的 `age` 公钥加密;没有公钥时拒绝运行,除非显式设置 `ALLOW_PLAINTEXT=1`。私钥只在 owner 手里。
 - **异地、只追加。** 产物写入 R2 `doctalk-ops`,键名带时间戳且唯一(`postgres/`,每月 1 日另存 `postgres-monthly/`)。任务从不覆盖、删除,也不写"最新"指针;保留期由 R2 生命周期规则控制(35 / 400 天),并有存储桶锁(14 / 60 天)。
-- **没有消息就是故障。** 每次运行都向 Sentry cron 监控(或 Healthchecks 地址)报到;漏跑、失败或卡住都会提醒 owner。
+- **没有消息就是故障。** 每次运行都以同一个 check-in id 向 Sentry cron 监控(或 Healthchecks 地址)报到;配置了告警渠道后,漏跑、失败或卡住都会提醒 owner。每个联网步骤都有超时,任何密钥都不会出现在命令行里。
 
 RPO 为 24 小时;恢复约需 30–45 分钟(下载、owner 解密、`pg_restore` 到新的 Railway Postgres、改指 `DATABASE_URL`)。
 
