@@ -23,10 +23,16 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
+      # WeasyPrint (PDF export) needs Pango at runtime; the backend image
+      # installs it too.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
       - run: pip install -r requirements-dev.txt
       - run: python ../scripts/check_version_consistency.py
       - run: ruff check app/ tests/
-      - run: python -m pytest tests/test_smoke.py tests/test_parse_service.py tests/test_proxy_ip_verification.py -v
+      # The whole unit suite. It needs no services (checked with every service
+      # pointed at a dead port); tests marked integration skip here and run in
+      # the integration job.
+      - run: python -m pytest -q
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
 
