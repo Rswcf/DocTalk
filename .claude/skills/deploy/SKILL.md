@@ -35,7 +35,7 @@ tree has no `0043`) crash-loops. Safe options:
    `checkout_attempts` and `feature_trial_usages` tables and their rows.
 
 CI proves the downgrade path on every run (the `integration` job runs tests/test_migrations.py, which does
-`upgrade head -> downgrade base -> upgrade head` on Postgres 16.6), so option 2 works, but it is
+`upgrade head -> downgrade base -> upgrade head` on Postgres 16.6 at the time; CI now runs 17.11 like production), so option 2 works, but it is
 destructive. Never assume "just redeploy the previous version" is safe after a migration.
 
 ### Checks
