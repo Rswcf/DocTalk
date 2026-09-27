@@ -48,7 +48,9 @@ jobs:
         working-directory: backend
     services:
       postgres:
-        image: postgres:16.6
+        # Same major as production (17.11, checked 2026-09-27), pinned by
+        # digest. Local docker compose still runs 16.6 (see CLAUDE.md).
+        image: postgres:17.11@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

@@ -13,7 +13,7 @@ DocTalk — AI document Q&A web app. Upload PDF / DOCX / PPTX / XLSX / TXT / MD 
 |---|---|---|
 | Frontend | Next.js 14 (App Router), Vercel | https://www.doctalk.site |
 | Backend | FastAPI + Celery, Railway | https://backend-production-a62e.up.railway.app |
-| Infra | Postgres 17 (dev/CI: 16.6), Qdrant, Redis; RetainPDF sidecar for layout translation; `pg-backup` nightly job → R2 `doctalk-ops` | Railway |
+| Infra | Postgres 17 (CI: 17.11; local compose: 16.6), Qdrant, Redis; RetainPDF sidecar for layout translation; `pg-backup` nightly job → R2 `doctalk-ops` | Railway |
 | Object storage | Cloudflare R2 bucket `doctalk-pdfs` over the S3 API (dev/CI: MinIO) | Cloudflare |
 | Repo | GitHub (public) | https://github.com/Rswcf/DocTalk |
 
