@@ -3990,5 +3990,6 @@
   "admin.backups.restoreOk": "restore test passed",
   "admin.backups.restoreNotOk": "restore test not passed",
   "admin.backups.none": "No backup found",
-  "admin.backups.unavailable": "Check unavailable"
+  "admin.backups.unavailable": "Check unavailable",
+  "admin.backups.missedRun": "No backup for the {time} UTC run"
 }

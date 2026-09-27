@@ -4027,5 +4027,6 @@
   "admin.backups.restoreOk": "恢复测试通过",
   "admin.backups.restoreNotOk": "恢复测试未通过",
   "admin.backups.none": "未找到备份",
-  "admin.backups.unavailable": "检查不可用"
+  "admin.backups.unavailable": "检查不可用",
+  "admin.backups.missedRun": "{time} UTC 那次计划运行没有产生备份"
 }

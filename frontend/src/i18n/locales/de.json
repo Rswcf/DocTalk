@@ -3988,5 +3988,6 @@
   "admin.backups.restoreOk": "Wiederherstellungstest bestanden",
   "admin.backups.restoreNotOk": "Wiederherstellungstest nicht bestanden",
   "admin.backups.none": "Kein Backup gefunden",
-  "admin.backups.unavailable": "Prüfung nicht verfügbar"
+  "admin.backups.unavailable": "Prüfung nicht verfügbar",
+  "admin.backups.missedRun": "Kein Backup für den Lauf um {time} UTC"
 }

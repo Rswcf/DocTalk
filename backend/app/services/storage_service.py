@@ -79,7 +79,7 @@ class StorageService:
         pool_kwargs: dict = {
             "timeout": urllib3.Timeout(connect=5, read=10),
             "retries": urllib3.Retry(total=2, backoff_factor=0.5,
-                                     status_forcelist=[500, 502, 503, 504],
+                                     status_forcelist=[429, 500, 502, 503, 504],
                                      respect_retry_after_header=False),
         }
         if secure:

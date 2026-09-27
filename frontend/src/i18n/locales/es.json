@@ -3988,5 +3988,6 @@
   "admin.backups.restoreOk": "prueba de restauración superada",
   "admin.backups.restoreNotOk": "prueba de restauración no superada",
   "admin.backups.none": "No se encontró ninguna copia",
-  "admin.backups.unavailable": "Comprobación no disponible"
+  "admin.backups.unavailable": "Comprobación no disponible",
+  "admin.backups.missedRun": "Sin copia de la ejecución de las {time} UTC"
 }

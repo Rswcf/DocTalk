@@ -165,6 +165,11 @@ function BackupStatusPanel({ backup, onRetry }: { backup: AdminBackupStatus | nu
       ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
       : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
   const details: string[] = [];
+  if (backup.status === "stale" && backup.due_run_at) {
+    // e.g. "2026-09-28 09:15" — the scheduled run no artifact covers.
+    const dueRun = backup.due_run_at.replace("T", " ").slice(0, 16);
+    details.push(tOr("admin.backups.missedRun", "No backup for the {time} UTC run", { time: dueRun }));
+  }
   if (backup.age_hours != null) {
     details.push(tOr("admin.backups.age", "{hours} h ago", { hours: String(backup.age_hours) }));
   }

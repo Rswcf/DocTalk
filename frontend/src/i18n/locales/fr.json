@@ -3988,5 +3988,6 @@
   "admin.backups.restoreOk": "test de restauration réussi",
   "admin.backups.restoreNotOk": "test de restauration non réussi",
   "admin.backups.none": "Aucune sauvegarde trouvée",
-  "admin.backups.unavailable": "Vérification indisponible"
+  "admin.backups.unavailable": "Vérification indisponible",
+  "admin.backups.missedRun": "Aucune sauvegarde pour l’exécution de {time} UTC"
 }

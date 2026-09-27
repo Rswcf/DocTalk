@@ -3988,5 +3988,6 @@
   "admin.backups.restoreOk": "復元テスト成功",
   "admin.backups.restoreNotOk": "復元テスト未通過",
   "admin.backups.none": "バックアップが見つかりません",
-  "admin.backups.unavailable": "確認できません"
+  "admin.backups.unavailable": "確認できません",
+  "admin.backups.missedRun": "{time} UTC の実行分のバックアップがありません"
 }

@@ -3988,5 +3988,6 @@
   "admin.backups.restoreOk": "पुनर्स्थापना परीक्षण सफल",
   "admin.backups.restoreNotOk": "पुनर्स्थापना परीक्षण असफल",
   "admin.backups.none": "कोई बैकअप नहीं मिला",
-  "admin.backups.unavailable": "जाँच उपलब्ध नहीं"
+  "admin.backups.unavailable": "जाँच उपलब्ध नहीं",
+  "admin.backups.missedRun": "{time} UTC वाले रन का कोई बैकअप नहीं"
 }

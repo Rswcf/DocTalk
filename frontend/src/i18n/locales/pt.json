@@ -3988,5 +3988,6 @@
   "admin.backups.restoreOk": "teste de restauração aprovado",
   "admin.backups.restoreNotOk": "teste de restauração não aprovado",
   "admin.backups.none": "Nenhum backup encontrado",
-  "admin.backups.unavailable": "Verificação indisponível"
+  "admin.backups.unavailable": "Verificação indisponível",
+  "admin.backups.missedRun": "Sem backup da execução das {time} UTC"
 }

@@ -125,13 +125,27 @@ def _at(day: int, hour: int, minute: int = 0) -> datetime:
         (_at(27, 10, 5), _at(28, 12), "stale"),   # yesterday's late upload must not cover today
         (_at(27, 9, 16), _at(28, 10, 30), "ok"),  # today's run still within its grace period
         (_at(28, 11, 5), _at(28, 12), "ok"),      # today's run late but done
+        (_at(28, 11, 20), _at(28, 12), "ok"),     # finished after its grace, still covers today
         (_at(28, 9, 16), _at(29, 8), "ok"),       # before the next scheduled run
         (_at(28, 9, 16), _at(29, 11, 20), "stale"),  # next run's grace has just passed
     ],
-    ids=["missed", "late-yesterday", "in-grace", "late-today", "before-next", "after-next-grace"],
+    ids=["missed", "late-yesterday", "in-grace", "late-today", "after-grace-today", "before-next", "after-next-grace"],
 )
 def test_freshness_is_coverage_of_the_latest_due_run(finished_at, now, expected) -> None:
     assert svc.get_postgres_backup_status(_one_artifact(finished_at), now)["status"] == expected
+
+
+def test_naive_datetimes_are_treated_as_utc() -> None:
+    naive_now = datetime(2026, 9, 28, 12, 0)
+    obj = SimpleNamespace(
+        object_name="postgres/doctalk-20260928T091500Z.dump.age", last_modified=datetime(2026, 9, 28, 9, 16), size=BIG
+    )
+    bucket = FakeOpsBucket(
+        objects=[obj], manifests={"postgres/doctalk-20260928T091500Z.manifest.json": _manifest(obj.object_name)}
+    )
+
+    assert svc.due_run(naive_now) == _at(28, 9, 15)
+    assert svc.get_postgres_backup_status(bucket, naive_now)["status"] == "ok"
 
 
 def test_due_run_honours_schedule_and_grace() -> None:
@@ -290,14 +304,35 @@ def test_admin_ops_health_is_an_admin_only_get() -> None:
 
 @pytest.mark.asyncio
 async def test_admin_ops_health_returns_the_backup_status(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.api import admin as admin_api
-
-    monkeypatch.setattr(admin_api, "get_postgres_backup_status", lambda: {"status": "ok", "latest_key": "k"})
+    from unittest.mock import AsyncMock
 
     from fastapi import Response
 
-    response = Response()
-    assert await admin_api.admin_ops_health(response=response, _admin=SimpleNamespace()) == {
-        "postgres_backup": {"status": "ok", "latest_key": "k"}
-    }
-    assert response.headers["cache-control"] == "private, no-store"
+    from app.api import admin as admin_api
+
+    probes: list[int] = []
+
+    def _probe():
+        probes.append(1)
+        return {"status": "ok", "latest_key": "k"}
+
+    store: dict = {}
+
+    async def _get(key):
+        return store.get(key)
+
+    async def _set(key, value, ttl_seconds):
+        store[key] = value
+        assert ttl_seconds == 120
+
+    monkeypatch.setattr(admin_api, "get_postgres_backup_status", _probe)
+    monkeypatch.setattr(admin_api, "cache_get", AsyncMock(side_effect=_get))
+    monkeypatch.setattr(admin_api, "cache_set", AsyncMock(side_effect=_set))
+
+    for _ in range(2):
+        response = Response()
+        assert await admin_api.admin_ops_health(response=response, _admin=SimpleNamespace()) == {
+            "postgres_backup": {"status": "ok", "latest_key": "k"}
+        }
+        assert response.headers["cache-control"] == "private, no-store"
+    assert probes == [1]  # the second view is served from the short cache

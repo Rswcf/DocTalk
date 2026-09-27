@@ -289,3 +289,4 @@ def test_request_client_retries_ignore_retry_after(recording_minio) -> None:
     retries = recording_minio.instances[0].http_client.connection_pool_kw["retries"]
     assert retries.respect_retry_after_header is False
     assert retries.total == 2
+    assert 429 in retries.status_forcelist  # throttling is still retried, just boundedly

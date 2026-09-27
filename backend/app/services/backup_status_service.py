@@ -56,12 +56,18 @@ def _read_manifest(client, bucket: str, key: str) -> Optional[dict]:
     return manifest if isinstance(manifest, dict) else None
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Aware UTC; a naive datetime is taken to be UTC already."""
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
 def due_run(now: datetime) -> datetime:
     """The latest scheduled run (PG_BACKUP_SCHEDULE_UTC, daily) whose grace
     period has passed by `now`: the run the newest artifact must cover."""
+    now = _as_utc(now)
     hour, minute = (int(part) for part in settings.PG_BACKUP_SCHEDULE_UTC.split(":"))
     grace = timedelta(hours=settings.PG_BACKUP_GRACE_HOURS)
-    run = now.astimezone(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    run = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
     while run + grace > now:
         run -= timedelta(days=1)
     return run
@@ -104,7 +110,7 @@ def get_postgres_backup_status(
     at all), unreachable (the bucket could not be listed in full), disabled
     (monitor switched off). Precedence: stale > small > unverified.
     """
-    now = now or datetime.now(timezone.utc)
+    now = _as_utc(now or datetime.now(timezone.utc))
     base: dict[str, Any] = {
         "status": "disabled",
         "due_run_at": due_run(now).isoformat(),
@@ -127,11 +133,12 @@ def get_postgres_backup_status(
     if newest is None:
         return {**base, "status": "missing"}
 
-    age_hours = (now - newest.last_modified).total_seconds() / 3600
+    newest_at = _as_utc(newest.last_modified)
+    age_hours = (now - newest_at).total_seconds() / 3600
     result = {
         **base,
         "latest_key": newest.object_name,
-        "created_at": newest.last_modified.isoformat(),
+        "created_at": newest_at.isoformat(),
         "age_hours": round(age_hours, 1),
         "bytes": int(newest.size or 0),
     }
@@ -145,7 +152,7 @@ def get_postgres_backup_status(
     expect_encrypted = newest.object_name.endswith(".dump.age")
     # Coverage of the schedule, not age: a late upload yesterday must not hide
     # a run that never happened today.
-    if newest.last_modified < due_run(now):
+    if newest_at < due_run(now):
         result["status"] = "stale"
     elif result["bytes"] < settings.PG_BACKUP_MIN_BYTES:
         result["status"] = "small"

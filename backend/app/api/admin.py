@@ -2000,9 +2000,18 @@ async def admin_ops_health(
     response: Response,
     _admin: User = Depends(require_admin),
 ):
-    """Operational health: currently the nightly Postgres backup (read-only)."""
+    """Operational health: currently the nightly Postgres backup (read-only).
+
+    Cached for two minutes so repeated admin views do not start repeated
+    storage probes (each is bounded, but runs in a worker thread)."""
     response.headers["Cache-Control"] = "private, no-store"
-    return {"postgres_backup": await asyncio.to_thread(get_postgres_backup_status)}
+    cache_key = "admin:ops-health"
+    cached = await cache_get(cache_key)
+    if isinstance(cached, dict):
+        return cached
+    payload = {"postgres_backup": await asyncio.to_thread(get_postgres_backup_status)}
+    await cache_set(cache_key, payload, ttl_seconds=120)
+    return payload
 
 
 @router.get("/funnel")
