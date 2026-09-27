@@ -8,6 +8,19 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+// Keys that exist only in English on purpose. Each entry must name the code
+// that renders it for English alone, so the exception stays honest.
+const ENGLISH_ONLY_KEYS = new Set([
+  // src/app/use-cases/finance/FinanceContent.tsx + FinanceJsonLd.tsx render
+  // FAQ q6 (10-K footnotes) only when locale === 'en'.
+  'useCasesFinance.faq.q6.question',
+  'useCasesFinance.faq.q6.answer',
+]);
+
+function isBlank(value) {
+  return typeof value !== 'string' || value.trim() === '';
+}
+
 function assertLocaleCoverage() {
   const enPath = path.join(localesDir, 'en.json');
   const en = readJson(enPath);
@@ -18,8 +31,11 @@ function assertLocaleCoverage() {
 
   for (const file of localeFiles) {
     const data = readJson(path.join(localesDir, file));
-    const missingKeys = enKeys.filter((key) => !(key in data));
-    const emptyKeys = enKeys.filter((key) => typeof data[key] !== 'string' || data[key].trim() === '');
+    const missingKeys = enKeys.filter((key) => !(key in data) && !ENGLISH_ONLY_KEYS.has(key));
+    // A key that is blank in English is an intentional "nothing here" slot
+    // (e.g. realWorld.*.p2, rendered only when non-empty); it may be blank
+    // everywhere. Every other key must carry text.
+    const emptyKeys = enKeys.filter((key) => key in data && !isBlank(en[key]) && isBlank(data[key]));
     if (missingKeys.length > 0) {
       missing.push(`${file}: missing ${missingKeys.length} keys`);
     }
