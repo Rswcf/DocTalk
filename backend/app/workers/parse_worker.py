@@ -6,7 +6,6 @@ from typing import List, Optional
 
 from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
-from minio import Minio
 from qdrant_client.models import PointStruct
 from sqlalchemy import String, cast, func, insert, select, text, update
 
@@ -23,6 +22,7 @@ from app.services.parse_service import (
     resolve_ocr_languages,
     text_quality_score,
 )
+from app.services.storage_service import storage_service
 
 from .celery_app import celery_app
 
@@ -64,25 +64,10 @@ def _set_doc_error(doc, code: str, human: str | None = None) -> None:
     doc.error_msg = payload
 
 
-def _get_minio_client() -> Minio:
-    from urllib.parse import urlparse
-    endpoint = settings.MINIO_ENDPOINT
-    access_key = settings.MINIO_ACCESS_KEY
-    secret_key = settings.MINIO_SECRET_KEY
-    # Parse endpoint for scheme-based secure detection
-    if endpoint.startswith("http://") or endpoint.startswith("https://"):
-        parsed = urlparse(endpoint)
-        secure = parsed.scheme == "https"
-        host = parsed.netloc
-    else:
-        host = endpoint
-        secure = bool(settings.MINIO_SECURE)
-    return Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
-
-
 def _download_file_bytes(bucket: str, object_key: str) -> bytes:
-    client = _get_minio_client()
-    response = client.get_object(bucket, object_key)
+    # The app-wide store's transfer client: same endpoint, region and TLS
+    # trust as every other storage call, with minio-py's long timeouts.
+    response = storage_service.transfer_client.get_object(bucket, object_key)
     try:
         data = response.read()
     finally:

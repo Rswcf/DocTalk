@@ -91,9 +91,9 @@ async def lifespan(app: FastAPI):
     def _init_services() -> None:
         try:
             storage_service.ensure_bucket()
-            logger.info("MinIO bucket ready")
+            logger.info("Object storage bucket ready")
         except Exception as e:
-            _alert(e, "MinIO bucket ensure failed at startup")
+            _alert(e, "Object storage bucket ensure failed at startup")
         try:
             embedding_service.ensure_collection()
             logger.info("Qdrant collection ready")
@@ -246,7 +246,10 @@ async def health(request: Request, deep: bool = Query(False)) -> dict:
         )
 
     async def _check_minio() -> None:
-        await asyncio.to_thread(storage_service.health_check)
+        # health_check returns False (rather than raising) when the bucket is
+        # missing; that is an unhealthy store too.
+        if not await asyncio.to_thread(storage_service.health_check):
+            raise RuntimeError("object storage bucket is missing")
 
     probes = {
         "database": _check_db(),

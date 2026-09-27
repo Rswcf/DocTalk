@@ -8,23 +8,23 @@ from urllib.parse import urlparse
 
 from minio import Minio
 from minio.error import S3Error
-from minio.sse import SseS3
-from minio.sseconfig import Rule, SSEConfig
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-def _parse_minio_endpoint(endpoint: str) -> tuple[str, bool]:
-    """Return (host:port, secure) from endpoint which may include scheme."""
+def _parse_minio_endpoint(endpoint: str, default_secure: bool = False) -> tuple[str, bool]:
+    """Return (host:port, secure) from endpoint which may include scheme.
+
+    A scheme wins; a bare host:port uses ``default_secure`` (MINIO_SECURE).
+    """
     if endpoint.startswith("http://") or endpoint.startswith("https://"):
         parsed = urlparse(endpoint)
         secure = parsed.scheme == "https"
         host = parsed.netloc
         return host, secure
-    # default: no scheme → assume insecure (dev MinIO)
-    return endpoint, False
+    return endpoint, default_secure
 
 
 class StorageUnavailableError(RuntimeError):
@@ -32,111 +32,132 @@ class StorageUnavailableError(RuntimeError):
 
 
 class StorageService:
+    """S3-compatible object storage: Cloudflare R2 in production, MinIO in
+    dev and CI. Every other module reaches the bucket through this one client."""
+
     def __init__(self,
                  endpoint: Optional[str] = None,
                  public_endpoint: Optional[str] = None,
                  access_key: Optional[str] = None,
                  secret_key: Optional[str] = None,
                  bucket: Optional[str] = None,
-                 default_ttl: Optional[int] = None) -> None:
+                 default_ttl: Optional[int] = None,
+                 region: Optional[str] = None) -> None:
         endpoint = endpoint or settings.MINIO_ENDPOINT
         public_endpoint = public_endpoint or settings.MINIO_PUBLIC_ENDPOINT
         access_key = access_key or settings.MINIO_ACCESS_KEY
         secret_key = secret_key or settings.MINIO_SECRET_KEY
         bucket = bucket or settings.MINIO_BUCKET
         default_ttl = default_ttl or settings.MINIO_PRESIGN_TTL
+        # R2 wants "auto". A fixed region also stops minio-py from issuing a
+        # GetBucketLocation lookup before its first request.
+        region = region or settings.MINIO_REGION
 
-        host, secure = _parse_minio_endpoint(endpoint)
-        self._client = self._new_client(host, secure, access_key, secret_key)
+        host, secure = _parse_minio_endpoint(endpoint, bool(settings.MINIO_SECURE))
+        self._transfer_args = dict(endpoint=host, access_key=access_key, secret_key=secret_key,
+                                   secure=secure, region=region)
+        self._transfer_client: Optional[Minio] = None
+        self._client = self._new_client(host, secure, access_key, secret_key, region)
         if public_endpoint:
-            public_host, public_secure = _parse_minio_endpoint(public_endpoint)
-            self._public_client = self._new_client(public_host, public_secure, access_key, secret_key)
+            public_host, public_secure = _parse_minio_endpoint(public_endpoint, bool(settings.MINIO_SECURE))
+            self._public_client = self._new_client(public_host, public_secure, access_key, secret_key, region)
         else:
             self._public_client = self._client
         self._bucket = bucket
         self._default_ttl = int(default_ttl)
 
     @staticmethod
-    def _new_client(host: str, secure: bool, access_key: str, secret_key: str) -> Minio:
-        # Configure MinIO client with short timeouts to avoid blocking the
-        # asyncio event loop when MinIO is unreachable.  The default urllib3
-        # retry policy retries 502/503/504 responses multiple times with
-        # exponential backoff, which can block for 30+ seconds.
+    def _new_client(host: str, secure: bool, access_key: str, secret_key: str,
+                    region: Optional[str] = None) -> Minio:
+        # Short timeouts keep a storage outage from blocking the asyncio event
+        # loop. The default urllib3 retry policy retries 502/503/504 responses
+        # multiple times with exponential backoff, which can block for 30+ s.
         import urllib3
 
-        http_client = urllib3.PoolManager(
-            timeout=urllib3.Timeout(connect=5, read=10),
-            retries=urllib3.Retry(total=2, backoff_factor=0.5,
-                                  status_forcelist=[500, 502, 503, 504]),
-            cert_reqs="CERT_REQUIRED" if secure else "CERT_NONE",
-        )
+        pool_kwargs: dict = {
+            "timeout": urllib3.Timeout(connect=5, read=10),
+            "retries": urllib3.Retry(total=2, backoff_factor=0.5,
+                                     status_forcelist=[500, 502, 503, 504]),
+        }
+        if secure:
+            import certifi
+
+            # Explicit trust store, the same one minio-py uses by default.
+            # Until R2 the only TLS client here was the presign-only public one.
+            pool_kwargs.update(cert_reqs="CERT_REQUIRED", ca_certs=certifi.where())
+        else:
+            pool_kwargs["cert_reqs"] = "CERT_NONE"
+        http_client = urllib3.PoolManager(**pool_kwargs)
         return Minio(host, access_key=access_key, secret_key=secret_key,
-                     secure=secure, http_client=http_client)
+                     secure=secure, region=region, http_client=http_client)
 
     @property
     def bucket(self) -> str:
         return self._bucket
 
+    @property
+    def client(self) -> Minio:
+        """The server-side client, for the few callers that need raw S3 calls."""
+        return self._client
+
+    @property
+    def transfer_client(self) -> Minio:
+        """Same endpoint, credentials, TLS and region, but minio-py's own HTTP
+        policy (5-minute timeouts, 5 retries) for worker-side transfers.
+
+        The parse worker streams whole documents; under the request client's
+        10 s read timeout a slow response body would fail the download
+        terminally instead of waiting it out, as it always has.
+        """
+        if self._transfer_client is None:
+            args = dict(self._transfer_args)
+            self._transfer_client = Minio(args.pop("endpoint"), **args)
+        return self._transfer_client
+
     def _storage_unavailable(self, operation: str, exc: Exception) -> StorageUnavailableError:
-        logger.warning("MinIO %s failed: %s", operation, exc)
+        logger.warning("Object storage %s failed: %s", operation, exc)
         return StorageUnavailableError(f"Object storage {operation} failed")
 
-    def health_check(self) -> bool:
-        """Probe MinIO liveness. Returns True if reachable; raises on error.
+    def _bucket_reachable(self) -> bool:
+        """True if the bucket exists and the credentials can read it.
 
-        Used by the /health?deep=true endpoint. bucket_exists is the lightest
-        authenticated call and validates both connectivity and credentials.
+        HeadBucket is not guaranteed under a bucket-scoped R2 token, so an
+        AccessDenied there falls back to listing (one request, first page),
+        which such a token can always do on its own bucket.
         """
-        return bool(self._client.bucket_exists(self._bucket))
+        try:
+            return bool(self._client.bucket_exists(self._bucket))
+        except S3Error as exc:
+            if exc.code != "AccessDenied":
+                raise
+        next(iter(self._client.list_objects(self._bucket)), None)
+        return True
+
+    def health_check(self) -> bool:
+        """Probe object storage for /health?deep=true. Returns True if the
+        bucket is reachable with these credentials; raises on error."""
+        return self._bucket_reachable()
 
     def ensure_bucket(self) -> None:
-        """Create bucket if it does not exist. Sets default SSE-S3 encryption."""
-        found = self._client.bucket_exists(self._bucket)
-        if not found:
+        """Create the bucket if it does not exist (dev and CI; production's
+        bucket is provisioned ahead of time).
+
+        No bucket-encryption call: R2 encrypts every object at rest and does
+        not accept SSE settings, and MinIO without KMS rejects them.
+        """
+        if not self._bucket_reachable():
             self._client.make_bucket(self._bucket)
-        # Enable default server-side encryption (AES-256)
-        try:
-            self._client.set_bucket_encryption(
-                self._bucket, SSEConfig(Rule.new_sse_s3_rule())
-            )
-        except Exception:
-            logging.getLogger(__name__).warning(
-                "Could not set bucket encryption policy — MinIO version may not support it"
-            )
 
     def upload_file(self, file_bytes: bytes, storage_key: str, content_type: str = "application/pdf") -> None:
-        """Upload bytes to MinIO under the given storage_key.
-
-        Attempts SSE-S3 encryption first; falls back to unencrypted upload
-        if KMS is not configured on the MinIO instance.
-        """
-        data = BytesIO(file_bytes)
-        size = len(file_bytes)
+        """Upload bytes under the given storage_key."""
         try:
             self._client.put_object(
                 self._bucket,
                 storage_key,
-                data,
-                length=size,
+                BytesIO(file_bytes),
+                length=len(file_bytes),
                 content_type=content_type,
-                sse=SseS3(),
             )
-        except S3Error as exc:
-            if "KMS" in str(exc) or exc.code == "NotImplemented":
-                # KMS not configured — upload without encryption
-                data.seek(0)
-                try:
-                    self._client.put_object(
-                        self._bucket,
-                        storage_key,
-                        data,
-                        length=size,
-                        content_type=content_type,
-                    )
-                except Exception as fallback_exc:
-                    raise self._storage_unavailable("upload", fallback_exc) from fallback_exc
-            else:
-                raise self._storage_unavailable("upload", exc) from exc
         except Exception as exc:
             raise self._storage_unavailable("upload", exc) from exc
 
@@ -147,13 +168,23 @@ class StorageService:
         return url
 
     def download_file(self, storage_key: str) -> bytes:
-        """Download an object from MinIO as bytes."""
+        """Download an object as bytes."""
         response = self._client.get_object(self._bucket, storage_key)
         try:
             return response.read()
         finally:
             response.close()
             response.release_conn()
+
+    def object_exists(self, storage_key: str) -> bool:
+        """True if the object exists; False only for NoSuchKey."""
+        try:
+            self._client.stat_object(self._bucket, storage_key)
+        except S3Error as exc:
+            if exc.code == "NoSuchKey":
+                return False
+            raise
+        return True
 
     def delete_file(self, storage_key: str) -> None:
         """Delete an object. No-op if not found."""

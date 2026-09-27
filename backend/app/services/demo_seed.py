@@ -44,22 +44,12 @@ DEMO_DOCS = [
 
 
 def _get_minio_client():
-    """Create a MinIO client (same logic as parse_worker)."""
-    from urllib.parse import urlparse
+    """The app-wide store's transfer client (minio-py's default HTTP
+    policy, as before). Kept as a function because the demo-seed tests patch
+    this name."""
+    from app.services.storage_service import storage_service
 
-    from minio import Minio
-
-    endpoint = settings.MINIO_ENDPOINT
-    access_key = settings.MINIO_ACCESS_KEY
-    secret_key = settings.MINIO_SECRET_KEY
-    if endpoint.startswith("http://") or endpoint.startswith("https://"):
-        parsed = urlparse(endpoint)
-        secure = parsed.scheme == "https"
-        host = parsed.netloc
-    else:
-        host = endpoint
-        secure = bool(settings.MINIO_SECURE)
-    return Minio(host, access_key=access_key, secret_key=secret_key, secure=secure)
+    return storage_service.transfer_client
 
 
 def _ensure_demo_files(docs: list) -> int:
