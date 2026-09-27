@@ -41,8 +41,10 @@ production Postgres had no backup at all.
 7. Prints `BACKUP OK key=… bytes=… restore_test=ok …` and reports `ok`.
 
 Any failure prints `BACKUP FAILED stage=<stage>` and reports `error`; so does
-a stop signal. Every networked step has a timeout and source queries give up
-on a lock after 60 s, so a run cannot hang forever. No secret reaches a
+a stop signal, which also stops the running step at once. Every networked
+step has a timeout (check-ins at most 45 s each, whatever `Retry-After` says)
+and source queries give up on a lock after 60 s, so a run cannot hang
+forever. No secret reaches a
 command line or the log (libpq environment + a private password file; curl
 reads its URL from stdin). The script never overwrites or deletes an object
 and never writes a mutable "latest" pointer. Check-ins carry one
@@ -52,7 +54,7 @@ and never writes a mutable "latest" pointer. Check-ins carry one
 
 | Name | Value |
 |---|---|
-| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (private network) |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (private network). Only the plain `postgresql://user:password@host[:port]/db` form is accepted; query parameters, percent-escapes and IPv6 literals are rejected so no connection setting is silently dropped. For TLS options set libpq's `PGSSLMODE` on the service |
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | `${{backend.R2_ACCESS_KEY_ID}}`, `${{backend.R2_SECRET_ACCESS_KEY}}`, or a token scoped to `doctalk-ops` only |
 | `R2_ENDPOINT` | `https://0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com` |
 | `R2_BUCKET` | `doctalk-ops` |
@@ -80,10 +82,12 @@ List variable names only, never values:
    (`--remote` is required: wrangler 4 object commands default to local storage)
    and check `shasum -a 256` against the manifest.
 3. Owner decrypts: `age -d -i ~/Private/doctalk-backup-age.key -o <key>.dump <key>.dump.age`.
-4. Restore into a new Railway Postgres (preferred) or an emptied database:
-   `docker run --rm -v "$PWD:/b" postgres:17.11-bookworm pg_restore --no-owner --no-privileges -j 4 -d "$TARGET_URL" /b/<key>.dump`
-   with the target URL supplied through an environment variable, never pasted
-   into chat.
+4. Restore into a new Railway Postgres (preferred) or an emptied database.
+   Keep the credentials off every command line: write a password file
+   (`host:port:db:user:password`, `chmod 600`) and export `PGHOST`, `PGPORT`,
+   `PGUSER` and `PGDATABASE` in your shell, then pass them by name:
+   `docker run --rm -v "$PWD:/b:ro" -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE -e PGPASSFILE=/b/.pgpass postgres:17.11-bookworm pg_restore --no-owner --no-privileges -j 4 -d "$PGDATABASE" /b/<key>.dump`
+   Never paste the password or URL into chat.
 5. Point `backend` and `pg-backup` at the new database, redeploy, then check
    `/health?deep=true`, a login and a chat with a citation jump.
 

@@ -31,8 +31,16 @@ PGTEST=/tmp/pgtest
 PGSOCK=/tmp/pgsock
 PGTEST_STARTED=""
 CRON_URL=""
-CHECK_IN_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date -u +%s%N)
+new_uuid() {  # a random (version 4) UUID
+  local hex
+  if [[ -r /proc/sys/kernel/random/uuid ]]; then cat /proc/sys/kernel/random/uuid; return; fi
+  hex=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')
+  printf '%s-%s-4%s-%x%s-%s\n' "${hex:0:8}" "${hex:8:4}" "${hex:13:3}" \
+    $(( (16#${hex:16:1} & 3) | 8 )) "${hex:17:3}" "${hex:20:12}"
+}
+CHECK_IN_ID=$(new_uuid)
 RUN_STARTED=$SECONDS
+CHILD=""
 
 # ---- helpers -----------------------------------------------------------------
 curl_quiet() {  # $1: URL; rest: curl options. Prints the HTTP status (000 = no response).
@@ -40,12 +48,24 @@ curl_quiet() {  # $1: URL; rest: curl options. Prints the HTTP status (000 = no 
   shift
   escaped=${url//\\/\\\\}
   escaped=${escaped//\"/\\\"}
-  curl --silent --globoff --output /dev/null --write-out '%{http_code}' \
-    --max-time 15 --retry 2 --config - "$@" <<<"url = \"$escaped\"" 2>/dev/null || true
+  # --max-time bounds one attempt, --retry-max-time the retries (a long
+  # Retry-After cannot stall the run), and timeout the whole invocation.
+  timeout -k 5 45 curl --silent --globoff --output /dev/null --write-out '%{http_code}' \
+    --max-time 15 --retry 2 --retry-max-time 30 --config - "$@" \
+    <<<"url = \"$escaped\"" 2>/dev/null || true
 }
 
-urldecode() { printf '%b' "${1//%/\\x}"; }
-pgpass_field() { local s=${1//\\/\\\\}; printf '%s' "${s//:/\\:}"; }
+# Long commands run as a background job so a TERM from Railway is handled at
+# once (bash defers traps while a foreground child runs) and forwarded to it.
+run() {
+  "$@" &
+  CHILD=$!
+  local rc=0
+  wait "$CHILD" || rc=$?
+  CHILD=""
+  return "$rc"
+}
+
 
 # ---- dead-man's switch -----------------------------------------------------
 if [[ -n "${SENTRY_DSN:-}" ]]; then
@@ -100,9 +120,14 @@ finish() {
   fi
   exit "$rc"
 }
+on_signal() {
+  [[ -n "$CHILD" ]] && kill -TERM "$CHILD" 2>/dev/null
+  exit 143
+}
 trap finish EXIT
-# Railway stopping the container is a failure too: exit so the EXIT trap reports it.
-trap 'exit 143' TERM INT
+# Railway stopping the container is a failure too: stop the running step and
+# exit so the EXIT trap reports it.
+trap on_signal TERM INT
 
 log "pg-backup start region=${RAILWAY_REPLICA_REGION:-unknown} deployment=${RAILWAY_DEPLOYMENT_ID:-unknown} $(pg_dump --version)"
 heartbeat in_progress
@@ -135,23 +160,21 @@ KEY_BASE="doctalk-${TS}"
 WORK=$(mktemp -d /tmp/pgbackup.XXXXXX)
 DUMP="$WORK/$KEY_BASE.dump"
 
-# DATABASE_URL -> libpq environment + a private password file.
-url_re='^postgres(ql)?://([^:@/]+)(:([^@]*))?@([^:/?]+)(:([0-9]+))?/([^?]+)(\?(.*))?$'
+# DATABASE_URL -> libpq environment + a private password file. Only the plain
+# form Railway's ${{Postgres.DATABASE_URL}} produces is accepted: no query
+# parameters, percent-escapes or IPv6 literals, so nothing the URL asks for
+# (TLS settings included) can be silently dropped. Set TLS with the libpq
+# environment variable PGSSLMODE on the service if it is ever needed.
+url_re='^postgres(ql)?://([A-Za-z0-9._~-]+):([A-Za-z0-9._~-]+)@([A-Za-z0-9.-]+)(:([0-9]+))?/([A-Za-z0-9_-]+)$'
 if [[ ! "$DATABASE_URL" =~ $url_re ]]; then
-  log "FAIL DATABASE_URL is not a postgres:// URL with user, host and database"
+  log "FAIL DATABASE_URL must be postgresql://user:password@host[:port]/db with no query parameters, percent-escapes or IPv6 (see README)"
   exit 1
 fi
-PGUSER=$(urldecode "${BASH_REMATCH[2]}")
-db_password=$(urldecode "${BASH_REMATCH[4]}")
-PGHOST=${BASH_REMATCH[5]}
-PGPORT=${BASH_REMATCH[7]:-5432}
-PGDATABASE=$(urldecode "${BASH_REMATCH[8]}")
-db_query=${BASH_REMATCH[10]}
-if [[ "$db_query" =~ (^|&)sslmode=([a-z-]+) ]]; then export PGSSLMODE=${BASH_REMATCH[2]}; fi
-export PGUSER PGHOST PGPORT PGDATABASE PGPASSFILE="$WORK/.pgpass"
-printf '%s:%s:%s:%s:%s\n' "$(pgpass_field "$PGHOST")" "$PGPORT" "$(pgpass_field "$PGDATABASE")" \
-  "$(pgpass_field "$PGUSER")" "$(pgpass_field "$db_password")" > "$PGPASSFILE"
-unset DATABASE_URL db_password db_query
+export PGUSER=${BASH_REMATCH[2]} PGHOST=${BASH_REMATCH[4]} PGPORT=${BASH_REMATCH[6]:-5432}
+export PGDATABASE=${BASH_REMATCH[7]} PGPASSFILE="$WORK/.pgpass"
+# Fields are restricted to characters that need no pgpass escaping.
+printf '%s:%s:%s:%s:%s\n' "$PGHOST" "$PGPORT" "$PGDATABASE" "$PGUSER" "${BASH_REMATCH[3]}" > "$PGPASSFILE"
+unset DATABASE_URL
 
 # ---- source ------------------------------------------------------------------
 STAGE=connect
@@ -169,8 +192,9 @@ counts_sql() {
 }
 
 STAGE=source_facts
-source_line=$(PGOPTIONS="$SOURCE_PGOPTIONS" timeout 330 psql -X -v ON_ERROR_STOP=1 -Atc "$(counts_sql)")
-IFS='|' read -r -a SOURCE <<<"$source_line"
+# Through run (not $(...)) so a TERM during a slow query is handled at once.
+PGOPTIONS="$SOURCE_PGOPTIONS" run timeout 330 psql -X -v ON_ERROR_STOP=1 -Atc "$(counts_sql)" -o "$WORK/source_facts"
+IFS='|' read -r -a SOURCE < "$WORK/source_facts"
 SERVER_VERSION_NUM=${SOURCE[0]}
 ALEMBIC=${SOURCE[1]}
 CLIENT_MAJOR=$(pg_dump --version | awk '{print $3}' | cut -d. -f1)
@@ -181,7 +205,7 @@ fi
 
 STAGE=dump
 t0=$SECONDS
-PGOPTIONS="$SOURCE_PGOPTIONS" timeout 1500 pg_dump -Fc --lock-wait-timeout=120s -f "$DUMP"
+PGOPTIONS="$SOURCE_PGOPTIONS" run timeout 1500 pg_dump -Fc --lock-wait-timeout=120s -f "$DUMP"
 T_DUMP=$((SECONDS - t0))
 DUMP_BYTES=$(stat -c %s "$DUMP")
 if (( DUMP_BYTES < MIN_DUMP_BYTES )); then
@@ -215,7 +239,7 @@ if [[ "$RESTORE_TEST" == 1 ]]; then
     start >/dev/null
   PGTEST_STARTED=1
   local_pg createdb restore_test
-  local_pg timeout 1800 pg_restore -d restore_test --no-owner --no-privileges --exit-on-error -j 2 "$DUMP"
+  local_pg run timeout 1800 pg_restore -d restore_test --no-owner --no-privileges --exit-on-error -j 2 "$DUMP"
   restored_line=$(local_pg psql -X -v ON_ERROR_STOP=1 -Atc "$(counts_sql)")
   IFS='|' read -r -a RESTORED <<<"$restored_line"
   pg_ctl -D "$PGTEST" -m immediate stop >/dev/null
@@ -310,7 +334,7 @@ write_manifest() {  # $1: artifact key the manifest points at; $2: output file
 
 DAILY_KEY="$BACKUP_PREFIX/$ARTIFACT_NAME"
 t0=$SECONDS
-timeout 900 rclone copyto "${RCLONE_FLAGS[@]}" "$ARTIFACT" "r2:$R2_BUCKET/$DAILY_KEY"
+run timeout 900 rclone copyto "${RCLONE_FLAGS[@]}" "$ARTIFACT" "r2:$R2_BUCKET/$DAILY_KEY"
 if ! remote_matches "$R2_BUCKET/$DAILY_KEY"; then
   log "FAIL uploaded object does not match the local artifact (size or MD5)"
   exit 1
@@ -324,7 +348,7 @@ timeout 120 rclone copyto "${RCLONE_FLAGS[@]}" "$WORK/daily.manifest.json" "r2:$
 if [[ $(date -u +%d) == 01 ]]; then
   STAGE=monthly_copy
   MONTHLY_KEY="$MONTHLY_PREFIX/$ARTIFACT_NAME"
-  timeout 900 rclone copyto "${RCLONE_FLAGS[@]}" "r2:$R2_BUCKET/$DAILY_KEY" "r2:$R2_BUCKET/$MONTHLY_KEY"
+  run timeout 900 rclone copyto "${RCLONE_FLAGS[@]}" "r2:$R2_BUCKET/$DAILY_KEY" "r2:$R2_BUCKET/$MONTHLY_KEY"
   if ! remote_matches "$R2_BUCKET/$MONTHLY_KEY"; then
     log "FAIL monthly copy does not match the local artifact"
     exit 1
