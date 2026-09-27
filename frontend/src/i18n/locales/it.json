@@ -3975,5 +3975,19 @@
   "doc.fileMissing.convertedTitle": "La vista delle pagine di questo file non è più disponibile",
   "doc.fileMissing.convertedBody": "La vista delle pagine di questo file è andata persa in un guasto dell’archiviazione nel giugno 2026 e non può essere recuperata. Al suo posto viene mostrato il testo estratto, e chat, citazioni e Ricerca citazioni funzionano come prima. Carica di nuovo il file come nuovo documento per riavere la vista delle pagine.",
   "errors.FILE_MISSING.title": "File originale non presente nell’archivio",
-  "errors.FILE_MISSING.body": "Il file di questo documento non è più archiviato, quindi non può essere rielaborato né tradotto. Chat e citazioni funzionano ancora; carica di nuovo il file per averne una copia nuova."
+  "errors.FILE_MISSING.body": "Il file di questo documento non è più archiviato, quindi non può essere rielaborato né tradotto. Chat e citazioni funzionano ancora; carica di nuovo il file per averne una copia nuova.",
+  "admin.backups.title": "Backup di Postgres",
+  "admin.backups.status.ok": "Integro",
+  "admin.backups.status.stale": "Obsoleto",
+  "admin.backups.status.small": "Troppo piccolo",
+  "admin.backups.status.unverified": "Non verificato",
+  "admin.backups.status.missing": "Mancante",
+  "admin.backups.status.unreachable": "Archiviazione non raggiungibile",
+  "admin.backups.status.disabled": "Monitoraggio disattivato",
+  "admin.backups.age": "{hours} h fa",
+  "admin.backups.restoreOk": "test di ripristino superato",
+  "admin.backups.restoreNotOk": "test di ripristino non superato",
+  "admin.backups.none": "Nessun backup trovato",
+  "admin.backups.unavailable": "Verifica non disponibile",
+  "admin.backups.missedRun": "Nessun backup per l’esecuzione delle {time} UTC"
 }

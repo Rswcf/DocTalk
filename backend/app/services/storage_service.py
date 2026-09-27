@@ -72,12 +72,15 @@ class StorageService:
         # Short timeouts keep a storage outage from blocking the asyncio event
         # loop. The default urllib3 retry policy retries 502/503/504 responses
         # multiple times with exponential backoff, which can block for 30+ s.
+        # Retry-After is ignored: a 503 asking for an hour would otherwise hold
+        # the calling thread that long.
         import urllib3
 
         pool_kwargs: dict = {
             "timeout": urllib3.Timeout(connect=5, read=10),
             "retries": urllib3.Retry(total=2, backoff_factor=0.5,
-                                     status_forcelist=[500, 502, 503, 504]),
+                                     status_forcelist=[429, 500, 502, 503, 504],
+                                     respect_retry_after_header=False),
         }
         if secure:
             import certifi

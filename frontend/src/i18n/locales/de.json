@@ -3975,5 +3975,19 @@
   "doc.fileMissing.convertedTitle": "Die Seitenansicht dieser Datei ist nicht mehr verfügbar",
   "doc.fileMissing.convertedBody": "Die Seitenansicht dieser Datei ging im Juni 2026 bei einem Speicherausfall verloren und lässt sich nicht wiederherstellen. Stattdessen wird der extrahierte Text angezeigt; Chat, Zitate und Zitatsuche funktionieren wie bisher. Laden Sie die Datei als neues Dokument erneut hoch, um die Seitenansicht zurückzubekommen.",
   "errors.FILE_MISSING.title": "Originaldatei nicht im Speicher",
-  "errors.FILE_MISSING.body": "Die Datei dieses Dokuments ist nicht mehr gespeichert und kann daher weder erneut verarbeitet noch übersetzt werden. Chat und Zitate funktionieren weiterhin; laden Sie die Datei erneut hoch, um eine neue Kopie zu erhalten."
+  "errors.FILE_MISSING.body": "Die Datei dieses Dokuments ist nicht mehr gespeichert und kann daher weder erneut verarbeitet noch übersetzt werden. Chat und Zitate funktionieren weiterhin; laden Sie die Datei erneut hoch, um eine neue Kopie zu erhalten.",
+  "admin.backups.title": "Postgres-Backups",
+  "admin.backups.status.ok": "Gesund",
+  "admin.backups.status.stale": "Veraltet",
+  "admin.backups.status.small": "Zu klein",
+  "admin.backups.status.unverified": "Nicht verifiziert",
+  "admin.backups.status.missing": "Fehlt",
+  "admin.backups.status.unreachable": "Speicher nicht erreichbar",
+  "admin.backups.status.disabled": "Überwachung aus",
+  "admin.backups.age": "vor {hours} h",
+  "admin.backups.restoreOk": "Wiederherstellungstest bestanden",
+  "admin.backups.restoreNotOk": "Wiederherstellungstest nicht bestanden",
+  "admin.backups.none": "Kein Backup gefunden",
+  "admin.backups.unavailable": "Prüfung nicht verfügbar",
+  "admin.backups.missedRun": "Kein Backup für den Lauf um {time} UTC"
 }

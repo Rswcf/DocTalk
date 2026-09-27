@@ -3975,5 +3975,19 @@
   "doc.fileMissing.convertedTitle": "La vista de páginas de este archivo ya no está disponible",
   "doc.fileMissing.convertedBody": "La vista de páginas de este archivo se perdió en un fallo de almacenamiento en junio de 2026 y no se puede recuperar. En su lugar se muestra el texto extraído, y el chat, las citas y el Buscador de citas funcionan como antes. Sube el archivo de nuevo como documento nuevo para recuperar la vista de páginas.",
   "errors.FILE_MISSING.title": "El archivo original no está en el almacenamiento",
-  "errors.FILE_MISSING.body": "El archivo de este documento ya no está almacenado, así que no se puede reprocesar ni traducir. El chat y las citas siguen funcionando; sube el archivo de nuevo para obtener una copia nueva."
+  "errors.FILE_MISSING.body": "El archivo de este documento ya no está almacenado, así que no se puede reprocesar ni traducir. El chat y las citas siguen funcionando; sube el archivo de nuevo para obtener una copia nueva.",
+  "admin.backups.title": "Copias de Postgres",
+  "admin.backups.status.ok": "Correcto",
+  "admin.backups.status.stale": "Desactualizada",
+  "admin.backups.status.small": "Demasiado pequeña",
+  "admin.backups.status.unverified": "Sin verificar",
+  "admin.backups.status.missing": "Ausente",
+  "admin.backups.status.unreachable": "Almacenamiento inaccesible",
+  "admin.backups.status.disabled": "Monitor desactivado",
+  "admin.backups.age": "hace {hours} h",
+  "admin.backups.restoreOk": "prueba de restauración superada",
+  "admin.backups.restoreNotOk": "prueba de restauración no superada",
+  "admin.backups.none": "No se encontró ninguna copia",
+  "admin.backups.unavailable": "Comprobación no disponible",
+  "admin.backups.missedRun": "Sin copia de la ejecución de las {time} UTC"
 }

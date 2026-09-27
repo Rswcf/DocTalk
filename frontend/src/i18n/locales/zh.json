@@ -4014,5 +4014,19 @@
   "doc.fileMissing.convertedTitle": "此文件的页面视图已无法获取",
   "doc.fileMissing.convertedBody": "此文件的页面视图在 2026 年 6 月的一次存储故障中丢失，无法恢复。现改为显示提取的文本，对话、引用和引用查找器照常可用。将文件作为新文档重新上传即可恢复页面视图。",
   "errors.FILE_MISSING.title": "原始文件已不在存储中",
-  "errors.FILE_MISSING.body": "此文档的文件已不再存储，因此无法重新处理或翻译。对话和引用仍可正常使用；重新上传文件即可获得新的副本。"
+  "errors.FILE_MISSING.body": "此文档的文件已不再存储，因此无法重新处理或翻译。对话和引用仍可正常使用；重新上传文件即可获得新的副本。",
+  "admin.backups.title": "Postgres 备份",
+  "admin.backups.status.ok": "正常",
+  "admin.backups.status.stale": "已过期",
+  "admin.backups.status.small": "体积过小",
+  "admin.backups.status.unverified": "未验证",
+  "admin.backups.status.missing": "缺失",
+  "admin.backups.status.unreachable": "存储不可达",
+  "admin.backups.status.disabled": "监控未开启",
+  "admin.backups.age": "{hours} 小时前",
+  "admin.backups.restoreOk": "恢复测试通过",
+  "admin.backups.restoreNotOk": "恢复测试未通过",
+  "admin.backups.none": "未找到备份",
+  "admin.backups.unavailable": "检查不可用",
+  "admin.backups.missedRun": "{time} UTC 那次计划运行没有产生备份"
 }

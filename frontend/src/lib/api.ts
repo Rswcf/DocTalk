@@ -807,6 +807,29 @@ export interface AdminBillingHealth {
   prices: AdminBillingPriceStatus[];
 }
 
+export type AdminBackupState = 'ok' | 'stale' | 'small' | 'unverified' | 'missing' | 'unreachable' | 'disabled';
+
+export interface AdminBackupStatus {
+  status: AdminBackupState;
+  due_run_at: string;
+  latest_key: string | null;
+  created_at: string | null;
+  age_hours: number | null;
+  bytes: number | null;
+  restore_test: string | null;
+  alembic_version: string | null;
+  encrypted: boolean | null;
+}
+
+export interface AdminOpsHealth {
+  postgres_backup: AdminBackupStatus;
+}
+
+export async function getAdminOpsHealth(): Promise<AdminOpsHealth> {
+  const res = await fetch(`${PROXY_BASE}/api/admin/ops-health`);
+  return handle(res);
+}
+
 export async function getAdminBillingHealth(remote = false): Promise<AdminBillingHealth> {
   const res = await fetch(`${PROXY_BASE}/api/admin/billing-health?remote=${remote ? 'true' : 'false'}`);
   return handle(res);

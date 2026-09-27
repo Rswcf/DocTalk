@@ -3975,5 +3975,19 @@
   "doc.fileMissing.convertedTitle": "इस फ़ाइल का पेज व्यू अब उपलब्ध नहीं है",
   "doc.fileMissing.convertedBody": "इस फ़ाइल का पेज व्यू जून 2026 में भंडारण की एक खराबी में खो गया था और इसे पुनर्प्राप्त नहीं किया जा सकता। इसकी जगह निकाला गया टेक्स्ट दिखाया जा रहा है, और चैट, उद्धरण और उद्धरण खोजक पहले की तरह काम करते हैं। पेज व्यू वापस पाने के लिए फ़ाइल को नए दस्तावेज़ के रूप में फिर से अपलोड करें।",
   "errors.FILE_MISSING.title": "मूल फ़ाइल भंडारण में नहीं है",
-  "errors.FILE_MISSING.body": "इस दस्तावेज़ की फ़ाइल अब संग्रहीत नहीं है, इसलिए इसे दोबारा प्रोसेस या अनुवाद नहीं किया जा सकता। चैट और उद्धरण अब भी काम करते हैं; नई प्रति के लिए फ़ाइल फिर से अपलोड करें।"
+  "errors.FILE_MISSING.body": "इस दस्तावेज़ की फ़ाइल अब संग्रहीत नहीं है, इसलिए इसे दोबारा प्रोसेस या अनुवाद नहीं किया जा सकता। चैट और उद्धरण अब भी काम करते हैं; नई प्रति के लिए फ़ाइल फिर से अपलोड करें।",
+  "admin.backups.title": "Postgres बैकअप",
+  "admin.backups.status.ok": "ठीक",
+  "admin.backups.status.stale": "पुराना",
+  "admin.backups.status.small": "बहुत छोटा",
+  "admin.backups.status.unverified": "असत्यापित",
+  "admin.backups.status.missing": "अनुपस्थित",
+  "admin.backups.status.unreachable": "भंडारण तक पहुँच नहीं",
+  "admin.backups.status.disabled": "निगरानी बंद",
+  "admin.backups.age": "{hours} घंटे पहले",
+  "admin.backups.restoreOk": "पुनर्स्थापना परीक्षण सफल",
+  "admin.backups.restoreNotOk": "पुनर्स्थापना परीक्षण असफल",
+  "admin.backups.none": "कोई बैकअप नहीं मिला",
+  "admin.backups.unavailable": "जाँच उपलब्ध नहीं",
+  "admin.backups.missedRun": "{time} UTC वाले रन का कोई बैकअप नहीं"
 }

@@ -3975,5 +3975,19 @@
   "doc.fileMissing.convertedTitle": "A visualização de páginas deste arquivo não está mais disponível",
   "doc.fileMissing.convertedBody": "A visualização de páginas deste arquivo foi perdida em uma falha de armazenamento em junho de 2026 e não pode ser recuperada. O texto extraído é exibido no lugar, e o chat, as citações e o Localizador de citações funcionam como antes. Envie o arquivo novamente como um novo documento para recuperar a visualização de páginas.",
   "errors.FILE_MISSING.title": "Arquivo original não está no armazenamento",
-  "errors.FILE_MISSING.body": "O arquivo deste documento não está mais armazenado, por isso não pode ser reprocessado nem traduzido. O chat e as citações continuam funcionando; envie o arquivo novamente para obter uma nova cópia."
+  "errors.FILE_MISSING.body": "O arquivo deste documento não está mais armazenado, por isso não pode ser reprocessado nem traduzido. O chat e as citações continuam funcionando; envie o arquivo novamente para obter uma nova cópia.",
+  "admin.backups.title": "Backups do Postgres",
+  "admin.backups.status.ok": "Saudável",
+  "admin.backups.status.stale": "Desatualizado",
+  "admin.backups.status.small": "Pequeno demais",
+  "admin.backups.status.unverified": "Não verificado",
+  "admin.backups.status.missing": "Ausente",
+  "admin.backups.status.unreachable": "Armazenamento inacessível",
+  "admin.backups.status.disabled": "Monitor desligado",
+  "admin.backups.age": "há {hours} h",
+  "admin.backups.restoreOk": "teste de restauração aprovado",
+  "admin.backups.restoreNotOk": "teste de restauração não aprovado",
+  "admin.backups.none": "Nenhum backup encontrado",
+  "admin.backups.unavailable": "Verificação indisponível",
+  "admin.backups.missedRun": "Sem backup da execução das {time} UTC"
 }

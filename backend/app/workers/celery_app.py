@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sentry_sdk
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core.config import settings
 
@@ -29,6 +30,7 @@ celery_app = Celery(
         "app.workers.deletion_worker",
         "app.workers.cleanup_tasks",
         "app.workers.annual_credit_worker",
+        "app.workers.ops_monitor",
     ],
 )
 
@@ -77,5 +79,11 @@ celery_app.conf.beat_schedule = {
     "requeue-stale-running-extractions": {
         "task": "requeue_stale_running_extractions",
         "schedule": 2700,
+    },
+    # The pg-backup cron runs at 09:15 UTC; by 12:00 UTC its 2 h grace period
+    # has passed, so a run that left no artifact is flagged the same day.
+    "check-postgres-backup-daily": {
+        "task": "check_postgres_backup_freshness",
+        "schedule": crontab(hour=12, minute=0),
     },
 }

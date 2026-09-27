@@ -3975,5 +3975,19 @@
   "doc.fileMissing.convertedTitle": "عرض الصفحات لهذا الملف لم يعد متاحًا",
   "doc.fileMissing.convertedBody": "فُقد عرض الصفحات لهذا الملف في عطل بالتخزين في يونيو 2026 ولا يمكن استرداده. يُعرض النص المستخرج بدلًا منه، وتعمل المحادثة والاقتباسات والباحث عن الاقتباسات كما كانت. ارفع الملف مجددًا كمستند جديد لاستعادة عرض الصفحات.",
   "errors.FILE_MISSING.title": "الملف الأصلي غير موجود في التخزين",
-  "errors.FILE_MISSING.body": "لم يعد ملف هذا المستند مخزنًا، لذا لا يمكن إعادة معالجته أو ترجمته. لا تزال المحادثة والاقتباسات تعمل؛ ارفع الملف مجددًا للحصول على نسخة جديدة."
+  "errors.FILE_MISSING.body": "لم يعد ملف هذا المستند مخزنًا، لذا لا يمكن إعادة معالجته أو ترجمته. لا تزال المحادثة والاقتباسات تعمل؛ ارفع الملف مجددًا للحصول على نسخة جديدة.",
+  "admin.backups.title": "نسخ Postgres الاحتياطية",
+  "admin.backups.status.ok": "سليمة",
+  "admin.backups.status.stale": "قديمة",
+  "admin.backups.status.small": "صغيرة جدًا",
+  "admin.backups.status.unverified": "غير متحقق منها",
+  "admin.backups.status.missing": "مفقودة",
+  "admin.backups.status.unreachable": "التخزين غير متاح",
+  "admin.backups.status.disabled": "المراقبة متوقفة",
+  "admin.backups.age": "قبل {hours} ساعة",
+  "admin.backups.restoreOk": "نجح اختبار الاستعادة",
+  "admin.backups.restoreNotOk": "لم ينجح اختبار الاستعادة",
+  "admin.backups.none": "لم يُعثر على نسخة احتياطية",
+  "admin.backups.unavailable": "الفحص غير متاح",
+  "admin.backups.missedRun": "لا توجد نسخة احتياطية لتشغيل {time} UTC"
 }

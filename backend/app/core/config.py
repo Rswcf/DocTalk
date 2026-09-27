@@ -126,6 +126,18 @@ class Settings(BaseSettings):
     }
     PREMIUM_MODES: list[str] = Field(default=[])
 
+    # Postgres backup watcher (infra/pg-backup writes the artifacts; this only
+    # reads the ops bucket). Off by default: dev and CI have no ops bucket.
+    OPS_BUCKET: str = Field(default="doctalk-ops")
+    PG_BACKUP_PREFIX: str = Field(default="postgres/")
+    # Must match the pg-backup service's cron (set on the Railway service
+    # instance). A backup is "stale" when the latest scheduled run whose grace
+    # period has passed left no artifact at or after its scheduled time.
+    PG_BACKUP_SCHEDULE_UTC: str = Field(default="09:15")
+    PG_BACKUP_GRACE_HOURS: float = Field(default=2.0)
+    PG_BACKUP_MIN_BYTES: int = Field(default=5_000_000)
+    PG_BACKUP_MONITOR_ENABLED: bool = Field(default=False)
+
     # Sentry
     SENTRY_DSN: Optional[str] = None
     SENTRY_ENVIRONMENT: str = Field(default="production")

@@ -8,6 +8,28 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-27
+
+Production Postgres is now backed up every night, and the backend checks
+the backups independently.
+
+### Added
+- A nightly off-site backup of the production database (the `pg-backup`
+  Railway cron service, 09:15 UTC). Each run dumps the database, restores
+  the dump in a throwaway database to check it, encrypts it and stores it in
+  Cloudflare R2 with 35-day daily and 400-day monthly retention; stored
+  backups cannot be deleted or overwritten for 14 (daily) and 60 (monthly)
+  days.
+- A daily check in the backend (12:00 UTC) that the newest backup exists, is
+  covers the latest scheduled run (09:15 UTC, with a 2-hour grace period, so
+  one missed night is flagged the same day), has a plausible size, passed
+  its restore test and is encrypted as its file type says.
+  Any problem is logged, sent to Sentry when it is configured and recorded
+  as an `ops.backup_stale` event.
+- The admin Overview shows the backup status (in all 11 languages), from the
+  new admin-only `GET /api/admin/ops-health`; if the check itself fails, the
+  card says so and offers a retry instead of disappearing.
+
 ## [0.34.0] - 2026-09-27
 
 Documents whose original file was lost stay usable, and nothing can erase
