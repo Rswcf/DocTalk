@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import stripe
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import String, case, cast, func, or_, select, text, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1997,9 +1997,11 @@ async def admin_billing_health(
 
 @router.get("/ops-health")
 async def admin_ops_health(
+    response: Response,
     _admin: User = Depends(require_admin),
 ):
     """Operational health: currently the nightly Postgres backup (read-only)."""
+    response.headers["Cache-Control"] = "private, no-store"
     return {"postgres_backup": await asyncio.to_thread(get_postgres_backup_status)}
 
 

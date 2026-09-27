@@ -3987,5 +3987,6 @@
   "admin.backups.age": "{hours} घंटे पहले",
   "admin.backups.restoreOk": "पुनर्स्थापना परीक्षण सफल",
   "admin.backups.restoreNotOk": "पुनर्स्थापना परीक्षण असफल",
-  "admin.backups.none": "कोई बैकअप नहीं मिला"
+  "admin.backups.none": "कोई बैकअप नहीं मिला",
+  "admin.backups.unavailable": "जाँच उपलब्ध नहीं"
 }

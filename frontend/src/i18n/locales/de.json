@@ -3987,5 +3987,6 @@
   "admin.backups.age": "vor {hours} h",
   "admin.backups.restoreOk": "Wiederherstellungstest bestanden",
   "admin.backups.restoreNotOk": "Wiederherstellungstest nicht bestanden",
-  "admin.backups.none": "Kein Backup gefunden"
+  "admin.backups.none": "Kein Backup gefunden",
+  "admin.backups.unavailable": "Prüfung nicht verfügbar"
 }

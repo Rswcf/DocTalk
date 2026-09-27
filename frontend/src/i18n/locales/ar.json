@@ -3987,5 +3987,6 @@
   "admin.backups.age": "قبل {hours} ساعة",
   "admin.backups.restoreOk": "نجح اختبار الاستعادة",
   "admin.backups.restoreNotOk": "لم ينجح اختبار الاستعادة",
-  "admin.backups.none": "لم يُعثر على نسخة احتياطية"
+  "admin.backups.none": "لم يُعثر على نسخة احتياطية",
+  "admin.backups.unavailable": "الفحص غير متاح"
 }

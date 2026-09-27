@@ -14,11 +14,13 @@ BIG = 51_520_906
 
 
 class FakeResponse:
-    def __init__(self, data: bytes) -> None:
+    def __init__(self, data) -> None:
         self._data = data
         self.closed = False
 
     def read(self, amt=None):
+        if isinstance(self._data, Exception):
+            raise self._data
         return self._data if amt is None else self._data[:amt]
 
     def close(self):
@@ -52,11 +54,18 @@ def _obj(name: str, hours_ago: float, size: int = BIG):
     return SimpleNamespace(object_name=name, last_modified=NOW - timedelta(hours=hours_ago), size=size)
 
 
-def _manifest(key: str, *, size: int = BIG, restore_test: str = "ok") -> bytes:
-    return json.dumps({
+_UNSET = object()
+
+
+def _manifest(key: str, *, size: int = BIG, restore_test: str = "ok", encrypted=_UNSET) -> bytes:
+    body = {
         "artifact": key, "artifact_bytes": size, "restore_test": restore_test,
-        "alembic_version": "20260913_0046", "encrypted": True,
-    }).encode()
+        "alembic_version": "20260913_0046",
+        "encrypted": key.endswith(".dump.age") if encrypted is _UNSET else encrypted,
+    }
+    if encrypted is None:
+        del body["encrypted"]
+    return json.dumps(body).encode()
 
 
 @pytest.fixture(autouse=True)
@@ -64,7 +73,7 @@ def _enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(svc.settings, "PG_BACKUP_MONITOR_ENABLED", True)
     monkeypatch.setattr(svc.settings, "OPS_BUCKET", "doctalk-ops")
     monkeypatch.setattr(svc.settings, "PG_BACKUP_PREFIX", "postgres/")
-    monkeypatch.setattr(svc.settings, "PG_BACKUP_MAX_AGE_HOURS", 30)
+    monkeypatch.setattr(svc.settings, "PG_BACKUP_MAX_AGE_HOURS", 26)
     monkeypatch.setattr(svc.settings, "PG_BACKUP_MIN_BYTES", 5_000_000)
 
 
@@ -96,6 +105,40 @@ def test_newest_verified_backup_is_ok_and_older_ones_and_probes_are_ignored() ->
     assert (status["restore_test"], status["alembic_version"], status["encrypted"]) == ("ok", "20260913_0046", True)
     # The manifest read is bounded.
     assert bucket.gets == [("doctalk-ops", "postgres/doctalk-20260928T091500Z.manifest.json", 0, svc.MANIFEST_MAX_BYTES)]
+
+
+def test_one_missed_nightly_run_is_stale_at_the_noon_check() -> None:
+    # Last good run yesterday 09:15 UTC; today's 09:15 run wrote nothing.
+    key = "postgres/doctalk-20260927T091500Z.dump.age"
+    bucket = FakeOpsBucket(
+        objects=[_obj(key, 26.75)], manifests={key.replace(".dump.age", ".manifest.json"): _manifest(key)}
+    )
+
+    assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "stale"
+
+
+def test_manifest_body_read_failure_is_unverified_and_stale_still_wins() -> None:
+    key = "postgres/doctalk-20260928T091500Z.dump.age"
+    manifests = {key.replace(".dump.age", ".manifest.json"): TimeoutError("read timed out")}
+    fresh = FakeOpsBucket(objects=[_obj(key, 3)], manifests=manifests)
+    old = FakeOpsBucket(objects=[_obj(key, 40)], manifests=manifests)
+
+    assert svc.get_postgres_backup_status(fresh, NOW)["status"] == "unverified"
+    assert svc.get_postgres_backup_status(old, NOW)["status"] == "stale"
+
+
+def test_scan_over_budget_or_deadline_is_unreachable_not_a_partial_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    key = "postgres/doctalk-20260928T091500Z.dump.age"
+    objects = [_obj(key, 3)] + [_obj(f"postgres/x-{i}.manifest.json", 3, size=10) for i in range(10)]
+    bucket = FakeOpsBucket(objects=objects, manifests={key.replace(".dump.age", ".manifest.json"): _manifest(key)})
+
+    monkeypatch.setattr(svc, "LIST_MAX_ENTRIES", 5)
+    assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "unreachable"
+
+    monkeypatch.setattr(svc, "LIST_MAX_ENTRIES", 5000)
+    clock = iter([0.0] + [1_000.0] * 50)
+    monkeypatch.setattr(svc.time, "monotonic", lambda: next(clock))
+    assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "unreachable"
 
 
 def test_backup_older_than_the_limit_is_stale() -> None:
@@ -134,7 +177,24 @@ def test_artifact_without_a_matching_passing_manifest_is_unverified(manifest) ->
     assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "unverified"
 
 
-def test_plaintext_dump_is_recognised() -> None:
+@pytest.mark.parametrize(
+    ("key", "encrypted"),
+    [
+        ("postgres/doctalk-20260928T091500Z.dump", True),
+        ("postgres/doctalk-20260928T091500Z.dump.age", False),
+        ("postgres/doctalk-20260928T091500Z.dump.age", None),
+        ("postgres/doctalk-20260928T091500Z.dump.age", "true"),
+    ],
+    ids=["plaintext-claims-encrypted", "age-claims-plaintext", "flag-missing", "flag-not-boolean"],
+)
+def test_encryption_flag_must_match_the_file_type(key: str, encrypted) -> None:
+    manifest_key = "postgres/doctalk-20260928T091500Z.manifest.json"
+    bucket = FakeOpsBucket(objects=[_obj(key, 3)], manifests={manifest_key: _manifest(key, encrypted=encrypted)})
+
+    assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "unverified"
+
+
+def test_plaintext_dump_with_a_consistent_manifest_is_ok() -> None:
     key = "postgres/doctalk-20260928T091500Z.dump"
     bucket = FakeOpsBucket(objects=[_obj(key, 3)], manifests={"postgres/doctalk-20260928T091500Z.manifest.json": _manifest(key)})
 
@@ -159,6 +219,9 @@ class _RecordingSession:
     def __exit__(self, *exc):
         return False
 
+    def execute(self, stmt, params=None) -> None:
+        self.sink.append(("execute", str(stmt)))
+
     def add(self, obj) -> None:
         self.sink.append(obj)
 
@@ -182,11 +245,23 @@ def test_beat_task_records_an_event_only_for_problems(monkeypatch: pytest.Monkey
     if state in ("ok", "disabled"):
         assert written == [] and captured == []
     else:
-        event = written[0]
+        # The best-effort write is bounded before anything is inserted.
+        assert written[:2] == [
+            ("execute", "SET LOCAL lock_timeout = '5s'"),
+            ("execute", "SET LOCAL statement_timeout = '15s'"),
+        ]
+        event = written[2]
         assert (event.event_name, event.source, event.reason) == ("ops.backup_stale", "beat", state)
         assert event.metadata_json == status
-        assert written[1] == "commit"
+        assert written[3] == "commit"
         assert captured == [f"Postgres backup check: {state}"]
+
+
+def test_beat_task_has_time_limits() -> None:
+    from app.workers import ops_monitor
+
+    task = ops_monitor.check_postgres_backup_freshness
+    assert (task.soft_time_limit, task.time_limit) == (120, 180)
 
 
 def test_admin_ops_health_is_an_admin_only_get() -> None:
@@ -204,6 +279,10 @@ async def test_admin_ops_health_returns_the_backup_status(monkeypatch: pytest.Mo
 
     monkeypatch.setattr(admin_api, "get_postgres_backup_status", lambda: {"status": "ok", "latest_key": "k"})
 
-    assert await admin_api.admin_ops_health(_admin=SimpleNamespace()) == {
+    from fastapi import Response
+
+    response = Response()
+    assert await admin_api.admin_ops_health(response=response, _admin=SimpleNamespace()) == {
         "postgres_backup": {"status": "ok", "latest_key": "k"}
     }
+    assert response.headers["cache-control"] == "private, no-store"

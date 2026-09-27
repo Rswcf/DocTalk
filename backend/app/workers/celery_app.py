@@ -80,8 +80,9 @@ celery_app.conf.beat_schedule = {
         "task": "requeue_stale_running_extractions",
         "schedule": 2700,
     },
-    # The pg-backup cron runs at 09:15 UTC; checking at 12:00 UTC gives a
-    # failed or skipped run time to show up as stale (> 30 h) or unverified.
+    # The pg-backup cron runs at 09:15 UTC; at 12:00 UTC a skipped run makes
+    # the newest artifact 26.75 h old, over the 26 h limit, so one missed
+    # night is flagged the same day.
     "check-postgres-backup-daily": {
         "task": "check_postgres_backup_freshness",
         "schedule": crontab(hour=12, minute=0),

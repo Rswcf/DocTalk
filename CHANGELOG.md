@@ -21,11 +21,14 @@ the backups independently.
   backups cannot be deleted or overwritten for 14 (daily) and 60 (monthly)
   days.
 - A daily check in the backend (12:00 UTC) that the newest backup exists, is
-  less than 30 hours old, has a plausible size and passed its restore test.
+  less than 26 hours old (so one missed night is flagged the same day), has a
+  plausible size, passed its restore test and is encrypted as its file type
+  says.
   Any problem is logged, sent to Sentry when it is configured and recorded
   as an `ops.backup_stale` event.
 - The admin Overview shows the backup status (in all 11 languages), from the
-  new admin-only `GET /api/admin/ops-health`.
+  new admin-only `GET /api/admin/ops-health`; if the check itself fails, the
+  card says so and offers a retry instead of disappearing.
 
 ## [0.34.0] - 2026-09-27
 

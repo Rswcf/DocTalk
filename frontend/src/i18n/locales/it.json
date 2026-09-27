@@ -3987,5 +3987,6 @@
   "admin.backups.age": "{hours} h fa",
   "admin.backups.restoreOk": "test di ripristino superato",
   "admin.backups.restoreNotOk": "test di ripristino non superato",
-  "admin.backups.none": "Nessun backup trovato"
+  "admin.backups.none": "Nessun backup trovato",
+  "admin.backups.unavailable": "Verifica non disponibile"
 }

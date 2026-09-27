@@ -24,11 +24,15 @@ export default function OverviewTab({
   activity,
   trends,
   opsHealth,
+  opsHealthFailed = false,
+  onRetryOpsHealth,
 }: {
   overview: Overview | null;
   activity: AdminUserActivity | null;
   trends: Trends | null;
   opsHealth?: AdminOpsHealth | null;
+  opsHealthFailed?: boolean;
+  onRetryOpsHealth?: () => void;
 }) {
   const { tOr } = useLocale();
   if (!overview || !activity) return null;
@@ -89,7 +93,11 @@ export default function OverviewTab({
           sparkline={activity.series.map(() => 0)}
         />
       </div>
-      {opsHealth ? <BackupStatusPanel backup={opsHealth.postgres_backup} /> : null}
+      {opsHealth ? (
+        <BackupStatusPanel backup={opsHealth.postgres_backup} />
+      ) : opsHealthFailed ? (
+        <BackupStatusPanel backup={null} onRetry={onRetryOpsHealth} />
+      ) : null}
       <section className="dt-admin-panel rounded-lg border p-4">
         <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
           {tOr("admin.overview.accountBase", "Account Base")}
@@ -115,8 +123,32 @@ const BACKUP_STATE_TONE: Record<AdminBackupStatus["status"], "ok" | "warn" | "mu
   unreachable: "warn",
 };
 
-function BackupStatusPanel({ backup }: { backup: AdminBackupStatus }) {
+function BackupStatusPanel({ backup, onRetry }: { backup: AdminBackupStatus | null; onRetry?: () => void }) {
   const { tOr } = useLocale();
+  if (!backup) {
+    return (
+      <section className="dt-admin-panel rounded-lg border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+            <DatabaseBackup size={16} aria-hidden="true" />
+            {tOr("admin.backups.title", "Postgres backups")}
+          </h2>
+          <span className="inline-flex items-center rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">
+            {tOr("admin.backups.unavailable", "Check unavailable")}
+          </span>
+        </div>
+        {onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 text-sm font-medium text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+          >
+            {tOr("common.retry", "Retry")}
+          </button>
+        ) : null}
+      </section>
+    );
+  }
   const tone = BACKUP_STATE_TONE[backup.status] ?? "warn";
   const label = {
     ok: tOr("admin.backups.status.ok", "Healthy"),

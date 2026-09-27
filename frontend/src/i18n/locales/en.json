@@ -3989,5 +3989,6 @@
   "admin.backups.age": "{hours} h ago",
   "admin.backups.restoreOk": "restore test passed",
   "admin.backups.restoreNotOk": "restore test not passed",
-  "admin.backups.none": "No backup found"
+  "admin.backups.none": "No backup found",
+  "admin.backups.unavailable": "Check unavailable"
 }

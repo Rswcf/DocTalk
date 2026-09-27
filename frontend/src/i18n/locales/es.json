@@ -3987,5 +3987,6 @@
   "admin.backups.age": "hace {hours} h",
   "admin.backups.restoreOk": "prueba de restauración superada",
   "admin.backups.restoreNotOk": "prueba de restauración no superada",
-  "admin.backups.none": "No se encontró ninguna copia"
+  "admin.backups.none": "No se encontró ninguna copia",
+  "admin.backups.unavailable": "Comprobación no disponible"
 }

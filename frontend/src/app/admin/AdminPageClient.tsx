@@ -79,6 +79,18 @@ export default function AdminPageClient() {
   const [breakdowns, setBreakdowns] = useState<Breakdowns | null>(null);
   const [billingHealth, setBillingHealth] = useState<AdminBillingHealth | null>(null);
   const [opsHealth, setOpsHealth] = useState<AdminOpsHealth | null>(null);
+  const [opsHealthFailed, setOpsHealthFailed] = useState(false);
+  // Best effort: an ops-health failure must not blank the Overview tab, but
+  // it is shown as "check unavailable" with a retry, never hidden.
+  const loadOpsHealth = useCallback(async () => {
+    try {
+      setOpsHealth(await getAdminOpsHealth());
+      setOpsHealthFailed(false);
+    } catch {
+      setOpsHealth(null);
+      setOpsHealthFailed(true);
+    }
+  }, []);
   const [funnel, setFunnel] = useState<AdminFunnel | null>(null);
   const [ragQuality, setRagQuality] = useState<AdminRagQuality | null>(null);
   const [userActivity, setUserActivity] = useState<AdminUserActivity | null>(null);
@@ -113,14 +125,7 @@ export default function AdminPageClient() {
     trends: async () => setTrends((await getAdminTrends("day", trendDays)) as Trends),
     funnel: async () => setFunnel(await getAdminFunnel(trendDays)),
     billing: async () => setBillingHealth(await getAdminBillingHealth(false)),
-    // Best effort: an ops-health failure must not blank the Overview tab.
-    opsHealth: async () => {
-      try {
-        setOpsHealth(await getAdminOpsHealth());
-      } catch {
-        setOpsHealth(null);
-      }
-    },
+    opsHealth: loadOpsHealth,
     rag: async () => setRagQuality(await getAdminRagQuality(trendDays)),
     breakdowns: async () => setBreakdowns((await getAdminBreakdowns()) as Breakdowns),
     recentUsers: async () =>
@@ -239,7 +244,14 @@ export default function AdminPageClient() {
 
         <div role="tabpanel">
           {activeTab === "overview" && (
-            <OverviewTab overview={overview} activity={userActivity} trends={trends} opsHealth={opsHealth} />
+            <OverviewTab
+              overview={overview}
+              activity={userActivity}
+              trends={trends}
+              opsHealth={opsHealth}
+              opsHealthFailed={opsHealthFailed}
+              onRetryOpsHealth={loadOpsHealth}
+            />
           )}
           {activeTab === "activation" && <ActivationTab activity={userActivity} funnel={funnel} />}
           {activeTab === "retention" && <RetentionTab retention={retention} />}

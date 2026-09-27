@@ -130,7 +130,9 @@ class Settings(BaseSettings):
     # reads the ops bucket). Off by default: dev and CI have no ops bucket.
     OPS_BUCKET: str = Field(default="doctalk-ops")
     PG_BACKUP_PREFIX: str = Field(default="postgres/")
-    PG_BACKUP_MAX_AGE_HOURS: int = Field(default=30)
+    # The job runs at 09:15 UTC and the check at 12:00 UTC: 26 h flags a
+    # single missed run on the same day (the last good artifact is 26.75 h old).
+    PG_BACKUP_MAX_AGE_HOURS: int = Field(default=26)
     PG_BACKUP_MIN_BYTES: int = Field(default=5_000_000)
     PG_BACKUP_MONITOR_ENABLED: bool = Field(default=False)
 

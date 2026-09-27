@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 
 import sentry_sdk
+from sqlalchemy import text
 
 from app.models.sync_database import SyncSessionLocal
 from app.models.tables import ProductEvent
@@ -13,7 +14,8 @@ from app.workers.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="check_postgres_backup_freshness")
+# Bounded: a slow bucket or a stuck database must not hold a worker process.
+@celery_app.task(name="check_postgres_backup_freshness", soft_time_limit=120, time_limit=180)
 def check_postgres_backup_freshness() -> str:
     """Flag a missing, stale, small or unverified Postgres backup.
 
@@ -31,6 +33,8 @@ def check_postgres_backup_freshness() -> str:
     sentry_sdk.capture_message(f"Postgres backup check: {state}", level="error")
     try:
         with SyncSessionLocal() as db:
+            db.execute(text("SET LOCAL lock_timeout = '5s'"))
+            db.execute(text("SET LOCAL statement_timeout = '15s'"))
             db.add(ProductEvent(event_name="ops.backup_stale", source="beat", reason=state, metadata_json=status))
             db.commit()
     except Exception:

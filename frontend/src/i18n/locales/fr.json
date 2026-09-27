@@ -3987,5 +3987,6 @@
   "admin.backups.age": "il y a {hours} h",
   "admin.backups.restoreOk": "test de restauration réussi",
   "admin.backups.restoreNotOk": "test de restauration non réussi",
-  "admin.backups.none": "Aucune sauvegarde trouvée"
+  "admin.backups.none": "Aucune sauvegarde trouvée",
+  "admin.backups.unavailable": "Vérification indisponible"
 }
