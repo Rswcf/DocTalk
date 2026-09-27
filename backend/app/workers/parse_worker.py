@@ -69,7 +69,11 @@ def _object_confirmed_missing(storage_key: str) -> bool:
     bucket; any doubt (an outage, a probe error) counts as not missing."""
     try:
         return not storage_service.object_exists(storage_key)
-    except Exception:
+    except SoftTimeLimitExceeded:
+        raise
+    except Exception as exc:
+        if _chain_has_soft_limit(exc):
+            raise SoftTimeLimitExceeded() from exc
         return False
 
 
@@ -353,6 +357,8 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
             except SoftTimeLimitExceeded:
                 raise
             except Exception as e:
+                if _chain_has_soft_limit(e):
+                    raise SoftTimeLimitExceeded() from e
                 if not _object_confirmed_missing(doc.storage_key):
                     # Transient (or unclassifiable): the outer handler keeps the
                     # doc 'parsing' for autoretry and writes PARSE_FAILED only on
@@ -376,6 +382,14 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                 db.add(doc)
                 db.commit()
                 return
+
+            # From here on the previous index is being destroyed: clear the
+            # completion marker durably FIRST, so a run that dies between the
+            # vector delete and the row cleanup can never later be mistaken
+            # for a complete parse by the download handler above.
+            doc.chunks_indexed = 0
+            db.add(doc)
+            db.commit()
 
             # Delete stale Qdrant vectors BEFORE deleting any DB rows (R2b ordering fix).
             # Doing Qdrant first means a Qdrant outage leaves the document's existing

@@ -320,6 +320,43 @@ export default function DocumentReaderPageClient() {
     </div>
   );
 
+  // A translated PDF is its own artifact: it can be previewed even when the
+  // original file is gone.
+  const showTranslatedPdf = Boolean(translatedPreview) && pdfPreviewMode === 'translated';
+  const viewerPdfUrl = showTranslatedPdf && translatedPreview ? translatedPreview.url : pdfUrl;
+  const translatedPreviewBar = translatedPreview ? (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 py-2">
+      <div className="inline-flex rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] p-0.5 text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => setPdfPreviewMode('original')}
+          className={`min-h-8 rounded-md px-3 transition-colors ${pdfPreviewMode === 'original' ? 'bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm' : 'text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'}`}
+        >
+          {tOr('layoutTranslation.originalPdf', 'Original')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setPdfPreviewMode('translated')}
+          className={`min-h-8 rounded-md px-3 transition-colors ${pdfPreviewMode === 'translated' ? 'bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm' : 'text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'}`}
+        >
+          {tOr('layoutTranslation.translatedPdf', 'Translated')}
+        </button>
+      </div>
+      <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--reader-muted)]">
+        <span className="truncate">{translatedPreview.targetLanguageLabel}</span>
+        {translatedPreview.downloadUrl ? (
+          <a
+            href={translatedPreview.downloadUrl}
+            className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[var(--reader-border)] px-2 font-medium text-[var(--reader-ink)] transition-colors hover:bg-[var(--reader-panel-muted)]"
+          >
+            <Download size={13} aria-hidden="true" />
+            {tOr('layoutTranslation.downloadPdf', 'Translated PDF')}
+          </a>
+        ) : null}
+      </div>
+    </div>
+  ) : null;
+
   const viewerContent = (
     <div className="h-full flex flex-col dt-reader-pane-document">
       {readerToolbar}
@@ -350,56 +387,27 @@ export default function DocumentReaderPageClient() {
         </div>
       ) : null}
       <div className="flex-1 min-h-0">
-        {missingFile ? (
+        {missingFile && !showTranslatedPdf ? (
           // The stored file is gone (410 FILE_MISSING). Show what was
           // extracted at upload time; citations and Quote Finder jumps still
-          // land in it, because TextViewer takes the same page + snippet.
+          // land in it, because TextViewer takes the same page + snippet. A
+          // translated PDF has its own artifact, so it can still be previewed.
           <div className="h-full min-h-0 flex flex-col">
+            {translatedPreviewBar}
             <MissingFileNotice variant={missingFile} />
             <div className="flex-1 min-h-0">
               <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
             </div>
           </div>
         ) : fileType === 'pdf' ? (
-          pdfUrl ? (
+          viewerPdfUrl ? (
             <div className="h-full min-h-0 flex flex-col">
-              {translatedPreview ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--reader-border)] bg-[var(--reader-panel-solid)] px-3 py-2">
-                  <div className="inline-flex rounded-lg border border-[var(--reader-border)] bg-[var(--reader-panel-muted)] p-0.5 text-xs font-medium">
-                    <button
-                      type="button"
-                      onClick={() => setPdfPreviewMode('original')}
-                      className={`min-h-8 rounded-md px-3 transition-colors ${pdfPreviewMode === 'original' ? 'bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm' : 'text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'}`}
-                    >
-                      {tOr('layoutTranslation.originalPdf', 'Original')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPdfPreviewMode('translated')}
-                      className={`min-h-8 rounded-md px-3 transition-colors ${pdfPreviewMode === 'translated' ? 'bg-[var(--reader-panel-solid)] text-[var(--reader-ink)] shadow-sm' : 'text-[var(--reader-muted)] hover:text-[var(--reader-ink)]'}`}
-                    >
-                      {tOr('layoutTranslation.translatedPdf', 'Translated')}
-                    </button>
-                  </div>
-                  <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--reader-muted)]">
-                    <span className="truncate">{translatedPreview.targetLanguageLabel}</span>
-                    {translatedPreview.downloadUrl ? (
-                      <a
-                        href={translatedPreview.downloadUrl}
-                        className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[var(--reader-border)] px-2 font-medium text-[var(--reader-ink)] transition-colors hover:bg-[var(--reader-panel-muted)]"
-                      >
-                        <Download size={13} aria-hidden="true" />
-                        {tOr('layoutTranslation.downloadPdf', 'Translated PDF')}
-                      </a>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
+              {translatedPreviewBar}
               <div className="flex-1 min-h-0">
                 <PdfViewer
                   citation={pdfPreviewMode === 'original' ? citationTarget?.citation : undefined}
                   onReturnToAnswer={canReturn ? returnToAnswer : undefined}
-                  pdfUrl={pdfPreviewMode === 'translated' && translatedPreview ? translatedPreview.url : pdfUrl}
+                  pdfUrl={viewerPdfUrl}
                   onRefreshUrl={pdfPreviewMode === 'translated' ? undefined : refreshPdfUrl}
                   currentPage={currentPage}
                   highlights={pdfPreviewMode === 'translated' ? [] : highlights}

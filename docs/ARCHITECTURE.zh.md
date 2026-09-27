@@ -1066,7 +1066,7 @@ Quote Finder 产品契约:引文卡绝不渲染 LLM 生成文本——`verify_qu
 **缺原文件的文档(v0.34.0)**:这次清空留下 102 个有页面、分块和向量但没有存储对象的文档(88 个 ready、14 个 error,其中 7 个连转换后的 PDF 也丢了)。它们仍是完整可用的文档:对话、引用和引用查找器只读 Postgres 和 Qdrant。三条规则保证这一点:
 
 1. **存在性每次检查,从不假定、从不缓存。** `require_stored_file`(`app/api/file_presence.py`)在 `/file-url` 签名前、在重新解析认领前(锁定状态检查之后、锁 `users` 之前)、在版式翻译动任何额度或试用之前,对对象做一次 HEAD。只有在确认存储桶可达的前提下得到 `NoSuchKey` 才算丢失(410 `FILE_MISSING`,带 `variant`,并发送 `Cache-Control: private, no-store`)。必须先确认存储桶,是因为 minio-py 对对象 HEAD 的所有无正文 404(包括存储桶不存在)都会合成 `NoSuchKey`。其他存储错误保持原来的 5xx,绝不把故障报成永久丢失,对象恢复后下一次请求即可正常使用。
-2. **worker 先下载,再删除。** `parse_document` 先取文件,再删 Qdrant 向量和任何页面/分块/元素/摘要行;下载失败时在不动这些数据的前提下分类处理:确认丢失且上次解析完整(所有分块都已索引)→ 恢复为 `ready`;确认丢失但不完整 → `DOWNLOAD_FAILED`;其他情况 → 走通用的自动重试路径(最后一次尝试之前保持 `parsing`,最后一次写 `PARSE_FAILED`)。回填脚本也会跳过无原文件的文档。
+2. **worker 先下载,再删除。** `parse_document` 先取文件,再删 Qdrant 向量和任何页面/分块/元素/摘要行;下载失败时在不动这些数据的前提下分类处理:确认丢失且上次解析完整(所有分块都已索引;worker 在删除向量前先把 `chunks_indexed` 清零并提交,中途中断的清理永远不会被当成完整)→ 恢复为 `ready`;确认丢失但不完整 → `DOWNLOAD_FAILED`;其他情况 → 走通用的自动重试路径(最后一次尝试之前保持 `parsing`,最后一次写 `PARSE_FAILED`)。回填脚本也会跳过无原文件的文档。
 3. **阅读器把丢失当作一种状态,而不是错误。** 收到 `FILE_MISSING` 时(无论来自首次加载还是链接续期,且轮询一次只跑一个),loader 清除已有错误、不设置 `pdfUrl`、停止轮询并设置 `missingFile`;阅读器在 `MissingFileNotice` 下显示 `TextViewer`(它接受与引用相同的页码和片段定位)。转换后 PDF 丢失时,去掉页面视图、保留文本视图。
 
 两个已退役的演示行(`nvidia-10k`、`nda-contract`)也在其中;公开演示列表现在只返回 `DEMO_DOCS` 中的 slug,它们的旧链接 `/demo/<slug>` 会跳到最接近的现有样例。

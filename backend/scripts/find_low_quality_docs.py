@@ -35,7 +35,7 @@ def _dsn() -> str:
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quality", type=float, default=0.70, help="text_quality below this is a candidate")
-    ap.add_argument("--limit", type=int, default=100)
+    ap.add_argument("--limit", type=int, default=100, help="max documents to list as enqueue candidates")
     ap.add_argument("--enqueue", action="store_true", help="re-dispatch parse_document for candidates")
     ap.add_argument("--force", action="store_true", help="include docs already OCR'd at current version")
     ap.add_argument("--locale", default=None, help="optional OCR locale hint (OSD self-detects otherwise)")
@@ -53,15 +53,19 @@ async def main() -> None:
               AND (parse_version IS NULL
                    OR parse_version < $1
                    OR (text_quality IS NOT NULL AND text_quality < $2))
-            ORDER BY text_quality NULLS FIRST, created_at
-            LIMIT $3
+            ORDER BY text_quality NULLS FIRST, created_at, id
             """,
-            PARSE_PIPELINE_VERSION, args.quality, args.limit,
+            PARSE_PIPELINE_VERSION, args.quality,
         )
         print(f"PARSE_PIPELINE_VERSION={PARSE_PIPELINE_VERSION}  candidates={len(rows)}  "
               f"(quality<{args.quality})")
         enqueue: list[str] = []
+        # --limit counts documents that can actually be enqueued, not rows
+        # scanned: skipped rows (file missing, already current) must not fill
+        # the window and hide eligible documents behind them.
         for r in rows:
+            if len(enqueue) >= args.limit:
+                break
             m = dict(r)
             # A doc already processed at the current pipeline version won't improve by
             # re-running the same pipeline — skip ALL such rows (not just OCR'd ones) to avoid

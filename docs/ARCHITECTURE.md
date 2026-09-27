@@ -1485,7 +1485,9 @@ Quote Finder read only Postgres and Qdrant. Three rules keep it that way:
 2. **The worker downloads before it destroys.** `parse_document` fetches the
    file before deleting Qdrant vectors or any page/chunk/element/brief row,
    and classifies a failed download without touching them: confirmed missing
-   with a complete previous parse (every chunk indexed) → back to `ready`;
+   with a complete previous parse (every chunk indexed; `chunks_indexed` is
+   zeroed and committed before the vector delete, so an interrupted cleanup
+   never looks complete) → back to `ready`;
    confirmed missing otherwise → `DOWNLOAD_FAILED`; anything else → the
    generic autoretry path (`parsing` until the final attempt writes
    `PARSE_FAILED`). The backfill script also skips file-less documents.

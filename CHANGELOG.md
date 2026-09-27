@@ -46,6 +46,8 @@ have deleted the surviving data before failing to download the file.
   the file is confirmed gone and the previous parse is complete, the document
   stays ready; transient storage errors now go through the normal automatic
   retries instead of failing the document on the first attempt.
+- A translated PDF can still be previewed from its chat card when the original
+  file is missing.
 - A missing object is only reported as missing after the bucket itself is
   confirmed reachable, so a storage misconfiguration can never be shown to
   users as permanent file loss.

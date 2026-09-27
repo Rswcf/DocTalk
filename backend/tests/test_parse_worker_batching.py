@@ -617,6 +617,55 @@ class TestDownloadBeforeCleanup:
         assert doc.status == "parsing"  # non-terminal while retries remain
         assert doc.error_msg is None
 
+    def test_completion_marker_is_cleared_durably_before_vectors_are_deleted(self, monkeypatch):
+        """A run that dies after the vector delete must leave counters that no
+        longer claim a complete parse (else a later missing-file download
+        would restore 'ready' over deleted vectors)."""
+        doc = _make_doc(uuid.uuid4())
+        doc.chunks_total = 12
+        doc.chunks_indexed = 12
+        events: list[tuple] = []
+
+        class _EventSession(_RecordingSession):
+            def commit(self) -> None:
+                super().commit()
+                events.append(("commit", self._doc.chunks_indexed))
+
+            def execute(self, stmt, params=None):
+                raise RuntimeError("row cleanup interrupted")
+
+        session = _EventSession(doc)
+        _wire_minimal_pdf_parse(monkeypatch, lambda: session)
+
+        class _RecordingQdrant:
+            def delete(self, *_a, **_k):
+                events.append(("qdrant_delete",))
+
+        monkeypatch.setattr(
+            parse_worker.embedding_service, "get_qdrant_client", lambda *_a, **_k: _RecordingQdrant()
+        )
+
+        with pytest.raises(RuntimeError, match="row cleanup interrupted"):
+            parse_worker.parse_document.run(str(doc.id))
+
+        assert events[:2] == [("commit", 0), ("qdrant_delete",)]
+        assert parse_worker._previous_parse_complete(doc) is False
+
+    def test_soft_limit_during_the_missing_file_probe_keeps_timeout_taxonomy(self, monkeypatch):
+        doc = _make_doc(uuid.uuid4())
+        session = _RecordingSession(doc)
+
+        def _probe_times_out(_key):
+            raise SoftTimeLimitExceeded()
+
+        self._wire_failed_download(monkeypatch, session, object_exists=_probe_times_out)
+
+        with pytest.raises(SoftTimeLimitExceeded):
+            parse_worker.parse_document.run(str(doc.id))
+
+        assert session.executed == []
+        assert doc.status == "parsing"  # attempt 1 of 3: the timeout handler writes nothing yet
+
     def test_download_happens_before_the_vector_delete(self, monkeypatch):
         doc = _make_doc(uuid.uuid4())
         session = _RecordingSession(doc)
