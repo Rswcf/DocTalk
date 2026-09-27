@@ -281,3 +281,11 @@ def test_real_sdk_presigns_r2_urls_offline_with_auto_region_scope() -> None:
     assert query["X-Amz-Expires"] == ["300"]
     assert query["X-Amz-SignedHeaders"] == ["host"]
     assert len(query["X-Amz-Signature"][0]) == 64
+
+
+def test_request_client_retries_ignore_retry_after(recording_minio) -> None:
+    # A 503 asking to wait an hour must not hold the calling thread that long.
+    _service()
+    retries = recording_minio.instances[0].http_client.connection_pool_kw["retries"]
+    assert retries.respect_retry_after_header is False
+    assert retries.total == 2

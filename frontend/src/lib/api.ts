@@ -811,7 +811,7 @@ export type AdminBackupState = 'ok' | 'stale' | 'small' | 'unverified' | 'missin
 
 export interface AdminBackupStatus {
   status: AdminBackupState;
-  max_age_hours: number;
+  due_run_at: string;
   latest_key: string | null;
   created_at: string | null;
   age_hours: number | null;

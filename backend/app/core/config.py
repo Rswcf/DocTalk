@@ -130,9 +130,11 @@ class Settings(BaseSettings):
     # reads the ops bucket). Off by default: dev and CI have no ops bucket.
     OPS_BUCKET: str = Field(default="doctalk-ops")
     PG_BACKUP_PREFIX: str = Field(default="postgres/")
-    # The job runs at 09:15 UTC and the check at 12:00 UTC: 26 h flags a
-    # single missed run on the same day (the last good artifact is 26.75 h old).
-    PG_BACKUP_MAX_AGE_HOURS: int = Field(default=26)
+    # Must match the pg-backup service's cron (set on the Railway service
+    # instance). A backup is "stale" when the latest scheduled run whose grace
+    # period has passed left no artifact at or after its scheduled time.
+    PG_BACKUP_SCHEDULE_UTC: str = Field(default="09:15")
+    PG_BACKUP_GRACE_HOURS: float = Field(default=2.0)
     PG_BACKUP_MIN_BYTES: int = Field(default=5_000_000)
     PG_BACKUP_MONITOR_ENABLED: bool = Field(default=False)
 

@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, Optional
 
 from app.core.config import settings
 from app.services.storage_service import storage_service
@@ -56,17 +56,29 @@ def _read_manifest(client, bucket: str, key: str) -> Optional[dict]:
     return manifest if isinstance(manifest, dict) else None
 
 
-def _newest_artifact(client, bucket: str) -> tuple[str, Any]:
+def due_run(now: datetime) -> datetime:
+    """The latest scheduled run (PG_BACKUP_SCHEDULE_UTC, daily) whose grace
+    period has passed by `now`: the run the newest artifact must cover."""
+    hour, minute = (int(part) for part in settings.PG_BACKUP_SCHEDULE_UTC.split(":"))
+    grace = timedelta(hours=settings.PG_BACKUP_GRACE_HOURS)
+    run = now.astimezone(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    while run + grace > now:
+        run -= timedelta(days=1)
+    return run
+
+
+def _newest_artifact(client, bucket: str, monotonic: Callable[[], float]) -> tuple[str, Any]:
     """('ok', newest object or None) or ('unreachable', None). Tracks the
     newest object while scanning, within an entry budget and a deadline; an
-    incomplete scan never yields a partial maximum."""
-    deadline = time.monotonic() + LIST_DEADLINE_SECONDS
+    incomplete scan never yields a partial maximum. Each request is itself
+    bounded by the storage client's timeouts and retry policy."""
+    deadline = monotonic() + LIST_DEADLINE_SECONDS
     newest = None
     try:
         for seen, obj in enumerate(
             client.list_objects(bucket, prefix=settings.PG_BACKUP_PREFIX, recursive=True), start=1
         ):
-            if seen > LIST_MAX_ENTRIES or time.monotonic() > deadline:
+            if seen > LIST_MAX_ENTRIES or monotonic() > deadline:
                 return "unreachable", None
             if not obj.object_name.endswith(_ARTIFACT_SUFFIXES):
                 continue
@@ -77,19 +89,25 @@ def _newest_artifact(client, bucket: str) -> tuple[str, Any]:
     return "ok", newest
 
 
-def get_postgres_backup_status(client=None, now: Optional[datetime] = None) -> dict[str, Any]:
+def get_postgres_backup_status(
+    client=None,
+    now: Optional[datetime] = None,
+    monotonic: Callable[[], float] = time.monotonic,
+) -> dict[str, Any]:
     """Status of the newest Postgres backup artifact.
 
-    status is one of: ok, stale (older than PG_BACKUP_MAX_AGE_HOURS), small
+    status is one of: ok, stale (the latest scheduled run past its grace
+    period left no artifact at or after its scheduled time), small
     (below PG_BACKUP_MIN_BYTES), unverified (no readable manifest, or the
     manifest does not describe this object, its restore test did not pass,
     or its encryption flag contradicts the file type), missing (no artifact
     at all), unreachable (the bucket could not be listed in full), disabled
     (monitor switched off). Precedence: stale > small > unverified.
     """
+    now = now or datetime.now(timezone.utc)
     base: dict[str, Any] = {
         "status": "disabled",
-        "max_age_hours": settings.PG_BACKUP_MAX_AGE_HOURS,
+        "due_run_at": due_run(now).isoformat(),
         "latest_key": None,
         "created_at": None,
         "age_hours": None,
@@ -103,8 +121,7 @@ def get_postgres_backup_status(client=None, now: Optional[datetime] = None) -> d
 
     client = client or storage_service.client
     bucket = settings.OPS_BUCKET
-    now = now or datetime.now(timezone.utc)
-    scan, newest = _newest_artifact(client, bucket)
+    scan, newest = _newest_artifact(client, bucket, monotonic)
     if scan != "ok":
         return {**base, "status": "unreachable"}
     if newest is None:
@@ -126,7 +143,9 @@ def get_postgres_backup_status(client=None, now: Optional[datetime] = None) -> d
         result["encrypted"] = manifest.get("encrypted")
 
     expect_encrypted = newest.object_name.endswith(".dump.age")
-    if age_hours > settings.PG_BACKUP_MAX_AGE_HOURS:
+    # Coverage of the schedule, not age: a late upload yesterday must not hide
+    # a run that never happened today.
+    if newest.last_modified < due_run(now):
         result["status"] = "stale"
     elif result["bytes"] < settings.PG_BACKUP_MIN_BYTES:
         result["status"] = "small"

@@ -73,7 +73,8 @@ def _enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(svc.settings, "PG_BACKUP_MONITOR_ENABLED", True)
     monkeypatch.setattr(svc.settings, "OPS_BUCKET", "doctalk-ops")
     monkeypatch.setattr(svc.settings, "PG_BACKUP_PREFIX", "postgres/")
-    monkeypatch.setattr(svc.settings, "PG_BACKUP_MAX_AGE_HOURS", 26)
+    monkeypatch.setattr(svc.settings, "PG_BACKUP_SCHEDULE_UTC", "09:15")
+    monkeypatch.setattr(svc.settings, "PG_BACKUP_GRACE_HOURS", 2.0)
     monkeypatch.setattr(svc.settings, "PG_BACKUP_MIN_BYTES", 5_000_000)
 
 
@@ -107,20 +108,42 @@ def test_newest_verified_backup_is_ok_and_older_ones_and_probes_are_ignored() ->
     assert bucket.gets == [("doctalk-ops", "postgres/doctalk-20260928T091500Z.manifest.json", 0, svc.MANIFEST_MAX_BYTES)]
 
 
-def test_one_missed_nightly_run_is_stale_at_the_noon_check() -> None:
-    # Last good run yesterday 09:15 UTC; today's 09:15 run wrote nothing.
+def _one_artifact(finished_at: datetime) -> FakeOpsBucket:
     key = "postgres/doctalk-20260927T091500Z.dump.age"
-    bucket = FakeOpsBucket(
-        objects=[_obj(key, 26.75)], manifests={key.replace(".dump.age", ".manifest.json"): _manifest(key)}
-    )
+    obj = SimpleNamespace(object_name=key, last_modified=finished_at, size=BIG)
+    return FakeOpsBucket(objects=[obj], manifests={key.replace(".dump.age", ".manifest.json"): _manifest(key)})
 
-    assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "stale"
+
+def _at(day: int, hour: int, minute: int = 0) -> datetime:
+    return datetime(2026, 9, day, hour, minute, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize(
+    ("finished_at", "now", "expected"),
+    [
+        (_at(27, 9, 16), _at(28, 12), "stale"),   # today's 09:15 run left nothing
+        (_at(27, 10, 5), _at(28, 12), "stale"),   # yesterday's late upload must not cover today
+        (_at(27, 9, 16), _at(28, 10, 30), "ok"),  # today's run still within its grace period
+        (_at(28, 11, 5), _at(28, 12), "ok"),      # today's run late but done
+        (_at(28, 9, 16), _at(29, 8), "ok"),       # before the next scheduled run
+        (_at(28, 9, 16), _at(29, 11, 20), "stale"),  # next run's grace has just passed
+    ],
+    ids=["missed", "late-yesterday", "in-grace", "late-today", "before-next", "after-next-grace"],
+)
+def test_freshness_is_coverage_of_the_latest_due_run(finished_at, now, expected) -> None:
+    assert svc.get_postgres_backup_status(_one_artifact(finished_at), now)["status"] == expected
+
+
+def test_due_run_honours_schedule_and_grace() -> None:
+    assert svc.due_run(_at(28, 11, 14)) == _at(27, 9, 15)
+    assert svc.due_run(_at(28, 11, 15)) == _at(28, 9, 15)
+    assert svc.due_run(_at(28, 3)) == _at(27, 9, 15)
 
 
 def test_manifest_body_read_failure_is_unverified_and_stale_still_wins() -> None:
     key = "postgres/doctalk-20260928T091500Z.dump.age"
     manifests = {key.replace(".dump.age", ".manifest.json"): TimeoutError("read timed out")}
-    fresh = FakeOpsBucket(objects=[_obj(key, 3)], manifests=manifests)
+    fresh = FakeOpsBucket(objects=[_obj(key, 2.5)], manifests=manifests)
     old = FakeOpsBucket(objects=[_obj(key, 40)], manifests=manifests)
 
     assert svc.get_postgres_backup_status(fresh, NOW)["status"] == "unverified"
@@ -129,7 +152,7 @@ def test_manifest_body_read_failure_is_unverified_and_stale_still_wins() -> None
 
 def test_scan_over_budget_or_deadline_is_unreachable_not_a_partial_ok(monkeypatch: pytest.MonkeyPatch) -> None:
     key = "postgres/doctalk-20260928T091500Z.dump.age"
-    objects = [_obj(key, 3)] + [_obj(f"postgres/x-{i}.manifest.json", 3, size=10) for i in range(10)]
+    objects = [_obj(key, 2.5)] + [_obj(f"postgres/x-{i}.manifest.json", 2.5, size=10) for i in range(10)]
     bucket = FakeOpsBucket(objects=objects, manifests={key.replace(".dump.age", ".manifest.json"): _manifest(key)})
 
     monkeypatch.setattr(svc, "LIST_MAX_ENTRIES", 5)
@@ -137,21 +160,13 @@ def test_scan_over_budget_or_deadline_is_unreachable_not_a_partial_ok(monkeypatc
 
     monkeypatch.setattr(svc, "LIST_MAX_ENTRIES", 5000)
     clock = iter([0.0] + [1_000.0] * 50)
-    monkeypatch.setattr(svc.time, "monotonic", lambda: next(clock))
-    assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "unreachable"
-
-
-def test_backup_older_than_the_limit_is_stale() -> None:
-    key = "postgres/doctalk-20260927T091500Z.dump.age"
-    bucket = FakeOpsBucket(objects=[_obj(key, 30.5)], manifests={key.replace(".dump.age", ".manifest.json"): _manifest(key)})
-
-    assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "stale"
+    assert svc.get_postgres_backup_status(bucket, NOW, monotonic=lambda: next(clock))["status"] == "unreachable"
 
 
 def test_undersized_artifact_is_small() -> None:
     key = "postgres/doctalk-20260928T091500Z.dump.age"
     bucket = FakeOpsBucket(
-        objects=[_obj(key, 3, size=1_000)],
+        objects=[_obj(key, 2.5, size=1_000)],
         manifests={key.replace(".dump.age", ".manifest.json"): _manifest(key, size=1_000)},
     )
 
@@ -172,7 +187,7 @@ def test_undersized_artifact_is_small() -> None:
 def test_artifact_without_a_matching_passing_manifest_is_unverified(manifest) -> None:
     key = "postgres/doctalk-20260928T091500Z.dump.age"
     manifests = {} if manifest is None else {key.replace(".dump.age", ".manifest.json"): manifest}
-    bucket = FakeOpsBucket(objects=[_obj(key, 3)], manifests=manifests)
+    bucket = FakeOpsBucket(objects=[_obj(key, 2.5)], manifests=manifests)
 
     assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "unverified"
 
@@ -189,14 +204,14 @@ def test_artifact_without_a_matching_passing_manifest_is_unverified(manifest) ->
 )
 def test_encryption_flag_must_match_the_file_type(key: str, encrypted) -> None:
     manifest_key = "postgres/doctalk-20260928T091500Z.manifest.json"
-    bucket = FakeOpsBucket(objects=[_obj(key, 3)], manifests={manifest_key: _manifest(key, encrypted=encrypted)})
+    bucket = FakeOpsBucket(objects=[_obj(key, 2.5)], manifests={manifest_key: _manifest(key, encrypted=encrypted)})
 
     assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "unverified"
 
 
 def test_plaintext_dump_with_a_consistent_manifest_is_ok() -> None:
     key = "postgres/doctalk-20260928T091500Z.dump"
-    bucket = FakeOpsBucket(objects=[_obj(key, 3)], manifests={"postgres/doctalk-20260928T091500Z.manifest.json": _manifest(key)})
+    bucket = FakeOpsBucket(objects=[_obj(key, 2.5)], manifests={"postgres/doctalk-20260928T091500Z.manifest.json": _manifest(key)})
 
     assert svc.get_postgres_backup_status(bucket, NOW)["status"] == "ok"
 

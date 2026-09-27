@@ -1535,7 +1535,9 @@ tracks them. Its invariants:
 
 A second, independent layer (v0.35.0) runs inside the backend: a daily beat
 task (12:00 UTC) reads the ops bucket and checks that the newest artifact is
-under 26 hours old (so a single missed 09:15 run is flagged the same day),
+newer than the latest scheduled run whose 2-hour grace period has passed (so
+a single missed 09:15 run is flagged the same day, even after a late upload
+the day before),
 large enough, and described by a manifest whose restore test passed and
 whose encryption flag matches the file type; anything else is logged, sent to Sentry when configured, recorded as
 an `ops.backup_stale` product event and shown on the admin Overview
