@@ -54,7 +54,7 @@ Sube archivos PDF, documentos de Word, presentaciones de PowerPoint, hojas de c�
 |------|------------|
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
-| **Base de Datos** | PostgreSQL 16, Qdrant (búsqueda vectorial) |
+| **Base de Datos** | PostgreSQL 17, Qdrant (búsqueda vectorial) |
 | **Almacenamiento** | Cloudflare R2 (compatible con S3; MinIO en local) |
 | **Autenticación** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Pagos** | Stripe Checkout + Subscriptions |

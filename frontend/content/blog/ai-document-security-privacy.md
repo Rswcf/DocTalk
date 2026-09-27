@@ -2,7 +2,7 @@
 title: "Is AI Document Chat Safe? Security and Privacy Guide for 2026"
 description: "A practical guide to security and privacy when using AI document chat tools. Learn what to look for, what questions to ask, and how different tools handle your data."
 date: "2026-03-18"
-updated: "2026-03-18"
+updated: "2026-09-27"
 author: "DocTalk Team"
 category: "ai-insights"
 tags: ["security", "privacy", "data protection", "gdpr", "encryption", "compliance"]
@@ -130,7 +130,7 @@ DocTalk runs on:
 - **Vercel** (frontend) — SOC 2 Type 2 certified
 - **Railway** (backend, PostgreSQL, Redis, Qdrant) — managed infrastructure with automatic security updates
 - **Cloudflare R2** (document storage) — every object encrypted at rest with AES-256
-- All services communicate over encrypted internal networks
+- The backend talks to PostgreSQL, Redis and Qdrant over Railway's private network, and to Cloudflare R2 over HTTPS
 
 ## Cloud vs. Local: The Tradeoff
 

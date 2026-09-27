@@ -115,3 +115,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t doctalk-test -f backend/Dockerfile .
+      # Nightly Postgres backup job (infra/pg-backup): lint the script, build
+      # the image, and check it ships the tools backup.sh needs, including a
+      # pg_dump whose major matches production (17).
+      - run: shellcheck infra/pg-backup/backup.sh
+      - run: docker build -t doctalk-pg-backup infra/pg-backup
+      - run: |
+          docker run --rm doctalk-pg-backup sh -c \
+            'pg_dump --version | grep -q "PostgreSQL) 17\." && age --version && rclone version >/dev/null && jq --version && curl --version >/dev/null'

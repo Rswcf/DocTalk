@@ -54,7 +54,7 @@ Faça upload de PDFs, documentos do Word, apresentações do PowerPoint, planilh
 |--------|------------|
 | **Frontend** | Next.js 14 (App Router), Auth.js v5, react-pdf v9, Tailwind CSS, Radix UI, Zustand |
 | **Backend** | FastAPI, Celery, Redis |
-| **Banco de Dados** | PostgreSQL 16, Qdrant (busca vetorial) |
+| **Banco de Dados** | PostgreSQL 17, Qdrant (busca vetorial) |
 | **Armazenamento** | Cloudflare R2 (compatível com S3; MinIO localmente) |
 | **Autenticação** | Auth.js v5 — Google OAuth, Microsoft OAuth, Email Magic Link |
 | **Pagamentos** | Stripe Checkout + Subscriptions |

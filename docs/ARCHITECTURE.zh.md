@@ -25,7 +25,7 @@ graph TB
     end
 
     subgraph DataStores["数据存储 (Railway)"]
-        PG["PostgreSQL 16"]
+        PG["PostgreSQL 17"]
         Qdrant["Qdrant<br/>向量搜索"]
         Redis["Redis<br/>Celery 消息队列 + 缓存"]
     end
@@ -1062,6 +1062,19 @@ Quote Finder 产品契约:引文卡绝不渲染 LLM 生成文本——`verify_qu
 2026-08 发现约 106/108 个存储对象缺失,当时归因于 MinIO→minio-v2 迁移:聊天正常(Postgres/Qdrant 完好)但受影响文档的 PDF 面板全部失败,而 demo 自愈只检查 Qdrant 向量所以从未察觉。启动播种现在校验两个存储:`_ensure_demo_files` 对每个 demo 文档的 `storage_key` 执行 stat,缺失则按原 id/key 从 seed_data 重传。种子资产按 slug 不可变;stat→put 的 TOCTOU 基于该书面不变量被接受。事故前的用户文档文件不可恢复(当时无存储备份——运维风险仍开放)。
 
 **根因更正(2026-09-26)**:迁移并不是原因。`minio-v2` 和 `qdrant-v2` 都没有挂载卷,数据落在容器的临时 overlay 盘上;2026-06-19 对 `minio-v2` 的重新部署清空了此前上传的全部文件。截至 2026-09-26,148 个文档文件引用中有 109 个指向已缺失的对象。生产文档存储已迁到 Cloudflare R2;`qdrant-v2` 仍没有挂载卷(持久化修复在后续阶段)。任何有状态的 Railway 服务都必须挂载卷,并通过 `railway ssh` 查看 `/proc/mounts` 核实,不能只看控制台。
+
+### Postgres 备份(2026-09-27)
+
+2026-09-27 之前,生产 Postgres(17.11,约 200 MB)没有任何备份:Railway 工作区是 Hobby 套餐,卷备份接口直接拒绝("Not Authorized"),唯一一份 Railway 自动快照也已过期。当天做了一次手工 `pg_dump`,并在临时容器里完成了恢复验证。
+
+周期性备份由 Railway 定时服务 `pg-backup` 完成(`infra/pg-backup/`,运维手册见其 README,方案见 `.collab/plans/2026-09-27-postgres-backups.md`)。它的不变量:
+
+- **没恢复成功的不上传。** 每次运行都把自己的 dump 恢复到容器内的临时集群,并与源库比对关键表行数和 alembic 版本。
+- **加密缺失即拒绝运行。** dump 用 owner 的 `age` 公钥加密;没有公钥时拒绝运行,除非显式设置 `ALLOW_PLAINTEXT=1`。私钥只在 owner 手里。
+- **异地、只追加。** 产物写入 R2 `doctalk-ops`,键名带时间戳且唯一(`postgres/`,每月 1 日另存 `postgres-monthly/`)。任务从不覆盖、删除,也不写"最新"指针;保留期由 R2 生命周期规则控制(35 / 400 天),并有存储桶锁(14 / 60 天)。
+- **没有消息就是故障。** 每次运行都向 Sentry cron 监控(或 Healthchecks 地址)报到;漏跑、失败或卡住都会提醒 owner。
+
+RPO 为 24 小时;恢复约需 30–45 分钟(下载、owner 解密、`pg_restore` 到新的 Railway Postgres、改指 `DATABASE_URL`)。
 
 ### 集成测试隔离(2026-08)
 

@@ -54,7 +54,7 @@
 |------|------|
 | **前端** | Next.js 14 (App Router)、Auth.js v5、react-pdf v9、Tailwind CSS、Radix UI、Zustand |
 | **后端** | FastAPI、Celery、Redis |
-| **数据库** | PostgreSQL 16、Qdrant（向量搜索） |
+| **数据库** | PostgreSQL 17、Qdrant（向量搜索） |
 | **存储** | Cloudflare R2（S3 兼容；本地开发用 MinIO） |
 | **认证** | Auth.js v5 — Google OAuth、Microsoft OAuth、Email Magic Link |
 | **支付** | Stripe Checkout + Subscriptions |

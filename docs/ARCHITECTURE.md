@@ -25,7 +25,7 @@ graph TB
     end
 
     subgraph DataStores["Data Stores (Railway)"]
-        PG["PostgreSQL 16"]
+        PG["PostgreSQL 17"]
         Qdrant["Qdrant<br/>Vector Search"]
         Redis["Redis<br/>Celery Broker + Cache"]
     end
@@ -725,7 +725,7 @@ erDiagram
 
     ExtractionResult {
         uuid id PK
-        uuid job_id FK UK
+        uuid job_id FK, UK
         string template_key
         jsonb structured_json
         text rendered_markdown
@@ -1464,6 +1464,33 @@ has since moved to Cloudflare R2; `qdrant-v2` still has no volume (its
 durability fix is a later phase). Any stateful Railway service must have a
 mounted volume, verified with `/proc/mounts` via `railway ssh` rather than from
 the dashboard alone.
+
+### Postgres backups (2026-09-27)
+
+Until 2026-09-27 production Postgres (17.11, about 200 MB) had no backup: the
+Railway workspace is on the Hobby plan, where volume backups are refused
+("Not Authorized"), and the only Railway-made snapshot had expired. A one-time
+`pg_dump` taken that day was restore-tested in a throwaway container.
+
+The recurring mechanism is the `pg-backup` Railway cron service
+(`infra/pg-backup/`, runbook in its README, plan
+`.collab/plans/2026-09-27-postgres-backups.md`). Its invariants:
+
+- **Nothing is uploaded that did not restore.** Every run restores its own dump
+  into a throwaway cluster in the container and compares key-table counts and
+  the alembic revision with the source.
+- **Fail closed on encryption.** Dumps are encrypted to the owner's `age` public
+  key; the job refuses to run without one unless `ALLOW_PLAINTEXT=1` is set.
+  The private key never leaves the owner.
+- **Off-provider, append-only.** Artifacts go to R2 `doctalk-ops` under unique
+  timestamped keys (`postgres/`, and `postgres-monthly/` on the 1st). The job
+  never overwrites, deletes or writes a "latest" pointer; retention is R2
+  lifecycle rules (35 / 400 days) with bucket locks (14 / 60 days).
+- **Silence is a failure.** Each run checks in to a Sentry cron monitor (or a
+  Healthchecks URL); a missed, failed or hung run alerts the owner.
+
+RPO is 24 hours; restore takes about 30–45 minutes (download, owner decrypts,
+`pg_restore` into a new Railway Postgres, repoint `DATABASE_URL`).
 
 ### Cross-region topology + parse recovery lifecycle (2026-08-08, v0.28.1)
 
