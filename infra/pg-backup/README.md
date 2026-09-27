@@ -5,14 +5,25 @@ restores, encrypts it to the owner's `age` key, and uploads it to the
 Cloudflare R2 bucket `doctalk-ops`. Plan and rationale:
 `.collab/plans/2026-09-27-postgres-backups.md`.
 
-**Status:** built, not yet deployed. It protects anything only after these
-acceptance gates pass (plan §4): (1) owner's `AGE_RECIPIENT` and an alert
-channel (`SENTRY_DSN` or `HEARTBEAT_URL`) are set; (2) R2 lifecycle and lock
-rules are in place and verified; (3) a smoke run's artifact is verified from
-outside (G1) and a forced failure produces an alert; (4) `cronSchedule` is
-set and the first unattended run succeeds (G3); (5) the owner decrypts and
-restores one artifact (G2). Until then the only copy is the manual dump of
-2026-09-27.
+**Status (2026-09-27): deployed and scheduled.** Acceptance gates (plan §4):
+
+1. `AGE_RECIPIENT` set: done. The key pair was generated on the owner's Mac;
+   the private key is `~/Private/doctalk-backup-age.key` (mode 600) and must
+   also go into the password manager plus one offline copy. **Alert channel
+   (`SENTRY_DSN` or `HEARTBEAT_URL`) still missing**: until it is set, a
+   failed run shows only as a CRASHED deployment in Railway (and Railway's own
+   crash e-mail, if enabled), and a run that never starts is not reported.
+2. R2 lifecycle (35 / 400 days) and lock (14 / 60 days) rules: in place;
+   the lock was proven by a refused delete of `postgres/_locktest-20260927T181105Z`
+   (a 1-byte probe that expires with the lifecycle rule).
+3. Smoke run verified from outside (G1): the artifact's SHA-256, size and age
+   header match the manifest; it decrypts with the private key to the exact
+   dump hash in the manifest; counts restored equal the source. A forced
+   failure (size floor) ended as `BACKUP FAILED stage=dump` and a CRASHED
+   deployment.
+4. `cronSchedule` set in `railway.toml`; first unattended run (G3) pending.
+5. Owner drill (G2): decryption is proven; the owner should still restore
+   one artifact once themselves (quarterly thereafter).
 
 Why it exists: the Railway workspace is on the Hobby plan, where volume
 backups are not available (`volumeInstanceBackupScheduleUpdate` and
@@ -106,3 +117,4 @@ throwaway `age` key from `docker run --rm --entrypoint age-keygen doctalk-pg-bac
 
 | Date | Commit | Image digest | Notes |
 |---|---|---|---|
+| 2026-09-27 | 20f878b1 | Railway build of `postgres:17.11-bookworm@sha256:639ab7ce…` | Service `pg-backup` (ed8cd926…), region us-west2. Smoke run e3bf63b9: `BACKUP OK`, 51.5 MB, restore test 8 s, users 183. Forced failure 7c6f8585: CRASHED as expected. |
