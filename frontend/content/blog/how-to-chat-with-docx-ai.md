@@ -141,7 +141,7 @@ No. DocTalk processes the final version of the document text. If your Word file 
 
 ### Can I chat with a DOCX and a PDF in the same session?
 
-DocTalk currently supports one document per chat session. You can upload both files separately and create individual sessions for each, then compare the answers manually. Multi-document chat within a single session is on the roadmap.
+Yes, with a collection. Add the DOCX and the PDF to the same collection and ask questions across both; each answer cites the file and passage it came from. You can also open each file in its own chat.
 
 ### How does DOCX processing speed compare to PDF?
 

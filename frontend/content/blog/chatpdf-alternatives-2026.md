@@ -2,7 +2,7 @@
 title: "7 Best ChatPDF Alternatives in 2026 (Free and Paid)"
 description: "ChatPDF alternatives compared on formats, citations and current pricing: DocTalk, AskYourPDF, PDF.ai, Humata, Gemini Notebook (formerly NotebookLM), Consensus and Claude. Prices checked 30 September 2026."
 date: "2026-03-18"
-updated: "2026-10-07"
+updated: "2026-10-01"
 author: "DocTalk Team"
 category: "comparisons"
 tags: ["chatpdf", "comparison", "alternatives", "ai tools", "pdf", "document chat"]
@@ -15,7 +15,7 @@ keywords: ["chatpdf alternative", "chatpdf alternatives 2026", "best chatpdf alt
 
 > **Updated October 2026 — what changed since March:**
 > - ChatPDF now reads Word, PowerPoint, Markdown and text files as well as PDFs, and its citations scroll to the source passage. Two of the reasons people left it in 2025 no longer apply.
-> - Google renamed NotebookLM to **Gemini Notebook**; the old address now redirects to notebook.google. It also accepts Word and PowerPoint files now.
+> - NotebookLM is now **Gemini Notebook**; the old address redirects to notebook.google. It also accepts Word and PowerPoint files now.
 > - PDF.ai's free plan is now one upload a month; paid plans start at $10/month billed yearly.
 > - Humata's Team plan is $49 per user per month, and the $1.99 student plan no longer appears on its pricing page.
 > - AskYourPDF and Consensus changed their plans; the figures below are current.
@@ -26,7 +26,7 @@ ChatPDF introduced millions of people to a simple idea in 2023: upload a PDF, as
 
 ## Why People Look for ChatPDF Alternatives
 
-**Verification at passage level.** ChatPDF's citations now jump to the source, which covers most everyday checking. Some work — legal review, compliance, a thesis — needs more: the exact sentence highlighted, or a quote you can paste with its page number, knowing it matches the source. That is where specialised tools differ most.
+**Verification at passage level.** ChatPDF's citations now jump to the source, which covers most everyday checking. Some work — legal review, compliance, a thesis — needs more: the exact passage highlighted, or a quote you can paste with its page number, knowing it matches the source. That is where specialised tools differ most.
 
 **Spreadsheets and web pages alongside documents.** ChatPDF reads PDF, DOC/DOCX, PPT/PPTX, Markdown and text files. If your work also involves Excel files or web pages you want to question in the same place, you need a tool that handles those too.
 
@@ -64,13 +64,13 @@ If you only need quick answers from a few files a day, ChatPDF may still be the 
 
 ### 2. AskYourPDF — Best for Research Integration
 
-[AskYourPDF](https://askyourpdf.com) began as a ChatGPT plugin and is now a standalone app with a Chrome extension, a Zotero integration and a developer API.
+[AskYourPDF](https://askyourpdf.com) began as a ChatGPT plugin and is now a standalone app and API; it is also reported to offer a Chrome extension and a Zotero integration.
 
-**What sets it apart:** researchers who keep their library in Zotero can query papers from it directly.
+**What sets it apart:** very large page allowances on paid plans and, per third-party reviews, a Zotero integration for researchers.
 
 **Pros:**
-- Zotero integration for academic workflows
-- Chrome extension and API
+- Zotero integration and Chrome extension (per third-party reviews)
+- Developer API
 - Very large page allowances on paid plans (2,500 pages per document on Premium, 6,000 on Pro)
 
 **Cons:**
@@ -122,7 +122,7 @@ If you only need quick answers from a few files a day, ChatPDF may still be the 
 
 ### 5. Gemini Notebook (formerly NotebookLM) — Best Free Research Notebook
 
-[Gemini Notebook](https://notebook.google) is Google's AI notebook, renamed from NotebookLM in 2026. You add sources to a notebook, then ask questions, get summaries with inline citations, and generate audio overviews.
+[Gemini Notebook](https://notebook.google) is Google's AI notebook, formerly NotebookLM. You add sources to a notebook, then ask questions, get summaries with inline citations, and generate audio overviews.
 
 **What sets it apart:** a generous free tier and a very wide range of source types, inside the Google account you may already use.
 
@@ -216,7 +216,7 @@ For a wider comparison, see our [2026 guide to AI PDF tools](/blog/best-ai-pdf-t
 For a free research notebook, Gemini Notebook (formerly NotebookLM) has the largest free allowance: 100 notebooks with 50 sources each. For verifying answers against the exact page across PDF, Word, PowerPoint and Excel, DocTalk's free plan gives 500 starter credits and then 300 credits a month, with a no-signup [demo](/demo).
 
 ### Is NotebookLM still available?
-Yes, under a new name. Google renamed it Gemini Notebook in 2026, and notebooklm.google now redirects to notebook.google.
+Yes, under a new name: it is now Gemini Notebook, and notebooklm.google redirects to notebook.google.
 
 ### Does ChatPDF support Word files now?
 Yes. As of September 2026, ChatPDF reads PDF, DOC/DOCX, PPT/PPTX, Markdown and text files, and it can also chat with a website or YouTube video.
