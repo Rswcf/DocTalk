@@ -217,7 +217,7 @@
   "auth.privacyNote": "我们不使用你的文档训练 AI 模型",
   "privacy.title": "隐私政策",
   "privacy.section1.title": "数据收集",
-  "privacy.section1.content": "我们收集你的邮箱用于身份验证，以及你上传的文档用于分析。 当你点击注册或登录按钮时，我们还会记录把你引荐过来的网站域名以及链接中的推广标签（例如 utm_source），以便了解大家是如何找到 DocTalk 的。这不使用 Cookie，也不使用任何标识符。",
+  "privacy.section1.content": "我们收集你的邮箱用于身份验证，以及你上传的文档用于分析。 当你在注册前使用关键按钮（例如注册、登录或试用演示）时，我们还会记录把你引荐过来的网站域名、链接中的推广标签（例如 utm_source）以及你最初进入的页面类型，以便了解大家是如何找到 DocTalk 的。这不会设置 Cookie，也不会生成设备标识符；如果你已登录，这些事件会像我们的其他产品事件一样与你的账号关联。",
   "privacy.section2.title": "数据使用",
   "privacy.section2.item1": "DocTalk 不使用您的数据训练模型",
   "privacy.section2.item2": "文档用于提供您请求的文档功能。",
