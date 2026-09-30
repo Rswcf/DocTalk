@@ -208,7 +208,7 @@ for (const isDemo of [false, true]) {
   test(`session limit analytics include request document and demo context (${isDemo}) outside reader routes`, async () => {
     const h = harness({ isDemo, createError: limitError });
     const events = [];
-    const analytics = load('lib/analytics.ts');
+    const analytics = load('lib/analytics.ts', { './attribution': load('lib/attribution.ts') });
     const originalWindow = global.window;
     const originalFetch = global.fetch;
     try {
