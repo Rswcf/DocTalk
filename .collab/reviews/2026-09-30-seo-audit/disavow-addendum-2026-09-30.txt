@@ -1,0 +1,55 @@
+# Disavow ADDENDUM for doctalk.site — generated 2026-09-30
+#
+# Source: Semrush Backlink Analytics, backlinks sorted by first-seen desc (read 2026-09-30),
+# rows first seen 2026-09-13 .. 2026-09-30. Referring domains 191 (09-19) -> 231 (09-29).
+# Contains ONLY domains that are not in disavow-doctalk.site-2026-09-20.txt.
+# Upload method: download the current file from the Google disavow tool, append these lines, upload the whole file
+# (the tool replaces the file; it does not append).
+
+# Campaign 1 anchor: "high quality dofollow backlinks da 50 pa 40 premium pbn network service doctalk.site ..." — 11 domains
+domain:theforbestimes.com
+domain:plurio.shop
+domain:expresskitchendesigns.com
+domain:s-tribe.net
+domain:firstguestpost.com
+domain:sapphirevpn.net
+domain:gladeflowers.com
+domain:forbesstories.com
+domain:bazerdaily.com
+domain:onlineshoppingidea.com
+domain:missburrg.com
+
+# Campaign 2 anchor: "expert manual outreach backlinks for doctalk.site designed to improve da, dr and tf ..." — 20 domains
+domain:mertio.shop
+domain:tokyopush188.online
+domain:prepaidgiftbalance.online
+domain:burpio.shop
+domain:top5casino.online
+domain:plixmo.shop
+domain:bestirishcasinoonline.online
+domain:drobo.shop
+domain:onlinegamblingbonus.online
+domain:doxycycline100mg.store
+domain:canlisohbethatlari.online
+domain:corvio.shop
+domain:piolo.shop
+domain:junip.shop
+domain:nelpa.shop
+domain:orplio.shop
+domain:casinoonlinecrazytime.online
+domain:matrivo.shop
+domain:peska.shop
+domain:nimpa.shop
+
+# Bare "doctalk.site" anchor on .site/.shop SEO-service hostnames, first seen 2026-09-22..09-27 — 9 domains
+# (same shape as the 09-20 file's bare-anchor link-seller block; per-domain Authority Score could not be pulled —
+#  the reseller locks Referring domains — but 221 of 231 referring domains sit at AS 0-10)
+domain:winningseo.site
+domain:digitalboost.site
+domain:localranking.site
+domain:fastranking.shop
+domain:trafficexperts.site
+domain:topranking.shop
+domain:rankfirst.shop
+domain:getranked.site
+domain:growwithseo.shop

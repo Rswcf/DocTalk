@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<audit version="0.0.38">
+<site url="https://www.doctalk.site" crawled="406" date="2026-09-30T19:49:40.193Z"/>
+<score overall="68" grade="D">
+ <cat name="Accessibility" score="91"/>
+ <cat name="Performance" score="86"/>
+ <cat name="Content" score="91"/>
+ <cat name="Core SEO" score="92"/>
+ <cat name="Mobile" score="84"/>
+ <cat name="Security" score="81"/>
+ <cat name="E-E-A-T" score="85"/>
+ <cat name="Crawlability" score="97"/>
+ <cat name="Internationalization" score="100"/>
+ <cat name="Images" score="100"/>
+ <cat name="Legal Compliance" score="100"/>
+ <cat name="Links" score="100"/>
+ <cat name="Local SEO" score="100"/>
+ <cat name="Structured Data" score="100"/>
+ <cat name="Social Media" score="100"/>
+ <cat name="URL Structure" score="100"/>
+</score>
+<summary passed="37453" warnings="4417" failed="407"/>
+<issues>
+ <category name="Crawlability" errors="0" warnings="2">
+  <rule id="crawl/canonical-chain" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/crawl/canonical-chain">
+   Page redirects before content is served
+   Pages (1): /
+   Items (1):
+    - / (https://www.doctalk.site → https://www.doctalk.site/) [finalUrl: https://www.doctalk.site/, chain: {&quot;sourceUrl&quot;:&quot;https://www.doctalk.site/&quot;,&quot;finalUrl&quot;:&quot;https://www.doctalk.site/&quot;,&quot;hops&quot;:[{&quot;url&quot;:&quot;https://www.doctalk.site/&quot;,&quot;statusCode&quot;:200,&quot;type&quot;:&quot;http&quot;}],&quot;chainLength&quot;:0,&quot;isLoop&quot;:false,&quot;endsInError…]
+  </rule>
+  <rule id="crawl/sitemap-coverage" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/crawl/sitemap-coverage">
+   1 indexable page(s) not in sitemap (0%)
+   Items (1):
+    - /imprint
+  </rule>
+ </category>
+ <category name="Core SEO" errors="0" warnings="497">
+  <rule id="core/meta-title" severity="error" status="warn" docs="https://docs.squirrelscan.com/rules/core/meta-title">
+   Title too short; Title too long
+   Pages (5/181): /alternatives, /fr, /imprint, /ja, /ko
+   Items (5/181):
+    - /zh (与任何 PDF 即时对话 | DocTalk (22 chars))
+    - /ja (あらゆるPDFと瞬時にチャット | DocTalk (25 chars))
+    - /ko (모든 PDF와 즉시 채팅 | DocTalk (23 chars))
+    - /zh/demo (选择示例文档 | DocTalk (16 chars))
+    - /ja/demo (サンプルドキュメントを選択 | DocTalk (23 chars))
+  </rule>
+  <rule id="core/meta-description" severity="error" status="warn" docs="https://docs.squirrelscan.com/rules/core/meta-description">
+   Description too long; Description too short
+   Pages (5/316): /alternatives, /ar, /de, /es, /fr
+   Items (5/316):
+    - /trust (How DocTalk secures your documents: AES-256 encryp (183 chars))
+    - /alternatives/askyourpdf (Looking for AskYourPDF alternatives? Compare DocTa (161 chars))
+    - /blog/ai-contract-review-guide (Learn how to use AI to review contracts faster — N (167 chars))
+    - /blog/ai-document-analysis-languages (How DocTalk analyzes documents in 11 languages and (178 chars))
+    - /blog/ai-due-diligence-guide (Learn how AI accelerates due diligence document re (175 chars))
+  </rule>
+ </category>
+ <category name="Security" errors="0" warnings="6">
+  <rule id="security/leaked-secrets" severity="error" status="warn" docs="https://docs.squirrelscan.com/rules/security/leaked-secrets">
+   2 potential secret(s) detected (verify manually)
+   Items (2):
+    - Cloudflare API Token: cloud-********************tebo (Found in html (https://www.doctalk.site/blog/ai-document-security-privacy))
+    - Generic Secret Assignment: passwo***********ed%&quot; (Found in external-script (https://www.doctalk.site/_next/static/chunks/6324-d146a6d6d20f35a8.js?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3))
+  </rule>
+  <rule id="security/csp" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/security/csp">
+   CSP allows &apos;unsafe-inline&apos;; CSP script-src allows wildcard (*)
+  </rule>
+  <rule id="security/form-captcha" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/security/form-captcha">
+   1 public form(s) without CAPTCHA
+   Pages (1): /contact
+   Items (1):
+    - form[0]
+  </rule>
+  <rule id="security/new-tab" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/security/new-tab">
+   2 external link(s) missing rel=&quot;noopener&quot;
+   Pages (1): /use-cases/finance
+   Items (2):
+    - https://www.sec.gov/search-filings
+    - https://www.investor.gov/introduction-investing/investing-basics/glossary/form-10-k
+  </rule>
+  <rule id="security/http-to-https" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/security/http-to-https">
+   20 HTTP URL(s) redirect to HTTPS
+   Items (5/20):
+    - http://www.doctalk.site/ (http://www.doctalk.site/ → https://www.doctalk.site/ (308)) [statusCode: 308, chain: {&quot;sourceUrl&quot;:&quot;http://www.doctalk.site/&quot;,&quot;finalUrl&quot;:&quot;https://www.doctalk.site/&quot;,&quot;hops&quot;:[{&quot;url&quot;:&quot;http://www.doctalk.site/&quot;,&quot;statusCode&quot;:308,&quot;type&quot;:&quot;http&quot;},{&quot;url&quot;:&quot;https://www.doctalk.site/&quot;,&quot;statusCode…]
+    - http://www.doctalk.site/pricing (http://www.doctalk.site/pricing → https://www.doctalk.site/pricing (308)) [statusCode: 308, chain: {&quot;sourceUrl&quot;:&quot;http://www.doctalk.site/pricing&quot;,&quot;finalUrl&quot;:&quot;https://www.doctalk.site/pricing&quot;,&quot;hops&quot;:[{&quot;url&quot;:&quot;http://www.doctalk.site/pricing&quot;,&quot;statusCode&quot;:308,&quot;type&quot;:&quot;http&quot;},{&quot;url&quot;:&quot;https://www.docta…]
+    - http://www.doctalk.site/blog (http://www.doctalk.site/blog → https://www.doctalk.site/blog (308)) [statusCode: 308, chain: {&quot;sourceUrl&quot;:&quot;http://www.doctalk.site/blog&quot;,&quot;finalUrl&quot;:&quot;https://www.doctalk.site/blog&quot;,&quot;hops&quot;:[{&quot;url&quot;:&quot;http://www.doctalk.site/blog&quot;,&quot;statusCode&quot;:308,&quot;type&quot;:&quot;http&quot;},{&quot;url&quot;:&quot;https://www.doctalk.site/b…]
+    - http://www.doctalk.site/demo (http://www.doctalk.site/demo → https://www.doctalk.site/demo (308)) [statusCode: 308, chain: {&quot;sourceUrl&quot;:&quot;http://www.doctalk.site/demo&quot;,&quot;finalUrl&quot;:&quot;https://www.doctalk.site/demo&quot;,&quot;hops&quot;:[{&quot;url&quot;:&quot;http://www.doctalk.site/demo&quot;,&quot;statusCode&quot;:308,&quot;type&quot;:&quot;http&quot;},{&quot;url&quot;:&quot;https://www.doctalk.site/d…]
+    - http://www.doctalk.site/features/citations (http://www.doctalk.site/features/citations → https://www.doctalk.site/features/citations (308)) [statusCode: 308, chain: {&quot;sourceUrl&quot;:&quot;http://www.doctalk.site/features/citations&quot;,&quot;finalUrl&quot;:&quot;https://www.doctalk.site/features/citations&quot;,&quot;hops&quot;:[{&quot;url&quot;:&quot;http://www.doctalk.site/features/citations&quot;,&quot;statusCode&quot;:308,&quot;type&quot;:…]
+  </rule>
+ </category>
+ <category name="Content" errors="0" warnings="696">
+  <rule id="content/keyword-stuffing" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/content/keyword-stuffing">
+   N word(s) may be overused
+   Pages (5/202): /about, /alternatives, /compare, /de, /features
+   Items (5/77):
+    - document (&quot;document&quot; (3.8%)) [count: 8, density: 3.8461538461538463]
+    - die (&quot;die&quot; (3.3%)) [count: 18, density: 3.308823529411765]
+    - und (&quot;und&quot; (3.1%)) [count: 17, density: 3.125]
+    - les (&quot;les&quot; (4.2%)) [count: 22, density: 4.198473282442748]
+    - des (&quot;des&quot; (4.0%)) [count: 21, density: 4.007633587786259]
+  </rule>
+  <rule id="content/article-links" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/content/article-links">
+   short article has 0 external links (min 1); medium article has N external links (min N); long article has N external links (min N)
+   Pages (5/359): /alternatives, /compare, /demo, /features, /pricing
+   Items (5/359):
+    - /pricing (short article has 0 external links (min 1))
+    - /demo (short article has 0 external links (min 1))
+    - /features (short article has 0 external links (min 1))
+    - /trust (short article has 0 external links (min 1))
+    - /use-cases (short article has 0 external links (min 1))
+  </rule>
+  <rule id="content/word-count" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/content/word-count">
+   Thin content: N words (min N)
+   Pages (5/135): /alternatives, /compare, /contact, /demo, /features
+   Items (5/135):
+    - /demo (Thin content: 131 words (min 300))
+    - /features (Thin content: 220 words (min 300))
+    - /zh (Thin content: 130 words (min 300))
+    - /ja (Thin content: 79 words (min 300))
+    - /features/layout-translation (Thin content: 203 words (min 300))
+  </rule>
+ </category>
+ <category name="Performance" errors="0" warnings="1612">
+  <rule id="perf/js-file-size" severity="error" status="warn" docs="https://docs.squirrelscan.com/rules/perf/js-file-size">
+   2 JS file(s) exceed 250.0 KB
+   Items (2):
+    - /_next/static/chunks/6324-d146a6d6d20f35a8.js?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3 [sizeBytes: 343476, size: 335.4 KB, status: 200, contentType: application/javascript; charset=utf-8] (from: /, /pricing, /blog, /demo, /features/citations; +401 more)
+    - /_next/static/chunks/9532-199161518f09dea2.js?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3 [sizeBytes: 398846, size: 389.5 KB, status: 200, contentType: application/javascript; charset=utf-8] (from: /, /pricing, /blog, /demo, /features/citations; +401 more)
+  </rule>
+  <rule id="perf/dom-size" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/perf/dom-size">
+   Element with N children found
+   Pages (5/393): /, /alternatives, /ar, /compare, /de
+   Items (5/393):
+    - / (Element with 69 children found)
+    - /pricing (Element with 63 children found)
+    - /demo (Element with 66 children found)
+    - /features/citations (Element with 64 children found)
+    - /features (Element with 63 children found)
+  </rule>
+  <rule id="perf/render-blocking" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/perf/render-blocking">
+   5 render-blocking resources
+   Pages (5/406): /, /about, /alternatives, /ar, /blog
+   Items (5):
+    - /_next/static/css/bc7201b52fb8de17.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - /_next/static/css/22ed4ef2c1282d19.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - /_next/static/css/632e7a3188c1a6f8.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - /_next/static/css/2db88069ee991c94.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - /_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+  </rule>
+  <rule id="perf/critical-request-chains" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/perf/critical-request-chains">
+   5 critical request chain(s) found
+   Pages (5/406): /, /about, /alternatives, /ar, /blog
+   Items (5):
+    - CSS: /_next/static/css/bc7201b52fb8de17.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - CSS: /_next/static/css/22ed4ef2c1282d19.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - CSS: /_next/static/css/632e7a3188c1a6f8.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - CSS: /_next/static/css/2db88069ee991c94.css?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+    - JS: /_next/static/chunks/polyfills-42372ed130431b0a.js?dpl=dpl_4d3h7Dk1PR2TX42zH8N1QPxTUXa3
+  </rule>
+  <rule id="perf/unminified-js" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/perf/unminified-js">
+   1 JavaScript file(s) appear unminified
+   Pages (5/406): /, /about, /alternatives, /ar, /blog
+   Items (1):
+    - 6324-d146a6d6d20f35a8.js (335.4KB, ~239.8KB savings) [reason: 5 comments]
+  </rule>
+ </category>
+ <category name="Accessibility" errors="407" warnings="1194">
+  <rule id="a11y/duplicate-id-aria" severity="error" status="fail" docs="https://docs.squirrelscan.com/rules/a11y/duplicate-id-aria">
+   1 problematic ID(s) in ARIA attributes
+   Pages (5/406): /, /about, /alternatives, /ar, /blog
+   Items (1):
+    - &quot;ed-mobile-nav&quot; (not found)
+  </rule>
+  <rule id="a11y/aria-hidden-focus" severity="error" status="fail" docs="https://docs.squirrelscan.com/rules/a11y/aria-hidden-focus">
+   1 focusable element(s) inside aria-hidden
+   Pages (1): /contact
+   Items (1):
+    - input#contact-website
+  </rule>
+  <rule id="a11y/focus-visible" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/focus-visible">
+   outline:none found - ensure alternative focus styles exist
+   Pages (5/14): /, /ar, /contact, /de, /es
+  </rule>
+  <rule id="a11y/heading-order" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/heading-order">
+   1 heading level skip(s) detected
+   Pages (5/66): /alternatives, /compare, /demo, /features, /use-cases
+   Items (1):
+    - H3 after H1
+  </rule>
+  <rule id="a11y/identical-links-same-purpose" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/identical-links-same-purpose">
+   1 link text(s) lead to different destinations
+   Pages (5/89): /blog, /alternatives/askyourpdf, /alternatives/chatpdf, /alternatives/humata, /alternatives/notebooklm
+   Items (5/11):
+    - &quot;use cases&quot; → 2 different URLs
+    - &quot;no-signup demo&quot; → 2 different URLs
+    - &quot;doctalk&quot; → 2 different URLs
+    - &quot;免注册演示&quot; → 2 different URLs
+    - &quot;サインアップ不要のデモ&quot; → 2 different URLs
+  </rule>
+  <rule id="a11y/link-in-text-block" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/link-in-text-block">
+   N link(s) in text may lack underlines
+   Pages (5/406): /, /about, /alternatives, /ar, /blog
+   Items (5/292):
+    - &quot;Demo&quot;
+    - &quot;Pricing&quot;
+    - &quot;Features&quot;
+    - &quot;No-Signup Demo&quot;
+    - &quot;Citation Highlighting&quot;
+  </rule>
+  <rule id="a11y/link-text" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/link-text">
+   1 link(s) with generic text
+   Pages (5/66): /, /about, /alternatives, /blog, /compare
+   Items (1):
+    - sign in
+  </rule>
+  <rule id="a11y/th-has-data-cells" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/th-has-data-cells">
+   1 &lt;th&gt; element(s) without associated data cells
+   Pages (5/143): /pricing, /alternatives/askyourpdf, /alternatives/chatpdf, /alternatives/pdf-ai, /ar/pricing
+   Items (5/19):
+    - Feature
+    - Format
+    - 功能
+    - Característica
+    - 機能
+  </rule>
+  <rule id="a11y/touch-targets" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/touch-targets">
+   2 element(s) with potentially small touch targets
+   Pages (5/406): /, /about, /alternatives, /ar, /blog
+   Items (5/406):
+    - / (2 element(s) with potentially small touch targets)
+    - /pricing (2 element(s) with potentially small touch targets)
+    - /blog (2 element(s) with potentially small touch targets)
+    - /demo (2 element(s) with potentially small touch targets)
+    - /features/citations (2 element(s) with potentially small touch targets)
+  </rule>
+  <rule id="a11y/table-duplicate-name" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/a11y/table-duplicate-name">
+   N table(s) without accessible names
+   Pages (4): /blog/chat-with-excel-spreadsheet-ai, /blog/chat-with-powerpoint-ai, /blog/free-ai-pdf-chat-no-signup, /blog/how-to-chat-with-docx-ai
+   Items (4):
+    - /blog/chat-with-excel-spreadsheet-ai (3 table(s) without accessible names)
+    - /blog/chat-with-powerpoint-ai (2 table(s) without accessible names)
+    - /blog/free-ai-pdf-chat-no-signup (2 table(s) without accessible names)
+    - /blog/how-to-chat-with-docx-ai (2 table(s) without accessible names)
+  </rule>
+ </category>
+ <category name="Mobile" errors="0" warnings="408">
+  <rule id="mobile/tap-targets" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/mobile/tap-targets">
+   N element(s) may have small tap targets
+   Pages (5/406): /, /about, /alternatives, /ar, /blog
+   Items (5/406):
+    - / (26 element(s) may have small tap targets)
+    - /pricing (26 element(s) may have small tap targets)
+    - /blog (26 element(s) may have small tap targets)
+    - /demo (26 element(s) may have small tap targets)
+    - /features/citations (26 element(s) may have small tap targets)
+  </rule>
+  <rule id="mobile/font-size" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/mobile/font-size">
+   N element(s) with font-size under Npx
+   Pages (2): /tools/reading-time, /tools/word-counter
+   Items (2):
+    - /tools/word-counter (2 element(s) with font-size under 12px)
+    - /tools/reading-time (1 element(s) with font-size under 12px)
+  </rule>
+ </category>
+ <category name="E-E-A-T" errors="0" warnings="2">
+  <rule id="eeat/author-byline" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/eeat/author-byline">
+   No content pages have author attribution
+  </rule>
+  <rule id="eeat/content-dates" severity="warning" status="warn" docs="https://docs.squirrelscan.com/rules/eeat/content-dates">
+   No content pages have datePublished
+  </rule>
+ </category>
+</issues>
+</audit>

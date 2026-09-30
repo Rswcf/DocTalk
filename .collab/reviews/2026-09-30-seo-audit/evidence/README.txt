@@ -1,0 +1,1 @@
+source: GSC Performance, property https://www.doctalk.site/ (URL-prefix), web search, 16 months, read 2026-09-30; totals 214 clicks / 28.6K impressions / CTR 0.7% / avg pos 16.8; last data day 2026-09-27
