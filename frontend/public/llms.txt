@@ -10,6 +10,10 @@
 - [Multi-Format Support](https://www.doctalk.site/features/multi-format)
 - [Multilingual (11 Languages)](https://www.doctalk.site/features/multilingual)
 - [Free Demo (No Signup)](https://www.doctalk.site/demo)
+- [Free Demo: How It Works](https://www.doctalk.site/features/free-demo)
+- [Performance Modes (Flash and Pro)](https://www.doctalk.site/features/performance-modes)
+- [Layout-Preserving PDF Translation](https://www.doctalk.site/features/layout-translation)
+- [Trust & Security](https://www.doctalk.site/trust)
 - [Pricing](https://www.doctalk.site/pricing)
 
 ## Use Cases
@@ -68,7 +72,17 @@
 - [NotebookLM Alternatives 2026](https://www.doctalk.site/blog/notebooklm-alternatives-2026)
 - [What Is RAG? How AI Document Chat Works](https://www.doctalk.site/blog/rag-explained-simple)
 
+## Blog Categories
+
+- [Guides](https://www.doctalk.site/blog/category/guides)
+- [Comparisons](https://www.doctalk.site/blog/category/comparisons)
+- [Use Cases](https://www.doctalk.site/blog/category/use-cases)
+- [Product](https://www.doctalk.site/blog/category/product)
+- [AI Insights](https://www.doctalk.site/blog/category/ai-insights)
+
 ## About
 
 - [About DocTalk](https://www.doctalk.site/about)
 - [Contact](https://www.doctalk.site/contact)
+- [Privacy Policy](https://www.doctalk.site/privacy)
+- [Terms of Service](https://www.doctalk.site/terms)
