@@ -181,7 +181,17 @@ export default async function StudentsContent({ locale }: { locale: string }) {
         </EdProse>
       </EdSection>
 
-      <EdSection alt title={t('useCasesStudents.multilingual.title')}>
+      {/* The one cohort that has ever retained writes papers and needs the author's words with a page number
+          (plan 2026-09-22-next-strategy §2.2). Copy is per-kind honest: no unconditional word-for-word claim. */}
+      <EdSection alt title={t('useCasesStudents.verifiedQuotes.title')}>
+        <EdProse>
+          <p>{t('useCasesStudents.verifiedQuotes.p1')}</p>
+          <p>{t('useCasesStudents.verifiedQuotes.p2')}</p>
+          <p>{t('useCasesStudents.verifiedQuotes.p3')}</p>
+        </EdProse>
+      </EdSection>
+
+      <EdSection title={t('useCasesStudents.multilingual.title')}>
         <EdProse>
           <p>{t('useCasesStudents.multilingual.p1')}</p>
           <p>
@@ -193,13 +203,13 @@ export default async function StudentsContent({ locale }: { locale: string }) {
         </EdProse>
       </EdSection>
 
-      <EdSection title={t('useCasesStudents.getStarted.title')}>
+      <EdSection alt title={t('useCasesStudents.getStarted.title')}>
         <EdStepRow
           steps={steps.map((s) => ({ title: s.title, body: s.description, icon: s.icon }))}
         />
       </EdSection>
 
-      <EdSection alt title={t('useCasesStudents.faqTitle')}>
+      <EdSection title={t('useCasesStudents.faqTitle')}>
         <EdFaqList items={faqItems} />
       </EdSection>
 

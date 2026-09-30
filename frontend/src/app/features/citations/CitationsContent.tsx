@@ -193,7 +193,7 @@ export default async function CitationsContent({ locale }: { locale: string }) {
             title: u.title,
             body: u.description,
             icon: u.icon,
-            href: u.link,
+            href: href(u.link),
           }))}
         />
       </EdSection>
