@@ -1,0 +1,158 @@
+# Production read-only readout 2026-09-30 (owner-approved). Owner c142f3af excluded. Server-side = NOT consent-gated.
+
+## providers
+provider	count
+google	145
+microsoft-entra-id	1
+
+## SQL-1 weekly signups
+wk	signups	activated	google	microsoft	magic_link	cn_mail	edu
+2026-02-09	1	0	0	0	1	0	0
+2026-02-16	1	0	0	0	1	1	0
+2026-02-23	3	0	2	0	1	0	0
+2026-03-02	1	0	1	0	0	0	0
+2026-03-09	1	1	1	0	0	0	0
+2026-03-16	2	2	1	0	1	0	0
+2026-03-23	3	1	1	0	2	0	0
+2026-03-30	6	2	3	0	3	0	0
+2026-04-06	8	4	5	0	3	0	0
+2026-04-13	11	6	10	0	1	0	0
+2026-04-20	17	10	17	0	0	0	2
+2026-04-27	20	11	20	0	0	0	1
+2026-05-04	18	14	17	1	0	0	0
+2026-05-11	10	8	10	0	0	1	1
+2026-05-18	9	4	8	0	1	0	0
+2026-05-25	3	3	3	0	0	0	0
+2026-06-01	8	0	1	0	7	0	0
+2026-06-08	5	0	0	0	5	0	0
+2026-06-15	4	3	4	0	0	0	0
+2026-06-22	1	0	1	0	0	0	0
+2026-06-29	10	0	1	0	9	0	0
+2026-07-06	3	1	3	0	0	0	0
+2026-07-20	1	1	1	0	0	0	0
+2026-07-27	1	1	0	0	1	0	0
+2026-08-03	4	2	4	0	0	0	0
+2026-08-10	4	2	3	0	1	0	0
+2026-08-17	8	5	8	0	0	0	0
+2026-08-24	5	4	5	0	0	0	0
+2026-08-31	2	1	2	0	0	0	0
+2026-09-07	2	0	2	0	0	0	0
+2026-09-14	2	1	2	0	0	0	0
+2026-09-21	8	5	8	0	0	0	0
+
+## SQL-2 weekly un-gated events
+wk	cta	auth_opened	auth_clicked
+2026-04-27	0	0	0
+2026-05-04	10	1	8
+2026-05-11	24	1	31
+2026-05-18	26	3	18
+2026-05-25	3	2	6
+2026-06-01	4	2	6
+2026-06-08	1	0	1
+2026-06-15	4	2	5
+2026-06-22	3	0	13
+2026-06-29	1	2	1
+2026-07-06	3	0	10
+2026-07-13	1	0	6
+2026-07-20	2	1	4
+2026-07-27	5	4	0
+2026-08-03	3	2	6
+2026-08-10	4	0	6
+2026-08-17	16	6	12
+2026-08-24	9	2	7
+2026-08-31	4	1	2
+2026-09-07	9	5	4
+2026-09-14	4	2	8
+2026-09-21	14	5	11
+2026-09-28	2	0	0
+
+## SQL-3 weekly anonymous demo sessions
+wk	demo_sessions
+2026-02-02	5
+2026-02-09	9
+2026-02-23	4
+2026-03-09	1
+2026-03-23	1
+2026-03-30	5
+2026-04-06	6
+2026-04-13	8
+2026-04-20	15
+2026-04-27	13
+2026-05-04	13
+2026-05-11	15
+2026-05-18	7
+2026-06-01	3
+2026-06-08	1
+2026-06-15	3
+2026-07-06	3
+2026-07-13	1
+2026-07-20	2
+2026-07-27	10
+2026-08-03	5
+2026-08-10	6
+2026-08-17	16
+2026-08-24	2
+2026-08-31	2
+2026-09-07	24
+2026-09-14	7
+2026-09-21	7
+2026-09-28	1
+
+## SQL-4 monthly CTA/auth by path
+mo	path	n
+2026-05-01	/	55
+2026-05-01	/demo	7
+2026-05-01	/blog/best-ai-pdf-tools-2026	2
+2026-05-01	/alternatives/notebooklm	2
+2026-05-01	/blog/notebooklm-alternatives-2026	2
+2026-05-01	/blog/best-ai-tools-academic-research-2026	1
+2026-05-01	/d/d949b371-8934-49e2-80d7-96d033bf1217	1
+2026-06-01	/	18
+2026-07-01	/	14
+2026-07-01	/d/182c1d7b-29df-4600-add2-420384c725a4	3
+2026-08-01	/	34
+2026-08-01	/es	5
+2026-08-01	/d/182c1d7b-29df-4600-add2-420384c725a4	4
+2026-09-01	/	38
+2026-09-01	/ar	3
+2026-09-01	/d/182c1d7b-29df-4600-add2-420384c725a4	1
+2026-09-01	/ja	1
+2026-09-01	/es	1
+2026-09-01	/d/d949b371-8934-49e2-80d7-96d033bf1217	1
+
+## event names seen
+event_name	min	count
+auth_confirm_clicked	2026-08-13	1
+auth_confirm_viewed	2026-08-02	4
+auth_email_link_failed	2026-05-26	15
+auth_email_link_requested	2026-05-07	206
+auth_email_link_sent	2026-05-07	186
+auth_modal_opened	2026-05-07	41
+auth_provider_clicked	2026-05-07	167
+billing_view	2026-05-02	46
+chat_message_completed	2026-05-01	284
+chat_message_sent	2026-05-01	294
+checkout_completed	2026-05-06	1
+checkout_created	2026-05-06	6
+checkout_failed	2026-09-13	5
+citation_clicked	2026-05-06	223
+document_upload_created	2026-05-02	102
+export_clicked	2026-08-28	1
+extraction_created	2026-05-07	5
+feedback_submitted	2026-05-06	1
+landing_cta_clicked	2026-05-07	152
+layout_translation_created	2026-06-05	8
+layout_translation_imported_document	2026-06-06	1
+limit_hit	2026-05-02	34
+paywall_opened	2026-05-01	119
+quote_finder_panel_opened	2026-09-20	3
+quote_saved	2026-08-03	2
+quote_search_completed	2026-08-02	4
+quote_search_submitted	2026-08-02	4
+rag_verification_completed	2026-05-07	374
+share_created	2026-05-06	6
+structured_feedback_submitted	2026-05-14	2
+table_scan_created	2026-05-07	8
+upgrade_click	2026-05-02	67
+upgrade_nudge_shown	2026-05-15	39
+url_ingest_created	2026-05-06	6

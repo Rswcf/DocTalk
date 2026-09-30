@@ -3,7 +3,32 @@
 Design: `.collab/plans/2026-09-30-seo-audit-design.md` (Fable 5.1, incl. Amendment 1). Executor: Claude. Fable review of rev. 1: SHIP-WITH-FIXES (15 fixes, all applied below).
 Evidence: `evidence/` (one file per step). Status labels follow the design §8: **PROVEN** (mechanism + timing + discriminating test), **CORRELATED** (timing only), **HYPOTHESIS** (untested), **KILLED** (a test that would have confirmed it came back negative).
 
-## 1. Headline
+## 0. Update after rev. 2 — the un-gated readout (owner-approved read-only production SQL, 2026-09-30)
+
+This section supersedes the "partly measurement" caveat below wherever the two disagree. Source: `evidence/G0-B-C-2-prod-readout-2026-09-30.txt`.
+
+| Week of | Signups | Activated signups | Landing CTA clicks | Anonymous demo sessions |
+|---|---|---|---|---|
+| 04-20 | 17 | 10 | — (event added 05-07) | 15 |
+| 04-27 | 20 | 11 | — | 13 |
+| 05-04 | 18 | 14 | 10 | 13 |
+| 05-11 | 10 | 8 | 24 | 15 |
+| 05-18 | 9 | 4 | 26 | 7 |
+| **05-25** | **3** | **3** | **3** | **0** |
+| 06-01 … 06-29 | 8, 5, 4, 1, 10* | 0, 0, 3, 0, 0 | 4, 1, 4, 3, 1 | 3, 1, 3, 0, 0 |
+| Jul (4 wk) | 3, 0, 1, 1 | 1, 0, 1, 1 | 3, 1, 2, 5 | 3, 1, 2, 10 |
+| Aug (5 wk) | 4, 4, 8, 5, 2 | 2, 2, 5, 4, 1 | 3, 4, 16, 9, 4 | 5, 6, 16, 2, 2 |
+| Sep (4 wk) | 2, 2, 8, 0 | 0, 1, 5, 0 | 9, 4, 14, 2 | 24, 7, 7, 1 |
+
+\* 06-01 (7) and 06-29 (9) are magic-link bursts with 0 activated, i.e. junk.
+
+- **The cliff is real in server-side data, which is not consent-gated.** Activated signups ran 8–14/week from late April to mid-May and 0–5/week after 05-25. CTA clicks fell 26 → 3 and demo sessions 7 → 0 in the same week. **G0-C (iii) is now met**: the un-gated series drops in the same weeks as GA4's chatgpt.com. ChatGPT is named as the channel that stopped (**3 of 3**, F-3b → PROVEN on timing; the mechanism on ChatGPT's side remains unknown).
+- The GA4 all-source step in the 05-23 week is therefore mostly **real**, not a capture artifact. The GSC-vs-GA4 Google coverage dip in Jun–Jul stands as a separate, smaller capture effect.
+- The late-April burst was itself transient. ChatGPT first users rose 3 → 5 → 10 → 17 (weeks of 04-04 … 04-25), decayed through May (9, 6, 8), then stepped to 2. The shape fits ChatGPT picking DocTalk up for a set of answers in mid-April and dropping it around 05-23.
+- **Diagnostics run after rev. 2, all KILLED as mechanisms on our side:** (a) the 05-23 blog template (the 05-24 build renders the full article, see C-6); (b) the home page before vs after the redesign (the 05-17 build `95269601` vs the 05-24 build `fbcd4dce`): identical title, description, canonical and JSON-LD types, and the same 24 unique internal link targets. Only the visible text shrank (941 → 697 words: the "See it in action" mock and one use-case section were removed). That is recorded, not a mechanism.
+- Actions since rev. 2 are in `evidence/actions-log.md`: sitemap resubmitted, 3 URLs requested for indexing, `.collab` records pushed to main (53d3adfc).
+
+## 1. Headline (rev. 2 — read §0 first)
 
 GA4 counted about 70% fewer first-time visitors after May 2026. ChatGPT, until then the largest source, fell the most: 32 and 27 in April and May, then 4–10 a month. Two caveats come with that number. First, GA4 only sees visitors who accept cookies. In the week of the 05-23 deploy every source stepped down together, and GA4's capture of Google visitors fell to about a third for June–July. Part of the June cliff is therefore probably measurement. Even on months with comparable coverage (Apr–May vs Aug–Sep), ChatGPT is still down 60–75%, so the ChatGPT loss is real. Second, whether **signups** fell by the same amount is unread and waits on the owner's SQL. August was the best signup month since May, which argues they may not have.
 
