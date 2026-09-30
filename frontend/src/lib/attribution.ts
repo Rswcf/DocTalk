@@ -64,7 +64,7 @@ const PUBLIC_PATH = new RegExp(
     `/(?:use-cases|compare|alternatives|features|tools)(?:/${SLUG})?|` +
     `/blog(?:/category)?(?:/${SLUG})?|` +
     `/demo(?:/${SLUG})?|` +
-    `/(?:pricing|trust|about|contact|imprint|privacy|terms))$`,
+    `/(?:pricing|trust|about|contact|imprint|privacy|terms))?$`,
 );
 
 const MAX_LEN = 64;
@@ -107,15 +107,22 @@ export function safeUtm(value: string | null | undefined): string | undefined {
   return v;
 }
 
-// Public marketing paths are kept; anything else collapses to its first
-// segment plus "/*", so /d/<document-id> becomes "/d/*" and
-// /shared/<token> becomes "/shared/*".
-export function safeLandingPath(pathname: string): string | undefined {
+// App routes whose first segment is safe to name; everything under them is
+// collapsed. Any other unknown path becomes "/*".
+const APP_ROUTE_BUCKETS = new Set([
+  'd', 'shared', 'collections', 'auth', 'billing', 'profile', 'admin', 'document-diff',
+]);
+
+// Public marketing paths are kept; known app routes collapse to their first
+// segment, so /d/<document-id> becomes "/d/*" and /shared/<token> becomes
+// "/shared/*"; anything else becomes "/*".
+export function safeLandingPath(pathname: string): string {
   const p = pathname.toLowerCase().replace(/\/+$/, '') || '/';
   if (PUBLIC_PATH.test(p)) return p;
-  const first = p.split('/')[1];
-  if (!first || !/^[a-z0-9-]{1,40}$/.test(first)) return '/*';
-  return p.split('/').length > 2 ? `/${first}/*` : `/${first}`;
+  const segments = p.split('/');
+  const first = segments[1];
+  if (!first || !APP_ROUTE_BUCKETS.has(first)) return '/*';
+  return segments.length > 2 ? `/${first}/*` : `/${first}`;
 }
 
 export function readAttribution(referrer: string, href: string): Attribution {

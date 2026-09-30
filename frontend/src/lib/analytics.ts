@@ -1,4 +1,4 @@
-import { ATTRIBUTED_EVENTS, getAttribution } from './attribution';
+import { ATTRIBUTED_EVENTS, getAttribution, safeLandingPath } from './attribution';
 
 type EventParams = Record<string, string | number | boolean | null | undefined>;
 
@@ -11,9 +11,12 @@ declare global {
 export function trackEvent(eventName: string, params: EventParams = {}) {
   if (typeof window === 'undefined') return;
   try {
+    // The pre-signup funnel events are sent without consent, so their path is
+    // bucketed like landing_path (no document ids or share tokens).
+    const attributed = ATTRIBUTED_EVENTS.has(eventName);
     const safeParams: EventParams = {
-      path: window.location.pathname,
-      ...(ATTRIBUTED_EVENTS.has(eventName) ? getAttribution() : {}),
+      path: attributed ? safeLandingPath(window.location.pathname) : window.location.pathname,
+      ...(attributed ? getAttribution() : {}),
       ...params,
     };
     window.gtag?.('event', eventName, safeParams);

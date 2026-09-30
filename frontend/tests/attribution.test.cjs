@@ -30,6 +30,8 @@ test('private and dynamic routes never leak ids or tokens into landing_path', ()
   assert.equal(safeLandingPath('/auth/verify-request/extra'), '/auth/*');
   assert.equal(safeLandingPath('/profile'), '/profile');
   assert.equal(safeLandingPath('/%40user%40mail.com'), '/*');
+  assert.equal(safeLandingPath('/john-smith'), '/*');
+  assert.equal(safeLandingPath('/unknown/deeper/path'), '/*');
   // Public marketing pages are kept as-is, locale prefix included.
   assert.equal(safeLandingPath('/'), '/');
   assert.equal(safeLandingPath('/zh'), '/zh');
@@ -122,7 +124,7 @@ test('over-long utm values are dropped, not truncated', () => {
 
 test('trackEvent attaches attribution only to the pre-signup funnel events', async () => {
   const sent = [];
-  global.window = { location: { pathname: '/', href: 'https://www.doctalk.site/' } };
+  global.window = { location: { pathname: '/d/182c1d7b-29df-4600-add2-420384c725a4', href: 'https://www.doctalk.site/' } };
   global.fetch = (_url, init) => {
     sent.push(JSON.parse(init.body));
     return Promise.resolve();
@@ -130,6 +132,7 @@ test('trackEvent attaches attribution only to the pre-signup funnel events', asy
   const attribution = {
     ATTRIBUTED_EVENTS: new Set(['landing_cta_clicked', 'auth_modal_opened', 'auth_provider_clicked']),
     getAttribution: () => ({ ref_host: 'chatgpt.com', utm_source: 'chatgpt.com', landing_path: '/' }),
+    safeLandingPath: (p) => (p.startsWith('/d/') ? '/d/*' : p),
   };
   const { trackEvent } = loadTs('../src/lib/analytics.ts', { './attribution': attribution });
   try {
@@ -142,7 +145,10 @@ test('trackEvent attaches attribution only to the pre-signup funnel events', asy
   }
   assert.equal(sent[0].properties.ref_host, 'chatgpt.com');
   assert.equal(sent[0].properties.cta, 'hero');
+  assert.equal(sent[0].properties.path, '/d/*');
   assert.equal(sent[1].properties.ref_host, undefined);
+  // Non-funnel events keep their raw path (authenticated product analytics, unchanged).
+  assert.equal(sent[1].properties.path, '/d/182c1d7b-29df-4600-add2-420384c725a4');
   // Caller-supplied params win over captured attribution.
   assert.equal(sent[2].properties.ref_host, 'explicit.example');
 });
