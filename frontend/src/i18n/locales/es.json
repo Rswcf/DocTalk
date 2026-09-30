@@ -266,7 +266,7 @@
   "privacy.ccpa.content": "No vendemos información personal. Los residentes de California pueden contactar a privacy@doctalk.site para solicitar acceso, eliminación, corrección o información de exclusión.",
   "privacy.noTraining": "DocTalk no entrena modelos con sus datos",
   "privacy.policyLink": "Política de privacidad",
-  "privacy.section1.content": "Recopilamos tu dirección de correo electrónico para la autenticación y los documentos que subes para su análisis. Cuando haces clic en un botón de registro o inicio de sesión, también registramos el dominio del sitio web que te remitió y las etiquetas de campaña del enlace (por ejemplo, utm_source), para saber cómo llega la gente a DocTalk. No usa cookies ni identificadores.",
+  "privacy.section1.content": "Recopilamos tu dirección de correo electrónico para la autenticación y los documentos que subes para su análisis. Cuando usas botones clave antes de registrarte (como registrarse, iniciar sesión o probar la demo), también registramos el dominio del sitio web que te remitió, las etiquetas de campaña del enlace (por ejemplo, utm_source) y el tipo de página por la que llegaste, para saber cómo llega la gente a DocTalk. No se instalan cookies ni se crea ningún identificador de dispositivo; si has iniciado sesión, estos eventos se vinculan a tu cuenta, como el resto de nuestros eventos de producto.",
   "privacy.section1.title": "Recopilación de datos",
   "privacy.section2.item1": "DocTalk no entrena modelos con sus datos",
   "privacy.section2.item2": "Los documentos se procesan para ofrecer las funciones documentales que solicita.",
