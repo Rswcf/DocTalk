@@ -1,239 +1,234 @@
 ---
 title: "7 Best ChatPDF Alternatives in 2026 (Free and Paid)"
-description: "Looking for a ChatPDF alternative? We compare 7 AI document chat tools — DocTalk, AskYourPDF, PDF.ai, Humata, NotebookLM, Consensus, and Claude — on features, pricing, and format support."
+description: "ChatPDF alternatives compared on formats, citations and current pricing: DocTalk, AskYourPDF, PDF.ai, Humata, Gemini Notebook (formerly NotebookLM), Consensus and Claude. Prices checked 30 September 2026."
 date: "2026-03-18"
-updated: "2026-03-18"
+updated: "2026-10-07"
 author: "DocTalk Team"
 category: "comparisons"
 tags: ["chatpdf", "comparison", "alternatives", "ai tools", "pdf", "document chat"]
 image: "/blog/images/placeholder.png"
 imageAlt: "Comparison of ChatPDF alternatives showing different AI document chat tools side by side"
-keywords: ["chatpdf alternative", "chatpdf alternatives 2026", "best chatpdf alternative free", "tools like chatpdf", "chatpdf vs doctalk", "chatpdf competitors"]
+keywords: ["chatpdf alternative", "chatpdf alternatives 2026", "best chatpdf alternative free", "tools like chatpdf", "chatpdf vs doctalk", "chatpdf competitors", "chatty pdf"]
 ---
 
-ChatPDF launched in early 2023 and introduced millions of people to a simple idea: upload a PDF, ask questions, get answers. It remains a solid tool for basic PDF chat. But after three years of rapid development across the AI document space, many users are looking for alternatives that go further — whether that means supporting more file formats, providing better citation verification, or handling multilingual documents.
+**Short answer:** if you need answers you can verify against the exact page, across PDF, Word, PowerPoint and Excel files, try [DocTalk](/). If you want a free research notebook inside Google, use Gemini Notebook (the tool formerly called NotebookLM). If you mostly search published papers rather than your own files, use Consensus. The rest of this guide explains why, with prices we checked on each vendor's own site on 30 September 2026.
 
-This guide compares seven ChatPDF alternatives across the dimensions that matter most in daily use. We have tested each tool with the same set of documents (a 40-page financial report, a 15-page research paper, and a multilingual contract) to make the comparison as fair as possible.
+> **Updated October 2026 — what changed since March:**
+> - ChatPDF now reads Word, PowerPoint, Markdown and text files as well as PDFs, and its citations scroll to the source passage. Two of the reasons people left it in 2025 no longer apply.
+> - Google renamed NotebookLM to **Gemini Notebook**; the old address now redirects to notebook.google. It also accepts Word and PowerPoint files now.
+> - PDF.ai's free plan is now one upload a month; paid plans start at $10/month billed yearly.
+> - Humata's Team plan is $49 per user per month, and the $1.99 student plan no longer appears on its pricing page.
+> - AskYourPDF and Consensus changed their plans; the figures below are current.
+
+ChatPDF introduced millions of people to a simple idea in 2023: upload a PDF, ask questions, get answers. It is still a good tool for that. This guide compares seven alternatives on the things that decide daily use — which files they read, how you check an answer, the free tier, and what you pay.
+
+**How we compiled this:** every price and limit below comes from the vendor's own pricing or help page, read on 30 September 2026, unless we say otherwise. Plans change often, so check the vendor's page before you buy.
 
 ## Why People Look for ChatPDF Alternatives
 
-Before jumping into the list, it helps to understand what prompts the search in the first place. Based on common user feedback across forums and review sites, the main reasons are:
+**Verification at passage level.** ChatPDF's citations now jump to the source, which covers most everyday checking. Some work — legal review, compliance, a thesis — needs more: the exact sentence highlighted, or a quote you can paste with its page number, knowing it matches the source. That is where specialised tools differ most.
 
-**PDF-only limitation.** ChatPDF works exclusively with PDF files. If your workflow includes Word documents, PowerPoint decks, Excel spreadsheets, or web pages, you need a separate tool — or one tool that handles everything.
+**Spreadsheets and web pages alongside documents.** ChatPDF reads PDF, DOC/DOCX, PPT/PPTX, Markdown and text files. If your work also involves Excel files or web pages you want to question in the same place, you need a tool that handles those too.
 
-**No citation highlighting.** ChatPDF provides citations in the form of page references, but it does not highlight the specific passage in the original document. You know the answer came from page 12, but you still have to find the relevant paragraph yourself.
+**Free-tier limits.** ChatPDF's free plan analyses two documents a day. ChatPDF has no public pricing page at the moment (chatpdf.com/pricing returns a 404), so check the in-app offer for the paid plan.
 
-**Free tier constraints.** ChatPDF's free tier limits you to 2 PDFs per day and 50 questions per day. For students or professionals who need to process multiple documents in a session, this runs out fast.
+**Many languages and scripts.** Users working with Chinese, Japanese, Korean or Arabic documents often want a tool whose interface and answers work natively in that language.
 
-**Language coverage.** While ChatPDF handles English well, performance on CJK languages (Chinese, Japanese, Korean) and right-to-left scripts (Arabic) varies. Users working with multilingual documents often hit accuracy issues.
-
-None of these are dealbreakers for everyone. If you only work with English PDFs and need a fast, simple tool, ChatPDF may still be the right choice. But if any of these limitations affect your workflow, one of the alternatives below will likely serve you better.
+If you only need quick answers from a few files a day, ChatPDF may still be the right choice. If any of the points above matter, one of these alternatives will likely fit better.
 
 ## The 7 Best ChatPDF Alternatives
 
-### 1. DocTalk — Best for Multi-Format Documents with Citation Verification
+### 1. DocTalk — Best for Answers You Can Verify, Across Formats
 
-[DocTalk](/) is an AI document Q&A platform that supports seven file formats — PDF, DOCX, PPTX, XLSX, TXT, Markdown, and web URLs. Its defining feature is [citation highlighting](/features/citations): when the AI cites a passage, you click the citation number and the app scrolls to the exact paragraph in the original document and highlights it.
+[DocTalk](/) is an AI document Q&A tool for PDF, DOCX, PPTX, XLSX, TXT, Markdown and web URLs. Every answer carries numbered citations; click one and the document scrolls to the exact passage and [highlights it](/features/citations). For quotes you want to reuse, **Quote Finder** returns quotes taken from the source text and checked against it by machine before they are shown, with the page they come from.
 
-**What sets it apart:** DocTalk is the only tool in this list that combines multi-format support with click-to-verify citation highlighting. You can upload a Word document and a PDF into the same workspace, ask questions that span both, and verify every answer against the source text.
+**What sets it apart:** citations you can click through to the highlighted passage, on seven formats, plus quotes that are checked against the document rather than paraphrased by the model.
 
 **Pros:**
-- 7 document formats supported (PDF, DOCX, PPTX, XLSX, TXT, MD, URL)
-- Citation highlighting — click a citation to see the source passage highlighted in the original document
-- [11 languages](/features/multilingual) with native support (not just translation)
-- 2 AI modes: Flash (DeepSeek V4 Flash) and Pro (DeepSeek V4 Pro)
-- [Free demo](/demo) with no signup required
+- 7 formats: PDF, DOCX, PPTX, XLSX, TXT, Markdown, web URL
+- Click-to-highlight citations on every answer
+- Quote Finder: quotes checked against the source by machine, with page attribution
+- Interface in [11 languages](/features/multilingual)
+- 2 answer modes: Flash (DeepSeek V4 Flash) for quick questions, Pro (DeepSeek V4 Pro) for deeper ones
+- [Free demo](/demo) with no signup
 - Per-document limits: Free 750 pages / 50 MB, Plus 1,500 pages / 100 MB, Pro 3,000 pages / 200 MB
 
 **Cons:**
 - No browser extension
-- No collaborative annotation features
-- Smaller brand recognition compared to ChatPDF
+- No shared annotation or team workspaces
+- A younger, smaller product than ChatPDF
 
-**Pricing:** Free tier (300 credits/month). Plus: $9.99/month (3,000 credits). Pro: $19.99/month (9,000 credits). Credit packs available for one-time purchases. See full [pricing](/pricing).
+**Pricing:** Free: 500 starter credits, then 300 credits a month from the second month. Plus: $9.99/month (3,000 credits). Pro: $19.99/month (9,000 credits). One-time credit packs are available. See [pricing](/pricing).
 
-**Best for:** Users who work with multiple document formats and need to verify AI answers against the original source. Particularly strong for legal documents, research papers, and multilingual workflows.
+**Best for:** anyone who has to check an AI answer against the source — legal and compliance documents, research papers, reports — and people who work across Word, PowerPoint and Excel as well as PDF.
 
 ### 2. AskYourPDF — Best for Research Integration
 
-[AskYourPDF](https://askyourpdf.com) started as a ChatGPT plugin and has grown into a standalone platform. It offers PDF upload, a Chrome extension for reading PDFs in-browser, and integrations with Zotero for academic workflows.
+[AskYourPDF](https://askyourpdf.com) began as a ChatGPT plugin and is now a standalone app with a Chrome extension, a Zotero integration and a developer API.
 
-**What sets it apart:** The Zotero integration is genuinely useful for researchers who manage their references there. AskYourPDF can pull papers directly from your Zotero library without requiring manual upload.
+**What sets it apart:** researchers who keep their library in Zotero can query papers from it directly.
 
 **Pros:**
-- ChatGPT plugin and standalone app
 - Zotero integration for academic workflows
-- Chrome extension for in-browser PDF reading
-- API available for developers
-- Supports large documents
+- Chrome extension and API
+- Very large page allowances on paid plans (2,500 pages per document on Premium, 6,000 on Pro)
 
 **Cons:**
-- PDF-only (no DOCX, PPTX, or XLSX support)
-- Citation quality is page-level, not passage-level — you get a page number, not a highlighted paragraph
-- Interface can feel cluttered with the ChatGPT integration layer
-- Free tier is limited (fewer questions per day than competitors)
+- Tight free plan: 1 document a day, up to 100 pages and 15 MB, 50 questions a day
+- References are page-level text citations rather than highlighted passages (per third-party reviews)
 
-**Pricing:** Free tier with daily limits. Pro: $9.99/month. Enterprise pricing available.
+**Pricing:** Free (limits above). Premium: $11.99/month. Pro: $14.99/month. Enterprise: custom.
 
-**Best for:** Researchers who use Zotero and want a direct integration, or ChatGPT power users who prefer working within the ChatGPT ecosystem. For a deeper comparison, see our [DocTalk vs AskYourPDF comparison](/compare/askyourpdf).
+**Best for:** Zotero users and heavy PDF readers. See our [DocTalk vs AskYourPDF comparison](/compare/askyourpdf).
 
-### 3. PDF.ai — Best Simple Free Option
+### 3. PDF.ai — Best Simple Interface
 
-[PDF.ai](https://pdf.ai) takes a minimalist approach. Upload a PDF, ask questions, get answers. No signup required for basic use. The interface is clean and distraction-free.
+[PDF.ai](https://pdf.ai) keeps things minimal: upload a PDF, ask, get an answer. It also sells a document-parsing API.
 
-**What sets it apart:** Simplicity. PDF.ai does one thing and does it well. There is no learning curve, no feature overload, and the free tier is surprisingly generous.
+**What sets it apart:** a clean, fast interface with little to learn.
 
 **Pros:**
-- Very clean, simple interface
-- No signup required for basic use
-- Fast response times
-- Good free tier
-- Source page references in answers
+- Very simple interface
+- Unlimited uploads and questions on the Ultimate plan
+- Document-parsing API for developers
 
 **Cons:**
-- PDF-only — no other formats
-- No citation highlighting (provides page numbers only)
-- Limited language support
-- No conversation history between sessions
-- No mobile app
+- Free plan is small: 1 upload and 100 questions a month, 10 MB files
+- Chats with PDFs; third-party reviews report no native Word or PowerPoint chat
+- References are text-based rather than highlighted passages (per third-party reviews)
 
-**Pricing:** Free tier available. Pro plans start at $15/month.
+**Pricing:** Hobby: free. Pro: $17/month, or $10/month billed yearly. Ultimate: $27/month, or $20/month yearly. Enterprise: $37 per user per month, or $30 yearly.
 
-**Best for:** Users who want the simplest possible PDF chat experience and do not need multi-format support or citation highlighting.
+**Best for:** people who want the least friction for occasional PDF questions.
 
-### 4. Humata — Best for Long Documents
+### 4. Humata — Best for Teams with Large Document Sets
 
-[Humata](https://humata.ai) focuses on handling long documents well. It can process PDFs up to several hundred pages and maintains reasonable accuracy on questions about content deep in the document.
+[Humata](https://humata.ai) positions itself as AI search over a team's knowledge base, with answers that link back to the source files.
 
-**What sets it apart:** Humata has invested in handling very long documents — contracts, manuals, and reports that run into hundreds of pages. Its summarization features are particularly strong, generating structured summaries with section-by-section breakdowns.
+**What sets it apart:** team plans with folder and department permissions, and pay-per-page pricing beyond each plan's allowance.
 
 **Pros:**
-- Strong performance on long documents (100+ pages)
-- Good summarization features
-- Clean interface with document management
-- Team collaboration features
-- Handles multiple documents in a workspace
+- Answers link to the cited source files
+- Team plan with permissions and OCR
+- Predictable overage pricing ($0.01–$0.02 per extra page)
 
 **Cons:**
-- PDF-only
-- Citation quality varies — sometimes references are vague
-- Free tier limited to 60 pages per PDF
-- Higher-priced tiers needed for heavy use
-- Occasional slow response times on complex queries
+- Free plan covers 60 pages a month
+- Citations link to the file; we could not confirm passage-level highlighting
 
-**Pricing:** Free tier (60 pages/PDF, limited queries). Student: $1.99/month. Expert: $9.99/month. Team: $99/month.
+**Pricing:** Free: 60 pages/month. Expert: $9.99/month (3 users, 500 pages/month). Team: $49 per user per month (5,000 pages/month). Enterprise: custom.
 
-**Best for:** Users who regularly work with very long documents and need summarization. Teams that want shared document workspaces.
+**Best for:** small teams that share a document collection.
 
-### 5. NotebookLM (Google) — Best Free Option
+### 5. Gemini Notebook (formerly NotebookLM) — Best Free Research Notebook
 
-[NotebookLM](https://notebooklm.google.com) is Google's free AI notebook tool. Upload documents (PDFs, Google Docs, web links, YouTube videos), and it creates a notebook where you can ask questions, generate summaries, and even create audio overviews (podcast-style summaries).
+[Gemini Notebook](https://notebook.google) is Google's AI notebook, renamed from NotebookLM in 2026. You add sources to a notebook, then ask questions, get summaries with inline citations, and generate audio overviews.
 
-**What sets it apart:** It is completely free, backed by Google's Gemini model, and the audio overview feature is genuinely novel — it generates a two-person podcast-style discussion of your document that you can listen to on a commute.
+**What sets it apart:** a generous free tier and a very wide range of source types, inside the Google account you may already use.
 
 **Pros:**
-- Completely free
-- Supports PDFs, Google Docs, web links, YouTube, and audio files
-- Audio overview feature (podcast-style summaries)
-- Strong integration with Google Workspace
-- Inline citations with source grounding
-- Handles multiple sources in one notebook
+- Free: up to 100 notebooks and 50 sources per notebook
+- Reads Word, PDF, PowerPoint, text, Markdown, CSV, Google Docs, Slides and Sheets, ePub, audio, images, web URLs and public YouTube videos
+- Inline citations grounded in your sources
+- Audio overviews (podcast-style summaries)
 
 **Cons:**
 - Requires a Google account
-- No DOCX, PPTX, or XLSX upload (must convert to Google Docs first)
-- Limited language support compared to dedicated multilingual tools
-- No API access
-- Cannot export conversations
-- Dependent on Google ecosystem — not ideal if your organization uses Microsoft 365
+- No native Excel (.xlsx) upload — use Google Sheets or CSV
+- Higher limits (up to 600 sources per notebook) come with paid Google AI plans; Google's limits page does not list their prices, so check the current plan page
 
-**Pricing:** Free.
+**Pricing:** Free tier as above; larger limits through Google's paid AI plans.
 
-**Best for:** Users already in the Google ecosystem who want a free tool. Anyone curious about audio summaries. Not ideal for enterprise use or workflows requiring DOCX/XLSX support. See our [NotebookLM alternatives comparison](/compare/notebooklm) for details.
+**Best for:** students and researchers who live in Google Workspace. See our [DocTalk vs NotebookLM comparison](/compare/notebooklm).
 
-### 6. Consensus — Best for Scientific Literature
+### 6. Consensus — Best for Searching Published Research
 
-[Consensus](https://consensus.app) is not a general-purpose document chat tool — it is a search engine for scientific research papers. You ask a question, and Consensus searches its database of 200+ million papers to find answers backed by peer-reviewed evidence.
+[Consensus](https://consensus.app) is not a tool for your own files. It is an AI search engine over more than 220 million peer-reviewed papers that answers questions from published evidence.
 
-**What sets it apart:** Consensus does not work with your documents. Instead, it searches published research literature. This makes it complementary to tools like DocTalk rather than a replacement. Its "consensus meter" shows what percentage of studies support a given claim, which is invaluable for literature reviews.
+**What sets it apart:** answers grounded in the research literature, with links to the papers.
 
 **Pros:**
-- Searches 200+ million peer-reviewed papers
-- Consensus meter shows agreement levels across studies
-- Citations link to original papers (DOI links)
-- Copilot feature for synthesis across papers
-- Study snapshot cards with key findings
+- Searches 220M+ peer-reviewed papers
+- "Deep review" reports that synthesise many papers
+- Student, faculty and clinician discounts (up to 40%)
 
 **Cons:**
-- Cannot upload your own documents
-- Limited to published research papers
-- Free tier limited to basic search (no Copilot)
-- Does not replace tools for working with your own files
-- No support for non-academic documents
+- Does not work with documents you upload
+- Free plan: 10 Pro messages and up to 3 Deep reviews a month
 
-**Pricing:** Free tier with basic search. Premium: $8.99/month. Team and enterprise plans available.
+**Pricing:** Free (limits above). Pro: $20/month, or $144/year. Deep: $65/month, or $540/year.
 
-**Best for:** Researchers and students doing literature reviews or seeking evidence-based answers to scientific questions. Use it alongside (not instead of) a document chat tool.
+**Best for:** literature reviews and evidence questions. Use it alongside a document tool, not instead of one.
 
-### 7. Claude (Anthropic) — Best General-Purpose AI with Document Support
+### 7. Claude (Anthropic) — Best General-Purpose Assistant for Documents
 
-[Claude](https://claude.ai) is a general-purpose AI assistant that can accept file uploads (PDFs, code files, images, and more) directly in the chat. It is not a dedicated document tool, but its large context window (up to 200K tokens) makes it surprisingly capable for document Q&A.
+[Claude](https://claude.ai) is a general AI assistant that accepts file uploads in chat. It is not a dedicated document tool, but it reads long files well.
 
-**What sets it apart:** Claude's massive context window means it can process entire books without chunking. For documents under 150 pages, it can hold the full text in context and answer questions with strong accuracy. It is also one of the most capable LLMs for nuanced reasoning.
+**What sets it apart:** strong reasoning over long documents — PDFs of up to 1,000 pages, with full visual analysis (tables, scans, charts) on the first 100 pages.
 
 **Pros:**
-- Very large context window (200K tokens)
-- Accepts PDF, code, image, and text file uploads
-- Strong reasoning and nuanced answers
-- Can compare multiple uploaded documents
-- Available as a general-purpose assistant for follow-up tasks (drafting, analysis)
+- Uploads up to 500 MB per file and 20 files per chat
+- Reads long PDFs; visual analysis of the first 100 pages
+- Projects keep files available across chats
+- Useful for follow-up drafting and analysis
 
 **Cons:**
-- No citation highlighting — answers reference the document but do not link to specific passages you can click
-- Not optimized for document Q&A (it is a general-purpose tool)
-- Free tier limited to a small number of messages per day
-- No persistent document library — you re-upload each session
-- No OCR for scanned PDFs
-- Accuracy degrades on very long documents despite the large context window
+- No click-to-highlight citations into the original document
+- A general assistant, so no document library or format-specific tools
+- The free tier works in rolling usage windows, which limits long sessions
 
-**Pricing:** Free tier (limited messages). Pro: $20/month. Team: $25/user/month.
+**Pricing:** Free (usage-limited). Pro: $20/month, or $17/month billed yearly.
 
-**Best for:** Users who want a powerful general AI that can also handle occasional document questions. Not ideal as a primary document analysis tool due to the lack of citation verification and document management.
+**Best for:** occasional document questions inside a general assistant you already use.
+
+## ChattyPDF vs ChatPDF: Not the Same Product
+
+People searching for "Chatty PDF" are often looking for ChatPDF, but [ChattyPDF](https://chattypdf.com) is a separate tool, built by the NLP company NLMatics. It ties answers to specific pages and adds table-of-contents search, term linking and table extraction; the site recommends running OCR on scanned files first. ChattyPDF does not publish pricing on its site, so we have left it out of the ranked list. If you want page-tied answers across more formats, the tools above cover that.
 
 ## Comparison Table
 
-| Tool | Formats | Citation Highlighting | Languages | Free Tier | Paid Plans |
-|---|---|---|---|---|---|
-| **DocTalk** | PDF, DOCX, PPTX, XLSX, TXT, MD, URL | Yes — click to highlight | 11 | 300 credits/mo | From $9.99/mo |
-| **AskYourPDF** | PDF only | No (page numbers) | ~5 | Limited daily | From $9.99/mo |
-| **PDF.ai** | PDF only | No (page numbers) | ~3 | Generous | From $15/mo |
-| **Humata** | PDF only | Partial | ~5 | 60 pages/PDF | From $1.99/mo |
-| **NotebookLM** | PDF, Google Docs, web, YouTube | Inline citations | ~10 | Unlimited (free) | Free |
-| **Consensus** | Published papers only | DOI links | English | Basic search | From $8.99/mo |
-| **Claude** | PDF, code, images, text | No | ~20 | Limited msgs | From $20/mo |
+Prices and limits as published by each vendor, checked 30 September 2026.
+
+| Tool | Reads | How you check an answer | Free tier | Paid from |
+|---|---|---|---|---|
+| **DocTalk** | PDF, DOCX, PPTX, XLSX, TXT, MD, URL | Click citation → passage highlighted; machine-checked quotes with page | 500 starter credits, then 300/mo | $9.99/mo |
+| **ChatPDF** | PDF, DOC/DOCX, PPT/PPTX, MD, TXT | Clickable citations that scroll to the source | 2 documents/day | Not published |
+| **AskYourPDF** | PDF-first | Page-level text references | 1 doc/day, 50 questions | $11.99/mo |
+| **PDF.ai** | PDF | Text references | 1 upload/mo, 100 questions | $10/mo (yearly) |
+| **Humata** | Uploaded files | Links to cited source files | 60 pages/mo | $9.99/mo |
+| **Gemini Notebook** | Docs, PDF, PPTX, Sheets/CSV, web, YouTube, audio… | Inline source citations | 100 notebooks, 50 sources each | Google AI plans |
+| **Consensus** | Published papers only | Links to papers | 10 Pro messages/mo | $20/mo |
+| **Claude** | PDF, text, images, code… | Conversational references | Usage-limited | $17/mo (yearly) |
 
 ## How to Choose
 
-The right tool depends on what you actually need:
+- **You must be able to prove where an answer came from** (legal, compliance, academic writing): [DocTalk](/) highlights the cited passage and gives machine-checked quotes with the page they come from.
+- **You want free and you use Google:** Gemini Notebook.
+- **You are doing a literature review:** start with Consensus to find papers, then question the PDFs you download in a document tool.
+- **You read a few PDFs a day and want no friction:** ChatPDF or PDF.ai.
+- **You want one assistant for everything:** Claude, accepting that it does not highlight sources in the file.
 
-- **If you work with multiple file formats** (DOCX, PPTX, XLSX) and need verifiable citations: [DocTalk](/) is the strongest option. Most alternatives are PDF-only.
+For a wider comparison, see our [2026 guide to AI PDF tools](/blog/best-ai-pdf-tools-2026), or the head-to-head [DocTalk vs ChatPDF](/compare/chatpdf).
 
-- **If you need a free tool and are in the Google ecosystem:** NotebookLM is hard to beat. It is genuinely capable and completely free.
+## Frequently Asked Questions
 
-- **If you are doing academic research:** Start with Consensus for literature search, then use DocTalk or AskYourPDF for analyzing specific papers you have downloaded.
+### What is the best free ChatPDF alternative?
+For a free research notebook, Gemini Notebook (formerly NotebookLM) has the largest free allowance: 100 notebooks with 50 sources each. For verifying answers against the exact page across PDF, Word, PowerPoint and Excel, DocTalk's free plan gives 500 starter credits and then 300 credits a month, with a no-signup [demo](/demo).
 
-- **If you want the simplest possible experience:** PDF.ai has the lowest friction — no signup, no learning curve.
+### Is NotebookLM still available?
+Yes, under a new name. Google renamed it Gemini Notebook in 2026, and notebooklm.google now redirects to notebook.google.
 
-- **If you need a general-purpose AI that can also read documents:** Claude is the most capable general AI with file support, but it lacks the document-specific features (citation highlighting, format support) that dedicated tools provide.
+### Does ChatPDF support Word files now?
+Yes. As of September 2026, ChatPDF reads PDF, DOC/DOCX, PPT/PPTX, Markdown and text files, and it can also chat with a website or YouTube video.
 
-- **If citation verification matters** (legal, compliance, academic work): Only DocTalk offers click-to-highlight citation verification across multiple formats. For work where you cannot afford to trust an unverified AI answer, this matters. See why in our guide on [how AI document chat actually works](/blog/rag-explained-simple).
+### Which AI PDF tool gives quotes you can verify, with page numbers?
+DocTalk's Quote Finder returns quotes taken from the source text and checked against it by machine before they are shown, with the page they come from, and you can jump to the highlighted passage.
 
-For a broader comparison of AI PDF tools, see our [full 2026 comparison guide](/blog/best-ai-pdf-tools-2026). And if you want to compare DocTalk against ChatPDF directly, we have a detailed [head-to-head comparison](/compare/chatpdf).
+### What is ChattyPDF?
+A separate product from ChatPDF, built by NLMatics, that ties answers to specific PDF pages. It does not publish pricing on its website.
 
 ## Final Thoughts
 
-ChatPDF popularized AI document chat, and it still does a good job at basic PDF Q&A. But the space has evolved significantly. The tool that fits your workflow depends on your file formats, your need for citation verification, your language requirements, and your budget.
+ChatPDF made AI document chat mainstream and has closed several of the gaps that once sent people elsewhere. The right alternative now depends on how you check answers, which formats you use and what you want to pay. Most of these tools have free tiers: try two or three with a real document from your own work, not a demo file, and keep the one whose answers you can verify fastest.
 
-The good news: most of these tools offer free tiers or trials. Try two or three with a real document from your own work — not a demo file — and see which one produces the most accurate, verifiable answers for your use case.
-
-[Try DocTalk free](/demo) — upload any document format and see citation highlighting in action. No signup required.
+[Try DocTalk free](/demo) — ask a question about a sample document and click a citation to see the highlighted passage. No signup required.
