@@ -217,7 +217,7 @@
   "auth.privacyNote": "We don't use your documents to train AI models",
   "privacy.title": "Privacy Policy",
   "privacy.section1.title": "Data Collection",
-  "privacy.section1.content": "We collect your email address for authentication and the documents you upload for analysis.",
+  "privacy.section1.content": "We collect your email address for authentication and the documents you upload for analysis. When you click a sign-up or sign-in button, we also record the domain of the website that referred you and any campaign tags in the link (for example utm_source), so we can see how people find DocTalk. This uses no cookies and no identifiers.",
   "privacy.section2.title": "Data Usage",
   "privacy.section2.item1": "DocTalk does not train models on your data",
   "privacy.section2.item2": "Documents are processed to provide the document features you request.",

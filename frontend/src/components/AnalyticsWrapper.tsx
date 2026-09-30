@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
+// Side-effect import: records first-touch referrer/utm on every route's first
+// load, before any client navigation. Independent of the consent gate below;
+// it stores nothing in the browser (see lib/attribution.ts).
+import '../lib/attribution';
 
 const CONSENT_KEY = 'doctalk_analytics_consent';
 // Must match the hard-coded ID inside frontend/public/ga-init.js. If you

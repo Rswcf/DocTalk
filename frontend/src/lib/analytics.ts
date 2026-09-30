@@ -1,3 +1,5 @@
+import { ATTRIBUTED_EVENTS, getAttribution } from './attribution';
+
 type EventParams = Record<string, string | number | boolean | null | undefined>;
 
 declare global {
@@ -11,6 +13,7 @@ export function trackEvent(eventName: string, params: EventParams = {}) {
   try {
     const safeParams: EventParams = {
       path: window.location.pathname,
+      ...(ATTRIBUTED_EVENTS.has(eventName) ? getAttribution() : {}),
       ...params,
     };
     window.gtag?.('event', eventName, safeParams);

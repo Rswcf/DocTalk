@@ -212,7 +212,7 @@
   "auth.privacyNote": "あなたのドキュメントをAIモデルの学習に使用することはありません",
   "privacy.title": "プライバシーポリシー",
   "privacy.section1.title": "データ収集",
-  "privacy.section1.content": "認証のためにメールアドレス、分析のためにアップロードされたドキュメントを収集します。",
+  "privacy.section1.content": "認証のためにメールアドレス、分析のためにアップロードされたドキュメントを収集します。 登録またはサインインのボタンをクリックした際に、参照元サイトのドメインとリンク内のキャンペーンタグ（例：utm_source）も記録し、DocTalk がどのように見つけられているかを把握します。Cookie や識別子は使用しません。",
   "privacy.section2.title": "データの使用",
   "privacy.section2.item1": "DocTalk はデータをモデル学習に使用しません",
   "privacy.section2.item2": "文書は、ご利用になる文書機能を提供するために処理されます。",
