@@ -8,3 +8,5 @@ date,engine,region_hl_gl,query_id,query_text,category,search_invoked,doctalk_tie
 2026-09-30,perplexity(logged-out),CEST,P-C6,free AI to chat with PDF without signing up,category,Y,d,,"Smallpdf; Denser Chat; ChatPDF; Free.ai; Rewind","smallpdf; denser; free","we own /features/free-demo + /blog/free-ai-pdf-chat-no-signup (30 Google clicks); absent"
 2026-09-30,perplexity(logged-out),CEST,P-Z1,读论文 ai 推荐,zh-academic,Y,d,,"SciSpace; Elicit; Scite; Semantic Scholar; NotebookLM; Kimi; Explainpaper; Scholarcy","aiplat.shanghaitech.edu",
 2026-09-30,perplexity(logged-out),CEST,P-C8,AI tool to summarize a research paper with citations,category,N,n/a,,,,"logged-out limit reached: 'Sign up and repeat your request.'"
+2026-09-30,copilot(unauth),CEST,P-C4,best ChatPDF alternatives,category,N,n/a,,,,"Copilot returned 'Verification required' (human check) — blocked; Claude does not solve verification challenges"
+2026-09-30,chatgpt,CEST,-,-,-,-,-,,,,"Sign-in via Google reached OpenAI MFA (authenticator one-time code) — owner must enter the code in the browser pane"
