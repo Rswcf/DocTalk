@@ -212,7 +212,7 @@
   "auth.privacyNote": "귀하의 문서를 AI 모델 학습에 사용하지 않습니다",
   "privacy.title": "개인정보 보호정책",
   "privacy.section1.title": "데이터 수집",
-  "privacy.section1.content": "인증을 위한 이메일 주소와 분석을 위해 업로드하는 문서를 수집합니다.",
+  "privacy.section1.content": "인증을 위한 이메일 주소와 분석을 위해 업로드하는 문서를 수집합니다. 가입 또는 로그인 버튼을 클릭하면 사용자를 안내한 웹사이트의 도메인과 링크의 캠페인 태그(예: utm_source)도 기록하여 사람들이 DocTalk를 어떻게 찾는지 파악합니다. 쿠키나 식별자는 사용하지 않습니다.",
   "privacy.section2.title": "데이터 사용",
   "privacy.section2.item1": "DocTalk은 데이터를 모델 학습에 사용하지 않습니다",
   "privacy.section2.item2": "문서는 요청하신 문서 기능을 제공하기 위해 처리됩니다.",

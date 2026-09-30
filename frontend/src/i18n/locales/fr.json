@@ -216,7 +216,7 @@
   "auth.privacyNote": "Nous n'utilisons pas vos documents pour entrainer des modeles d'IA",
   "privacy.title": "Politique de confidentialite",
   "privacy.section1.title": "Collecte des donnees",
-  "privacy.section1.content": "Nous collectons votre adresse e-mail pour l'authentification et les documents que vous telechargez pour l'analyse.",
+  "privacy.section1.content": "Nous collectons votre adresse e-mail pour l'authentification et les documents que vous telechargez pour l'analyse. Lorsque vous cliquez sur un bouton d'inscription ou de connexion, nous enregistrons aussi le domaine du site qui vous a redirigé et les balises de campagne du lien (par exemple utm_source), afin de comprendre comment les gens découvrent DocTalk. Aucun cookie ni identifiant n'est utilisé.",
   "privacy.section2.title": "Utilisation des donnees",
   "privacy.section2.item1": "DocTalk n’entraîne pas de modèles avec vos données",
   "privacy.section2.item2": "Les documents sont traités pour fournir les fonctionnalités documentaires que vous demandez.",

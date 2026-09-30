@@ -216,7 +216,7 @@
   "auth.privacyNote": "Wir verwenden Ihre Dokumente nicht zum Training von KI-Modellen",
   "privacy.title": "Datenschutzrichtlinie",
   "privacy.section1.title": "Datenerhebung",
-  "privacy.section1.content": "Wir erheben Ihre E-Mail-Adresse zur Authentifizierung und die von Ihnen hochgeladenen Dokumente zur Analyse.",
+  "privacy.section1.content": "Wir erheben Ihre E-Mail-Adresse zur Authentifizierung und die von Ihnen hochgeladenen Dokumente zur Analyse. Wenn du auf eine Schaltfläche zum Registrieren oder Anmelden klickst, speichern wir außerdem die Domain der Website, von der du gekommen bist, sowie Kampagnen-Tags im Link (zum Beispiel utm_source), damit wir sehen, wie Menschen DocTalk finden. Dabei werden keine Cookies und keine Kennungen verwendet.",
   "privacy.section2.title": "Datennutzung",
   "privacy.section2.item1": "DocTalk trainiert keine Modelle mit Ihren Daten",
   "privacy.section2.item2": "Dokumente werden für die von Ihnen angeforderten Dokumentfunktionen verarbeitet.",
