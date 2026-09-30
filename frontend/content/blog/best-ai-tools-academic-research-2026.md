@@ -276,9 +276,9 @@ No single tool covers the full research lifecycle. Here is a practical workflow 
 | **Connected Papers** | Literature search | No | 5 graphs/mo | From €4.16/mo (yearly) | Research mapping |
 | **Semantic Scholar** | Literature search | No | Unlimited | Free | Academic search |
 | **Zotero + AI** | Reference mgmt | Via plugins | Free (core) | Storage plans | Organized libraries |
-| **ScholarAI** | Paper search in ChatGPT | No | See site | See site | ChatGPT users |
+| **ScholarAI** | Paper search (ChatGPT era) | No | Not verified | Not verified | Check scholarai.io first |
 
-Prices from each vendor's site, checked 30 September 2026.
+Prices for DocTalk, Gemini Notebook, Claude, Consensus, Elicit and Connected Papers come from each vendor's site, checked 30 September 2026. The Semantic Scholar and Zotero rows are from our March review; ScholarAI's current offer is unverified.
 
 ## Honest Advice for Researchers
 

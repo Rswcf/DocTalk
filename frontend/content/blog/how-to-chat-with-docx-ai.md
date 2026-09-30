@@ -1,8 +1,8 @@
 ---
 title: "How to Chat with Word Documents (DOCX) Using AI"
-description: "Most AI tools only support PDFs. Learn how DocTalk lets you chat with DOCX files, with full paragraph and table extraction and cited answers."
+description: "Many AI PDF tools still expect a PDF. Learn how DocTalk lets you chat with Word (DOCX) files, with paragraph and table extraction and cited answers you can click through to the passage."
 date: "2026-02-18"
-updated: "2026-02-18"
+updated: "2026-10-01"
 author: "DocTalk Team"
 category: "guides"
 tags: ["docx", "word", "ai chat", "tutorial", "multi-format"]
@@ -19,7 +19,7 @@ If you have been converting your DOCX files to PDF just to use an AI chat tool, 
 
 Microsoft Word is the default document format for most businesses, law firms, government agencies, and academic institutions. The format is based on [Microsoft's OOXML specification](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-docx/). According to Microsoft, there are over 1 billion Office users worldwide, and Word remains the most-used application in the suite.
 
-Yet most AI PDF tools — including ChatPDF, AskYourPDF, and PDF.ai — require you to convert DOCX to PDF before uploading. This conversion step introduces several problems:
+Yet several AI PDF tools still expect a PDF — PDF.ai, for example, is PDF-focused according to third-party reviews — so Word files have to be converted before upload. That conversion step introduces several problems:
 
 - **Lost formatting**: Headers, footers, and complex layouts can shift during PDF conversion
 - **Table corruption**: Multi-column tables sometimes merge cells or lose alignment
@@ -118,16 +118,20 @@ DocTalk supports multiple chat sessions per document. If you are analyzing a 100
 
 ## Comparing DOCX Support Across AI Tools
 
-| Tool | Native DOCX | Table Support | Citation Quality |
-|---|---|---|---|
-| **DocTalk** | Yes | Full table extraction | Click-to-highlight |
-| ChatPDF | No (PDF only) | N/A | Page reference |
-| AskYourPDF | No (PDF only) | N/A | Page reference |
-| NotebookLM | No (Google Docs only) | N/A | Inline reference |
-| ChatDOC | Yes | Basic | Page reference |
-| PDF.ai | No (PDF only) | N/A | In-doc highlight |
+Checked 30 September 2026 on each vendor's own site unless marked.
 
-DocTalk and ChatDOC are the only major AI document tools with native DOCX support. DocTalk offers stronger citation highlighting (click-to-navigate with text highlighting vs. page references).
+| Tool | Native DOCX | Table Support | How you check an answer |
+|---|---|---|---|
+| **DocTalk** | Yes | Full table extraction | Click a citation → passage highlighted |
+| ChatPDF | Yes (DOC/DOCX) | — | Clickable citations that scroll to the source |
+| AskYourPDF | Not listed¹ | — | Page-level text references¹ |
+| Gemini Notebook (formerly NotebookLM) | Yes (Word) | — | Inline source citations |
+| ChatDOC | Yes (Pro plan) | — | TapSource citations |
+| PDF.ai | No¹ (PDF-focused) | N/A | Text references¹ |
+
+¹ From third-party reviews. "—" means we could not confirm it.
+
+Word support is no longer rare: DocTalk, ChatPDF, Gemini Notebook and ChatDOC (on Pro) all read DOCX natively. DocTalk's difference is how you check the answer — click a citation and the passage is highlighted in the document.
 
 ## Frequently Asked Questions
 

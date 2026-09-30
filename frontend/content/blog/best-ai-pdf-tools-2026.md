@@ -174,7 +174,7 @@ Checked 30 September 2026 on each vendor's own site unless noted.
 |---|---|---|---|---|---|---|---|
 | **PDF** | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | **Word** | Yes | Yes | —¹ | Yes | —¹ | No¹ | Pro |
-| **PowerPoint** | Yes | Yes | —¹ | Yes | —¹ | No¹ | — |
+| **PowerPoint** | Yes | Yes | Yes¹ | Yes | —¹ | No¹ | — |
 | **Excel** | Yes | No | No | Sheets/CSV | —¹ | No | — |
 | **Web URL** | Yes | Yes | — | Yes | — | No | Pro |
 | **How you check** | Passage highlighted | Scrolls to source | Page reference¹ | Inline citation | Link to file | Text reference¹ | TapSource |
