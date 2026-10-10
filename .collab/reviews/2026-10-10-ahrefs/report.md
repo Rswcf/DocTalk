@@ -32,3 +32,6 @@ Backlinks are 564 live referring domains (580 all-time), almost all link-selling
 - Link Intersect (row 4): not runnable by script on this account (see row 4). The reseller session expired once mid-test and was reopened from waimaoxia without a password.
 - Un-gated attribution readout: Railway CLI needs the owner's login (pairing code flow; the owner's browser has no Railway session).
 - Similarweb (enterprise) is available on waimaoxia and was not in the plan; it may estimate traffic sources including AI chatbots. To try once the session is back.
+
+## Addendum (2026-10-10, after Fable's resolution)
+- Similarweb (enterprise) on waimaoxia: **unavailable** — "工具已过有效期，请续费后使用" (the reseller subscription for this tool has expired). Competitor channel/referral pull (plan v2 resolution item 4) not possible without a renewal; not requested.
