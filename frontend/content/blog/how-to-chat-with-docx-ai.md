@@ -2,7 +2,7 @@
 title: "How to Chat with Word Documents (DOCX) Using AI"
 description: "Many AI PDF tools still expect a PDF. Learn how DocTalk lets you chat with Word (DOCX) files, with paragraph and table extraction and cited answers you can click through to the passage."
 date: "2026-02-18"
-updated: "2026-10-01"
+updated: "2026-10-10"
 author: "DocTalk Team"
 category: "guides"
 tags: ["docx", "word", "ai chat", "tutorial", "multi-format"]

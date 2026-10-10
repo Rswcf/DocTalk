@@ -2,7 +2,7 @@
 title: "Best AI Tools for Academic Research in 2026: A Researcher's Guide"
 description: "The best AI tools for academic research in 2026 — document analysis, literature search, systematic reviews and reference management — with honest pros and cons and prices checked 30 September 2026. Includes Gemini Notebook (formerly NotebookLM), Consensus, Elicit and DocTalk."
 date: "2026-03-18"
-updated: "2026-10-01"
+updated: "2026-10-10"
 author: "DocTalk Team"
 category: "comparisons"
 tags: ["academic research", "ai tools", "students", "researchers", "literature review", "comparison"]
