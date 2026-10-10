@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllPosts, getPostBySlug } from '../../../lib/blog';
+import { extractFaq, extractRankedItems, jsonLdString } from '../../../lib/blogSchema';
 import BlogPostClient from './BlogPostClient';
 import {
   buildArticleJsonLd,
@@ -61,6 +62,12 @@ export default function BlogPostPage({ params }: Props) {
     .filter((p) => p.category === post.category && p.slug !== post.slug)
     .slice(0, 3);
 
+  const postUrl = `https://www.doctalk.site/blog/${post.slug}`;
+  // FAQPage and ItemList come from the post's own markdown, so they always match
+  // what the page shows. A post without an FAQ section or a ranked list emits neither.
+  const faq = extractFaq(post.content);
+  const ranked = post.category === 'comparisons' ? extractRankedItems(post.content) : [];
+
   return (
     <>
       <script
@@ -108,6 +115,41 @@ export default function BlogPostPage({ params }: Props) {
           }),
         }}
       />
+      {faq.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: jsonLdString({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: faq.map(({ question, answer }) => ({
+                '@type': 'Question',
+                name: question,
+                acceptedAnswer: { '@type': 'Answer', text: answer },
+              })),
+            }),
+          }}
+        />
+      )}
+      {ranked.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: jsonLdString({
+              '@context': 'https://schema.org',
+              '@type': 'ItemList',
+              name: post.title,
+              numberOfItems: ranked.length,
+              itemListElement: ranked.map(({ position, name, anchor }) => ({
+                '@type': 'ListItem',
+                position,
+                name,
+                url: `${postUrl}#${anchor}`,
+              })),
+            }),
+          }}
+        />
+      )}
       <BlogPostClient post={post} relatedPosts={related} />
     </>
   );
