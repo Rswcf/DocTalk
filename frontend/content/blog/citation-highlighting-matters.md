@@ -2,7 +2,7 @@
 title: "Why Citation Highlighting Matters in AI Document Analysis"
 description: "AI tools that generate answers without source citations are a liability. Learn why citation highlighting is essential for trust, accuracy, and professional use of AI document analysis."
 date: "2026-03-18"
-updated: "2026-03-18"
+updated: "2026-10-10"
 author: "DocTalk Team"
 category: "ai-insights"
 tags: ["citations", "hallucination", "trust", "rag", "verification", "ai insights"]
@@ -117,15 +117,17 @@ A compliance officer asks about a policy document: "What are the reporting deadl
 
 | Tool | Citation Type | Verification Effort | Can You See Context? |
 |---|---|---|---|
-| **DocTalk** | Click-to-navigate highlighting | Seconds per citation | Yes — highlighted in original document |
-| ChatPDF | Page reference | Manual page scan needed | Partial — page only |
-| AskYourPDF | Page reference | Manual page scan needed | Partial — page only |
-| PDF.ai | In-document highlight | Low | Yes — but limited to PDF |
-| NotebookLM | Inline source quote | Moderate — need to check context | No navigation to source |
-| ChatGPT (file upload) | None | Must re-read document | No |
-| Gemini (file upload) | Approximate reference | High | No |
+| **DocTalk** | Click-to-navigate highlighting, with the page on each citation | Seconds per citation | Yes — highlighted in the original document |
+| ChatDOC | Page number on each answer; click it to jump | Low | Yes — jumps to the section |
+| Adobe Acrobat AI Assistant | Highlights where it found the answer; page number in PDF Spaces | Low | Yes — highlighted in the document |
+| ChatPDF | Clickable citations that scroll to the source | Low | Yes — jumps to the source passage |
+| AskYourPDF | Citation back to the exact page; click to verify | Low to moderate | The page; highlighting not stated |
+| Gemini Notebook (formerly NotebookLM) | Direct quotes; select one to jump to it | Low | Yes — the quote in context, no page number |
+| PDF.ai | Sources listed with each answer | Moderate | Not documented |
 
-The key differentiator is whether you can go from the AI's claim to the exact highlighted passage in the original document with a single click. Tools with page references or inline quotes provide some accountability, but they leave a gap between "the AI said it" and "I can see it in the document." Click-to-navigate highlighting closes that gap. See our [ChatPDF comparison](/compare/chatpdf) for a more detailed analysis.
+Rows other than DocTalk describe what each vendor documents on its own pages, checked on 10 October 2026. For the quotes and links, see [which AI PDF readers cite the page number for every answer](/blog/ai-pdf-readers-page-number-citations-2026).
+
+Click-to-navigate citations are now common. The differences that remain are whether the exact passage is highlighted, and whether the citation shows a page number you can put in a reference. A jump without a highlight still leaves you scanning; a quote without a page number still leaves you searching the PDF before you can cite it. See our [ChatPDF comparison](/compare/chatpdf) for a more detailed analysis.
 
 ## Building Trust Through Transparency
 
@@ -163,7 +165,7 @@ You can move between the AI's answer and the document freely. Check a citation, 
 
 ### Do all AI document tools have citation highlighting?
 
-No. Most tools provide page references at best. Click-to-navigate highlighting that shows the exact passage in context is less common. See the comparison table above for specifics.
+No. Most tools now let you click a citation to jump to the source, but fewer highlight the exact passage, and fewer still document a page number on each citation. See the comparison table above for specifics.
 
 ### Can the citations ever be wrong?
 
