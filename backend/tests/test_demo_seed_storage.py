@@ -183,3 +183,254 @@ async def test_public_demo_list_only_advertises_seeded_slugs(monkeypatch) -> Non
         assert f"'{spec['slug']}'" in sql
     assert "documents.demo_slug IN (" in sql
     assert "nvidia-10k" not in sql
+
+
+def _sql(stmt) -> str:
+    from sqlalchemy.dialects import postgresql
+
+    return str(stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+
+
+class _FakeRefreshSession:
+    """Sync session double for refresh_stale_demo_parses: the first execute is
+    the stale-row SELECT, every later one is a claim UPDATE."""
+
+    def __init__(self, stale_docs: list, claim_rowcounts: list[int], events: list) -> None:
+        self.stale_docs = stale_docs
+        self.claim_rowcounts = list(claim_rowcounts)
+        self.events = events
+        self.statements: list = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, stmt):
+        self.statements.append(stmt)
+        if len(self.statements) == 1:
+            docs = self.stale_docs
+            return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: docs))
+        self.events.append("claim")
+        return SimpleNamespace(rowcount=self.claim_rowcounts.pop(0))
+
+    def commit(self):
+        self.events.append("commit")
+
+
+class TestRefreshStaleDemoParses:
+    """A parser fix must reach the demo docs. The vector/error self-heal never
+    looks at parse_version, the backfill script skips demo rows and /reparse
+    is owner-only, so the production attention-paper demo doc kept its
+    February parse (arXiv stamp as every chunk's section title)."""
+
+    def _setup(self, monkeypatch, stale_docs, claim_rowcounts=(1,), exists=True):
+        from app.services.storage_service import storage_service
+        from app.workers import parse_worker
+
+        events: list = []
+        session = _FakeRefreshSession(stale_docs, list(claim_rowcounts), events)
+        ensured: list = []
+        dispatched: list = []
+
+        def _exists(key):
+            if isinstance(exists, Exception):
+                raise exists
+            return exists
+
+        def _delay(doc_id):
+            events.append("delay")
+            dispatched.append(doc_id)
+
+        monkeypatch.setattr(demo_seed, "SyncSessionLocal", lambda: session)
+        monkeypatch.setattr(demo_seed, "_ensure_demo_files", lambda docs: ensured.append(list(docs)) or 0)
+        monkeypatch.setattr(storage_service, "object_exists", _exists)
+        monkeypatch.setattr(parse_worker.parse_document, "delay", _delay)
+        return session, ensured, dispatched, events
+
+    def test_stale_ready_demo_doc_is_claimed_then_dispatched(self, monkeypatch):
+        doc = _doc("attention-paper", "documents/def/Attention Is All You Need.pdf")
+        session, ensured, dispatched, events = self._setup(monkeypatch, [doc])
+
+        assert demo_seed.refresh_stale_demo_parses() == 1
+
+        assert ensured == [[doc]]
+        assert dispatched == [str(doc.id)]
+        # Dispatch contract: the claim is committed before the task is published.
+        assert events == ["claim", "commit", "delay"]
+        claim = _sql(session.statements[1])
+        assert claim.startswith("UPDATE documents SET status='parsing', parse_requested_locale=NULL, updated_at=now()")
+        assert f"documents.id = '{doc.id}'" in claim
+        assert "documents.status = 'ready'" in claim
+        assert "documents.parse_version IS NULL OR documents.parse_version < 3" in claim
+
+    def test_select_targets_ready_seeded_demo_docs_below_current_version(self, monkeypatch):
+        session, ensured, dispatched, _events = self._setup(monkeypatch, [])
+
+        assert demo_seed.refresh_stale_demo_parses() == 0
+
+        select_sql = _sql(session.statements[0])
+        for spec in demo_seed.DEMO_DOCS:
+            assert f"'{spec['slug']}'" in select_sql
+        assert "documents.status = 'ready'" in select_sql
+        assert "documents.parse_version IS NULL OR documents.parse_version < 3" in select_sql
+        assert ensured == [] and dispatched == []
+
+    def test_lost_claim_is_not_dispatched(self, monkeypatch):
+        doc = _doc("attention-paper", "documents/def/Attention Is All You Need.pdf")
+        _session, _ensured, dispatched, _events = self._setup(monkeypatch, [doc], claim_rowcounts=(0,))
+
+        assert demo_seed.refresh_stale_demo_parses() == 0
+        assert dispatched == []
+
+    def test_missing_original_is_never_claimed(self, monkeypatch):
+        # The worker would return the doc to 'ready' at the old version and
+        # every beat tick would claim it again.
+        doc = _doc("attention-paper", "documents/def/Attention Is All You Need.pdf")
+        session, _ensured, dispatched, _events = self._setup(monkeypatch, [doc], exists=False)
+
+        assert demo_seed.refresh_stale_demo_parses() == 0
+        assert len(session.statements) == 1  # no claim UPDATE
+        assert dispatched == []
+
+    def test_storage_outage_is_never_claimed(self, monkeypatch):
+        doc = _doc("attention-paper", "documents/def/Attention Is All You Need.pdf")
+        session, _ensured, dispatched, _events = self._setup(
+            monkeypatch, [doc], exists=RuntimeError("bucket unreachable")
+        )
+
+        assert demo_seed.refresh_stale_demo_parses() == 0
+        assert len(session.statements) == 1
+        assert dispatched == []
+
+    def test_dispatch_failure_is_logged_not_raised(self, monkeypatch):
+        doc = _doc("attention-paper", "documents/def/Attention Is All You Need.pdf")
+        self._setup(monkeypatch, [doc])
+        from app.workers import parse_worker
+
+        def _boom(_doc_id):
+            raise RuntimeError("broker down")
+
+        monkeypatch.setattr(parse_worker.parse_document, "delay", _boom)
+
+        assert demo_seed.refresh_stale_demo_parses() == 0
+
+    def test_startup_seeding_runs_the_refresh_and_survives_its_failure(self, monkeypatch):
+        calls: list = []
+
+        def _refresh():
+            calls.append("refresh")
+            raise RuntimeError("db blip")
+
+        monkeypatch.setattr(demo_seed, "DEMO_DOCS", [])
+        monkeypatch.setattr(demo_seed, "SyncSessionLocal", lambda: _FakeRefreshSession([], [], []))
+        monkeypatch.setattr(demo_seed, "_ensure_demo_files", lambda docs: 0)
+        monkeypatch.setattr(demo_seed, "refresh_stale_demo_parses", _refresh)
+
+        demo_seed.seed_demo_documents()
+
+        assert calls == ["refresh"]
+
+    def test_beat_runs_the_refresh(self):
+        from app.workers import cleanup_tasks  # noqa: F401  (registers the task)
+        from app.workers.celery_app import celery_app
+
+        entry = celery_app.conf.beat_schedule["refresh-stale-demo-parses"]
+        assert entry["task"] == "refresh_stale_demo_parses"
+        assert "refresh_stale_demo_parses" in celery_app.tasks
+
+
+@pytest.mark.integration
+class TestRefreshStaleDemoParsesPostgres:
+    """Real-Postgres proof of the claim: only ready demo rows below the current
+    PARSE_PIPELINE_VERSION are claimed, the claim resets the stored locale and
+    refreshes updated_at (the stale watchdog keys on it), and a second sweep
+    is a no-op."""
+
+    def test_claims_only_stale_ready_demo_rows_once(self, monkeypatch):
+        from sqlalchemy import func as sa_func
+        from sqlalchemy import select as sa_select
+        from sqlalchemy import text as sa_text
+        from sqlalchemy import update as sa_update
+
+        from app.models.sync_database import SyncSessionLocal
+        from app.models.tables import Document
+        from app.services.parse_service import PARSE_PIPELINE_VERSION
+        from app.services.storage_service import storage_service
+        from app.workers import parse_worker
+
+        tag = uuid.uuid4().hex[:8]
+        slugs = {name: f"refresh-{name}-{tag}" for name in ("stale", "current", "errored", "legacy")}
+        # Only stale/current/errored are seeded demo slugs; 'legacy' is a
+        # retired demo row (nvidia-10k style) that must never be re-parsed.
+        monkeypatch.setattr(
+            demo_seed, "DEMO_DOCS", [{"slug": slugs[n]} for n in ("stale", "current", "errored")]
+        )
+        monkeypatch.setattr(demo_seed, "_ensure_demo_files", lambda docs: 0)
+        monkeypatch.setattr(storage_service, "object_exists", lambda key: True)
+        dispatched: list[str] = []
+        monkeypatch.setattr(parse_worker.parse_document, "delay", lambda doc_id: dispatched.append(doc_id))
+
+        def _row(name: str, status: str, version) -> Document:
+            return Document(
+                filename=f"{name}.pdf",
+                file_size=1,
+                storage_key=f"documents/{uuid.uuid4()}/{name}.pdf",
+                status=status,
+                demo_slug=slugs[name],
+                parse_version=version,
+                parse_requested_locale="ja",
+            )
+
+        with SyncSessionLocal() as db:
+            rows = {
+                "stale": _row("stale", "ready", None),
+                "current": _row("current", "ready", PARSE_PIPELINE_VERSION),
+                "errored": _row("errored", "error", None),
+                "legacy": _row("legacy", "ready", None),
+            }
+            db.add_all(rows.values())
+            db.commit()
+            ids = {name: row.id for name, row in rows.items()}
+            db.execute(
+                sa_update(Document)
+                .where(Document.id.in_(ids.values()))
+                .values(updated_at=sa_func.now() - sa_text("interval '2 hours'"))
+            )
+            db.commit()
+
+        try:
+            assert demo_seed.refresh_stale_demo_parses() == 1
+            assert dispatched == [str(ids["stale"])]
+            assert demo_seed.refresh_stale_demo_parses() == 0
+            assert dispatched == [str(ids["stale"])]
+
+            with SyncSessionLocal() as db:
+                got = {
+                    r.id: r
+                    for r in db.execute(
+                        sa_select(
+                            Document.id,
+                            Document.status,
+                            Document.parse_requested_locale,
+                            (Document.updated_at > sa_func.now() - sa_text("interval '1 minute'")).label("fresh"),
+                        ).where(Document.id.in_(ids.values()))
+                    ).all()
+                }
+            assert (got[ids["stale"]].status, got[ids["stale"]].parse_requested_locale, got[ids["stale"]].fresh) == (
+                "parsing", None, True,
+            )
+            for name in ("current", "errored", "legacy"):
+                assert got[ids[name]].parse_requested_locale == "ja"
+                assert got[ids[name]].fresh is False
+            assert got[ids["current"]].status == "ready"
+            assert got[ids["errored"]].status == "error"
+            assert got[ids["legacy"]].status == "ready"
+        finally:
+            with SyncSessionLocal() as db:
+                for did in ids.values():
+                    row = db.get(Document, did)
+                    if row:
+                        db.delete(row)
+                db.commit()

@@ -11,7 +11,7 @@ import os
 import uuid
 
 from minio.error import S3Error
-from sqlalchemy import select
+from sqlalchemy import func, or_, select, update
 
 from app.core.config import settings
 from app.models.sync_database import SyncSessionLocal
@@ -253,3 +253,80 @@ def seed_demo_documents() -> None:
                 logger.warning("demo_seed.storage_self_heal restored %d file(s)", restored)
         except Exception as e:
             logger.warning("demo_seed storage self-heal failed: %s", e)
+
+    try:
+        refresh_stale_demo_parses()
+    except Exception as e:
+        logger.warning("demo_seed parse refresh failed: %s", e)
+
+
+def refresh_stale_demo_parses() -> int:
+    """Re-parse ready demo docs whose parse_version is older than the pipeline's.
+
+    Nothing else refreshes them: the self-heal above only reacts to lost vectors
+    or an error status, find_low_quality_docs.py skips demo rows, and
+    POST /reparse is owner-only (demo docs have no owner). The re-parse is in
+    place, so the document id (the public /d/<id> link) and its sessions survive.
+
+    Runs at startup and on a beat tick (cleanup_tasks). During a deploy the old
+    container's worker can take the startup dispatch and re-parse with the old
+    parser, which stamps the old version; the next tick then claims it again.
+    Claims follow the dispatch contract: one conditional UPDATE sets
+    status='parsing' and resets parse_requested_locale, committed before
+    .delay(). Returns the number of documents dispatched.
+    """
+    from app.services.parse_service import PARSE_PIPELINE_VERSION
+    from app.services.storage_service import storage_service
+
+    is_stale = or_(
+        Document.parse_version.is_(None),
+        Document.parse_version < PARSE_PIPELINE_VERSION,
+    )
+    dispatched = 0
+    with SyncSessionLocal() as db:
+        stale = db.execute(
+            select(Document).where(
+                Document.demo_slug.in_([spec["slug"] for spec in DEMO_DOCS]),
+                Document.status == "ready",
+                is_stale,
+            )
+        ).scalars().all()
+        if not stale:
+            return 0
+
+        # A missing object would send the worker's download back to 'ready' at
+        # the old version, and every tick would claim the doc again.
+        _ensure_demo_files(stale)
+        for doc in stale:
+            doc_id, slug = doc.id, doc.demo_slug
+            try:
+                present = storage_service.object_exists(doc.storage_key)
+            except Exception as e:
+                logger.warning("demo_seed.parse_refresh_skipped '%s': storage check failed: %s", slug, e)
+                continue
+            if not present:
+                logger.warning("demo_seed.parse_refresh_skipped '%s': original file missing", slug)
+                continue
+
+            claimed = db.execute(
+                update(Document)
+                .where(Document.id == doc_id, Document.status == "ready", is_stale)
+                .values(status="parsing", parse_requested_locale=None, updated_at=func.now())
+            )
+            db.commit()
+            if claimed.rowcount != 1:
+                continue  # another claimer (startup vs beat) or a status change won
+            try:
+                from app.workers.parse_worker import parse_document
+
+                parse_document.delay(str(doc_id))
+                dispatched += 1
+                logger.info(
+                    "demo_seed.parse_refresh: re-parsing '%s' (doc=%s) at pipeline v%d",
+                    slug, doc_id, PARSE_PIPELINE_VERSION,
+                )
+            except Exception:
+                # The claim stays 'parsing' with a fresh updated_at; the stale
+                # processing watchdog re-dispatches it after 45 minutes.
+                logger.exception("demo_seed.parse_refresh dispatch failed for '%s'", slug)
+    return dispatched

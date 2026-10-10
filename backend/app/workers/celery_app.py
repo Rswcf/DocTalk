@@ -76,6 +76,13 @@ celery_app.conf.beat_schedule = {
     # longer than Redis's 40-minute visibility timeout. Broker redelivery gets
     # first chance to recover a dead late-ack task; only then may this watchdog
     # spend the job's one bounded recovery claim.
+    # Demo docs parsed by an older PARSE_PIPELINE_VERSION. Startup also runs
+    # this, but during a deploy the old container's worker can take that
+    # dispatch and re-parse with the old parser; this tick claims it again.
+    "refresh-stale-demo-parses": {
+        "task": "refresh_stale_demo_parses",
+        "schedule": 1800,
+    },
     "requeue-stale-running-extractions": {
         "task": "requeue_stale_running_extractions",
         "schedule": 2700,
