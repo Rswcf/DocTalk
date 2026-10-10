@@ -45,12 +45,19 @@ function loadSource(relativePath) {
   return loaded.exports;
 }
 
-const { LOCALIZED_PATHS, URL_LOCALES } = loadSource('i18n/routing.ts');
+const { LOCALIZED_PATHS, URL_LOCALES, NOINDEX_SUBPAGE_LOCALES } = loadSource('i18n/routing.ts');
 const sitemap = loadSource('app/sitemap.ts').default;
 const entries = sitemap();
 const BASE = 'https://www.doctalk.site';
 const urls = entries.map((entry) => entry.url);
 const urlSet = new Set(urls);
+
+// Index tiers (traffic plan v2, Step 4, 2026-10-10): for these locales only the
+// home page is indexable. Restated here on purpose, so changing the tier set is a
+// deliberate edit in two places, not a silent one.
+const TIER2 = ['it', 'ar', 'hi'];
+const indexable = (locale, localizedPath) => !TIER2.includes(locale) || localizedPath === '/';
+const localeUrl = (locale, localizedPath) => (localizedPath === '/' ? `${BASE}/${locale}` : `${BASE}/${locale}${localizedPath}`);
 
 /** Every directory under app/[locale] that is a real page route. */
 function localeRouteDirs() {
@@ -81,13 +88,24 @@ test('every localized path has an English sitemap entry', () => {
   }
 });
 
-test('every localized path has one entry per URL locale', () => {
+test('the tier-2 locale set is it, ar and hi', () => {
+  assert.deepEqual([...NOINDEX_SUBPAGE_LOCALES].sort(), [...TIER2].sort());
+  for (const locale of TIER2) assert.ok(URL_LOCALES.includes(locale), `${locale} is not a URL locale`);
+});
+
+test('every localized path has one entry per indexable URL locale, and none for tier-2 sub-pages', () => {
   for (const localizedPath of LOCALIZED_PATHS) {
     for (const locale of URL_LOCALES) {
-      const expected = localizedPath === '/' ? `${BASE}/${locale}` : `${BASE}/${locale}${localizedPath}`;
-      assert.ok(urlSet.has(expected), `missing locale sitemap entry: ${expected}`);
+      const expected = localeUrl(locale, localizedPath);
+      if (indexable(locale, localizedPath)) {
+        assert.ok(urlSet.has(expected), `missing locale sitemap entry: ${expected}`);
+      } else {
+        assert.ok(!urlSet.has(expected), `noindex tier-2 page listed in the sitemap: ${expected}`);
+      }
     }
   }
+  // The tier-2 home pages stay listed.
+  for (const locale of TIER2) assert.ok(urlSet.has(`${BASE}/${locale}`), `missing tier-2 home page: ${locale}`);
 });
 
 test('LOCALIZED_PATHS and app/[locale] page routes agree in both directions', () => {
@@ -115,10 +133,56 @@ test('every localized English entry carries a reciprocal hreflang map', () => {
     assert.ok(sameUrl(languages.en, expected), `${localizedPath}: en hreflang must point at the English URL`);
     assert.ok(sameUrl(languages['x-default'], expected), `${localizedPath}: x-default must point at the English URL`);
     for (const locale of URL_LOCALES) {
-      const localeUrl = localizedPath === '/' ? `${BASE}/${locale}` : `${BASE}/${locale}${localizedPath}`;
-      assert.ok(sameUrl(languages[locale], localeUrl), `${localizedPath}: ${locale} hreflang`);
+      if (indexable(locale, localizedPath)) {
+        assert.ok(sameUrl(languages[locale], localeUrl(locale, localizedPath)), `${localizedPath}: ${locale} hreflang`);
+      } else {
+        assert.equal(languages[locale], undefined, `${localizedPath}: noindex ${locale} page must not be an hreflang alternate`);
+      }
     }
   }
+});
+
+test('every locale sitemap entry carries the same hreflang map as its English entry', () => {
+  for (const localizedPath of LOCALIZED_PATHS) {
+    const english = entries.find((candidate) => candidate.url === (localizedPath === '/' ? BASE : `${BASE}${localizedPath}`));
+    for (const locale of URL_LOCALES) {
+      const entry = entries.find((candidate) => candidate.url === localeUrl(locale, localizedPath));
+      if (!entry) continue;
+      assert.deepEqual(entry.alternates?.languages, english.alternates?.languages, `${locale}${localizedPath}`);
+      // Every URL an hreflang map names is itself listed (no alternate points at a noindex page).
+      for (const alternate of Object.values(entry.alternates.languages)) {
+        assert.ok([...urlSet].some((url) => sameUrl(url, alternate)), `${localizedPath}: hreflang names an unlisted URL ${alternate}`);
+      }
+    }
+  }
+});
+
+test('page metadata: tier-2 sub-pages are noindex,follow; every other page keeps its default robots', () => {
+  const { buildMarketingMetadata } = loadSource('lib/seo.ts');
+  const meta = (locale, localizedPath) => buildMarketingMetadata({
+    title: 'T', description: 'D', path: localizedPath, locale, localized: true,
+  });
+  for (const localizedPath of LOCALIZED_PATHS) {
+    for (const locale of ['en', ...URL_LOCALES]) {
+      const result = meta(locale, localizedPath);
+      if (indexable(locale, localizedPath)) {
+        assert.equal(result.robots, undefined, `${locale}${localizedPath} must not override robots`);
+      } else {
+        assert.deepEqual(result.robots, { index: false, follow: true }, `${locale}${localizedPath}`);
+      }
+      // Canonical stays self-referencing on every page, noindex ones included.
+      assert.equal(result.alternates.canonical, locale === 'en' ? localizedPath : localeUrl(locale, localizedPath).slice(BASE.length));
+      const languages = result.alternates.languages;
+      for (const other of TIER2) {
+        assert.equal(other in languages, localizedPath === '/', `${locale}${localizedPath}: hreflang ${other}`);
+      }
+    }
+  }
+  // An explicit robots value from the caller still wins.
+  const explicit = buildMarketingMetadata({
+    title: 'T', description: 'D', path: '/pricing', locale: 'it', localized: true, robots: { index: true, follow: true },
+  });
+  assert.deepEqual(explicit.robots, { index: true, follow: true });
 });
 
 test('no sitemap URL is emitted twice', () => {

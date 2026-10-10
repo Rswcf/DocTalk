@@ -76,6 +76,27 @@ export function isLocalizedPath(path: string): boolean {
 }
 
 /**
+ * Index tiers for translated marketing pages (traffic plan v2, Step 4, 2026-10-10).
+ * Googlebot fetches only a few HTML pages a day here, and most of the crawl went
+ * to translated pages Google then declined to index. For these locales only the
+ * home page stays indexable; every other localized page is `noindex, follow`,
+ * dropped from the sitemap and left out of hreflang. The pages stay live and the
+ * language switcher still links to them. Reversible by emptying this set.
+ */
+export const NOINDEX_SUBPAGE_LOCALES: ReadonlySet<UrlLocale> = new Set<UrlLocale>(['it', 'ar', 'hi']);
+
+/** Whether a localized page should be indexed (and listed in the sitemap and hreflang). */
+export function isIndexableLocalePath(locale: string, path: string): boolean {
+  if (!isUrlLocale(locale) || !NOINDEX_SUBPAGE_LOCALES.has(locale)) return true;
+  return normalizePath(path) === '/';
+}
+
+/** URL locales whose version of `path` is indexable, in URL_LOCALES order. */
+export function indexableLocalesFor(path: string): UrlLocale[] {
+  return URL_LOCALES.filter((locale) => isIndexableLocalePath(locale, path));
+}
+
+/**
  * Prefix a locale-agnostic path for a given locale.
  * `en` (or any non-URL locale) returns the path unchanged, so English output is byte-stable.
  *   localizedHref('de', '/use-cases/lawyers') -> '/de/use-cases/lawyers'

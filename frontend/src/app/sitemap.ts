@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllPosts, KNOWN_BLOG_CATEGORIES } from "../lib/blog";
-import { LOCALIZED_PATHS, URL_LOCALES, localizedHref } from "../i18n/routing";
+import { LOCALIZED_PATHS, indexableLocalesFor, localizedHref } from "../i18n/routing";
 
 const BASE_URL = "https://www.doctalk.site";
 
@@ -61,7 +61,7 @@ const DEFAULT_LOCALIZED_PRIORITY = 0.7;
 /** Reciprocal hreflang map for a localized path (unprefixed en + each URL locale + x-default). */
 function languagesFor(path: string): Record<string, string> {
   const languages: Record<string, string> = { en: `${BASE_URL}${path}` };
-  for (const loc of URL_LOCALES) {
+  for (const loc of indexableLocalesFor(path)) {
     languages[loc] = `${BASE_URL}${localizedHref(loc, path)}`;
   }
   languages["x-default"] = `${BASE_URL}${path}`;
@@ -123,7 +123,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const localeEntries: MetadataRoute.Sitemap = [];
   for (const path of LOCALIZED_PATHS) {
     const languages = languagesFor(path);
-    for (const loc of URL_LOCALES) {
+    // Tier-2 locale pages (NOINDEX_SUBPAGE_LOCALES) are noindex, so they are not listed.
+    for (const loc of indexableLocalesFor(path)) {
       localeEntries.push({
         url: `${BASE_URL}${localizedHref(loc, path)}`,
         changeFrequency: "monthly",

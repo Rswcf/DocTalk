@@ -31,7 +31,15 @@ from `LOCALIZED_PATHS`. The fixes are structural, not one-off.
   English URL for months because the two lists were maintained separately.
   `LOCALIZED_PRIORITY` must carry an explicit value for every path in the set;
   `tests/sitemap-routes.test.cjs` asserts set/route/priority agreement in both
-  directions and fails on the old hand-written sitemap. Production is 405 `<loc>`.
+  directions and fails on the old hand-written sitemap. Production is 306 `<loc>` (405 before
+  the 2026-10-10 index tiers).
+- **Index tiers (2026-10-10, traffic plan v2 Step 4)**: `NOINDEX_SUBPAGE_LOCALES` in
+  `i18n/routing.ts` (it, ar, hi) keeps only those locales' home page indexable. Their other
+  localized pages stay live and linked from the language selector, but `buildMarketingMetadata`
+  emits `noindex, follow`, and `isIndexableLocalePath` / `indexableLocalesFor` drop them from
+  the sitemap and from every hreflang map. Any new hreflang or sitemap code must go through
+  `indexableLocalesFor`, never loop `URL_LOCALES` directly. `tests/sitemap-routes.test.cjs`
+  restates the set on purpose, so changing a tier means editing both files.
 - **`createMarketingLocalePage` REQUIRES its `JsonLd` prop.** It used to be optional and
   fell back to a generic Article-only component; `/features/layout-translation` was the
   one caller that took the fallback, so its ten locale URLs shipped without the schema
