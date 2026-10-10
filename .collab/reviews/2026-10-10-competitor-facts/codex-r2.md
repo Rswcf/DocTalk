@@ -1,0 +1,10 @@
+VERDICT: SHIP-WITH-FIXES
+
+1. all locales, `compareNotebooklm.whatIsDocTalkDescription`: “vendor lock-in” / dependency claim is still present. Evidence: user already rejected this claim; `frontend/src/lib/auth.ts:24-52` supports Google/Microsoft/email providers, not freedom from vendor lock-in. Exact replacement: remove the localized lock-in sentence. EN sentence to remove: `DocTalk requires no vendor lock-in.` Also remove equivalents at `zh:1555`, `ja/es/de/fr/it/ar/hi:1550`, `ko:1550`, `pt:894`.
+
+2. all locales, `compareNotebooklm.feature.securityP2`: “export account data ... at any time” overclaims. Evidence: `backend/app/api/users.py:242-262` enforces `EXPORT_COOLDOWN_SECONDS = 3600` and returns 429 during cooldown; export contents are supported at `backend/app/api/users.py:361-368`. EN exact replacement: `DocTalk is an independent platform. Stored documents are encrypted at rest with AES-256, and DocTalk does not train models on your data. You can export your account data, including conversations and saved quotes, and you can sign in with Google, Microsoft or email.` Remove the localized “at any time” phrase in the other 10 locales at the same key.
+
+3. `en/zh/ja/ko/es/de/pt/it/ar/hi comparePdfai.languageSupportDocTalk` and `en/zh/ja/ko/es/de/pt/it/ar/hi compareAskyourpdf.languageSupportDocTalk`: the 4.5b number is gone, but “full/complete/every part/truly global” wording remains. Evidence: round 1 rejected “fully localized” / “every interface element”; supported facts are 11 interface languages and answer language, not every UI element or global audience. EN exact replacement for both keys: `DocTalk's interface is available in 11 languages: English, Chinese, Spanish, Japanese, German, French, Korean, Portuguese, Italian, Arabic, and Hindi. The AI answers in the language of your question.`
+
+4. frontend test verification: `node --test tests/*.test.cjs` from `frontend/` did not complete. Evidence: command and two single-test reruns exited `139` with `ERROR: SecItemCopyMatching failed -50`. No file replacement; rerun in a working Node/keychain environment before release.
+
