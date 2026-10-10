@@ -436,26 +436,87 @@ class TestMarginStampIsNotContent:
         assert not any(b.off_axis for b in cleaned)
         assert chunks[0].section_title == "Results"
 
-    def test_page_with_text_only_in_the_margin_band_reads_left_to_right(self):
-        # No interior text to align to (a full-page image): a vertical stamp
-        # is still off-axis against the default direction and is dropped.
+    def test_image_only_page_uses_the_document_direction(self):
+        # A full-page figure inside a horizontal paper: the page has no text
+        # outside the margin band, so it takes the document's direction and
+        # its vertical stamp is still dropped.
+        body = PageInfo(
+            page_number=1,
+            width_pt=612,
+            height_pt=792,
+            rotation=0,
+            blocks=[BlockInfo(page=1, text="Body sentence on page one.", bbox=(80, 100, 500, 112), font_size=10)],
+        )
+        figure = PageInfo(
+            page_number=2,
+            width_pt=612,
+            height_pt=792,
+            rotation=0,
+            blocks=[
+                BlockInfo(
+                    page=2, text="For the exclusive use of a licensee. " * 3, bbox=(8, 100, 18, 700),
+                    font_size=10, direction=(0.0, -1.0),
+                ),
+                BlockInfo(page=2, text="7", bbox=(300, 740, 306, 752), font_size=10),
+            ],
+        )
+
+        text = " ".join(c.text for c in self.svc.chunk_document([body, figure]))
+
+        assert "exclusive use" not in text
+        assert "7" in text
+
+    def test_vertical_writing_text_inside_the_margin_band_is_kept(self):
+        # Codex r2: a tategaki page whose only lines sit in the outer band
+        # (the last lines of a chapter) must not be emptied by a
+        # left-to-right fallback.
+        down = (0.0, 1.0)
+        body = PageInfo(
+            page_number=1,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=1, text="本文の一行目です。", bbox=(500, 90, 512, 700), font_size=10, direction=down),
+                BlockInfo(page=1, text="本文の二行目です。", bbox=(480, 90, 492, 700), font_size=10, direction=down),
+            ],
+        )
+        tail = PageInfo(
+            page_number=2,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=2, text="最後の一行です。", bbox=(560, 90, 572, 700), font_size=10, direction=down),
+                BlockInfo(page=2, text="最後の二行目です。", bbox=(545, 90, 557, 700), font_size=10, direction=down),
+            ],
+        )
+
+        single = "".join(c.text for c in self.svc.chunk_document([tail]))
+        both = "".join(c.text for c in self.svc.chunk_document([body, tail]))
+
+        assert "最後の一行です。" in single and "最後の二行目です。" in single
+        assert "最後の一行です。" in both and "本文の一行目です。" in both
+
+    def test_arxiv_stamp_without_direction_in_the_margin_is_dropped(self):
+        # Codex r2: OCR can lose the stamp's direction; the identifier regex
+        # still drops it when it lies in the margin band.
         page = PageInfo(
             page_number=1,
             width_pt=612,
             height_pt=792,
             rotation=0,
             blocks=[
-                BlockInfo(
-                    page=1, text="arXiv:1706.03762v7 [cs.CL] 2 Aug 2023", bbox=(11, 214, 38, 555),
-                    font_size=20, direction=(0.0, -1.0),
-                ),
-                BlockInfo(page=1, text="7", bbox=(300, 740, 306, 752), font_size=10),
+                BlockInfo(page=1, text="arXiv:2101.00001v2 [cs.LG] 5 Jan 2021", bbox=(8, 200, 40, 560), font_size=20),
+                BlockInfo(page=1, text="Body sentence one.", bbox=(80, 100, 500, 112), font_size=10),
+                BlockInfo(page=1, text="See arXiv:2101.00001 for details.", bbox=(80, 130, 500, 142), font_size=10),
             ],
         )
 
-        cleaned = self.svc.clean_text_blocks(page.blocks, page.width_pt, page.height_pt)
+        text = " ".join(c.text for c in self.svc.chunk_document([page]))
 
-        assert [b.text for b in cleaned] == ["7"]
+        assert "[cs.LG]" not in text
+        assert "See arXiv:2101.00001 for details." in text
 
     def test_margin_band_uses_unrotated_page_size(self):
         # /Rotate 90: PageInfo carries the rotated rect (792 x 612) while line
