@@ -20,8 +20,8 @@ interface MarketingMetadataOptions {
   twitter?: Partial<TwitterInput>;
   locale?: string;
   /**
-   * When true, emit hreflang `alternates.languages` for every marketing locale
-   * and set the canonical to this locale's URL. `path` is the locale-agnostic
+   * When true, emit hreflang `alternates.languages` for every indexable marketing
+   * locale and set the canonical to this locale's URL (tier-2 pages get none). `path` is the locale-agnostic
    * path (e.g. `/use-cases/lawyers`); `locale` is the page's locale (default `en`).
    */
   localized?: boolean;
@@ -112,9 +112,11 @@ export function buildMarketingMetadata({
   const titleText = resolveTitleText(title);
   const pageLocale = locale ?? 'en';
   const canonicalPath = localized ? localizedHref(pageLocale, path) : path;
-  // Tier-2 locale pages (see NOINDEX_SUBPAGE_LOCALES) stay live but out of the index.
+  // Tier-2 locale pages (see NOINDEX_SUBPAGE_LOCALES) stay live but out of the index:
+  // noindex,follow and no hreflang cluster (their siblings do not list them back).
+  const indexable = !localized || isIndexableLocalePath(pageLocale, path);
   const effectiveRobots: Metadata['robots'] | undefined =
-    robots ?? (localized && !isIndexableLocalePath(pageLocale, path) ? { index: false, follow: true } : undefined);
+    robots ?? (indexable ? undefined : { index: false, follow: true });
 
   return {
     title,
@@ -122,7 +124,7 @@ export function buildMarketingMetadata({
     ...(keywords ? { keywords } : {}),
     alternates: {
       canonical: canonicalPath,
-      ...(localized ? { languages: buildLanguageAlternates(path) } : {}),
+      ...(localized && indexable ? { languages: buildLanguageAlternates(path) } : {}),
     },
     ...(effectiveRobots ? { robots: effectiveRobots } : {}),
     openGraph: {

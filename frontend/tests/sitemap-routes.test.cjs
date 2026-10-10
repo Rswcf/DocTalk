@@ -173,6 +173,11 @@ test('page metadata: tier-2 sub-pages are noindex,follow; every other page keeps
       // Canonical stays self-referencing on every page, noindex ones included.
       assert.equal(result.alternates.canonical, locale === 'en' ? localizedPath : localeUrl(locale, localizedPath).slice(BASE.length));
       const languages = result.alternates.languages;
+      if (!indexable(locale, localizedPath)) {
+        // A noindex page emits no hreflang cluster: its siblings do not list it back.
+        assert.equal(languages, undefined, `${locale}${localizedPath} must not emit hreflang`);
+        continue;
+      }
       for (const other of TIER2) {
         assert.equal(other in languages, localizedPath === '/', `${locale}${localizedPath}: hreflang ${other}`);
       }
@@ -212,4 +217,18 @@ test('blog posts and categories are present', () => {
   for (const category of KNOWN_BLOG_CATEGORIES) {
     assert.ok(urlSet.has(`${BASE}/blog/category/${category}`), `missing blog category: ${category}`);
   }
+});
+
+test('the hidden crawler language nav links only indexable versions', () => {
+  const React = require('react');
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const MarketingLocaleLinks = loadSource('components/marketing/MarketingLocaleLinks.tsx').default;
+  const hrefs = (localizedPath) => [...renderToStaticMarkup(React.createElement(MarketingLocaleLinks, { path: localizedPath }))
+    .matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
+  const expected = (localizedPath) => ['en', ...URL_LOCALES.filter((locale) => indexable(locale, localizedPath))]
+    .map((locale) => (locale === 'en' ? localizedPath : localeUrl(locale, localizedPath).slice(BASE.length)));
+  for (const localizedPath of ['/', '/tools', '/pricing']) {
+    assert.deepEqual(hrefs(localizedPath), expected(localizedPath), localizedPath);
+  }
+  assert.ok(hrefs('/').includes('/it') && !hrefs('/tools').includes('/it/tools'));
 });

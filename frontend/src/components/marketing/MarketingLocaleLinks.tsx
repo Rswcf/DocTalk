@@ -1,4 +1,4 @@
-import { MARKETING_LOCALES, localizedHref } from '../../i18n/routing';
+import { indexableLocalesFor, localizedHref } from '../../i18n/routing';
 import { LOCALES } from '../../i18n/locales-meta';
 
 /**
@@ -10,14 +10,16 @@ import { LOCALES } from '../../i18n/locales-meta';
  * language version. Belt-and-suspenders alongside hreflang + sitemap (and the
  * primary discovery path for engines that handle hreflang poorly, e.g. Baidu).
  *
- * `path` is the locale-agnostic path (e.g. `/use-cases/lawyers`).
+ * `path` is the locale-agnostic path (e.g. `/use-cases/lawyers`). Only indexable
+ * versions are linked: tier-2 pages (NOINDEX_SUBPAGE_LOCALES) are left out, so the
+ * crawl this nav invites goes to pages that can rank.
  */
 export default function MarketingLocaleLinks({ path, label }: { path: string; label?: string }) {
   const localeInfo = (code: string) => LOCALES.find((l) => l.code === code);
   return (
     <nav className="sr-only" aria-label={label ?? 'Languages'}>
       <ul>
-        {MARKETING_LOCALES.map((code) => (
+        {['en', ...indexableLocalesFor(path)].map((code) => (
           <li key={code}>
             <a href={localizedHref(code, path)} hrefLang={code}>
               {localeInfo(code)?.label ?? code.toUpperCase()}
