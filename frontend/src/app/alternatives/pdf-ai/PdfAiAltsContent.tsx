@@ -23,10 +23,10 @@ export default async function PdfAiAltsContent({ locale }: { locale: string }) {
 
   const quickCompare = [
     { name: t('altsPdfai.tableFileFormats'), doctalk: t('altsPdfai.table7Formats'), competitor: t('altsPdfai.tablePdfOnly') },
-    { name: t('altsPdfai.tableCitationHighlighting'), doctalk: true, competitor: false },
-    { name: t('altsPdfai.tableLanguages'), doctalk: '11', competitor: '1' },
+    { name: t('altsPdfai.tableCitationHighlighting'), doctalk: true, competitor: t('comparison.sourcesListed') },
+    { name: t('altsPdfai.tableLanguages'), doctalk: '11', competitor: t('comparison.notVerified') },
     { name: t('altsPdfai.tableFreeTier'), doctalk: t('altsPdfai.tableFreeTierDoctalk'), competitor: t('altsPdfai.tableFreeTierCompetitor') },
-    { name: t('altsPdfai.tableStartingPrice'), doctalk: '$9.99/mo', competitor: '$15/mo' },
+    { name: t('altsPdfai.tableStartingPrice'), doctalk: '$9.99/mo', competitor: t('altsPdfai.tableStartingPriceCompetitor') },
   ];
 
   const faqItems = [

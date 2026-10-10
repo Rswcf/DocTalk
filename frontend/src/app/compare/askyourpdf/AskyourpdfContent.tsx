@@ -21,15 +21,15 @@ export default async function AskyourpdfContent({ locale }: { locale: string }) 
 
   const features = [
     { name: t('compareAskyourpdf.featureSupportedFormats'), doctalk: t('compareAskyourpdf.featureSupportedFormatsDocTalk'), competitor: t('compareAskyourpdf.featureSupportedFormatsCompetitor') },
-    { name: t('compareAskyourpdf.featureCitationHighlighting'), doctalk: true, competitor: false },
+    { name: t('compareAskyourpdf.featureCitationHighlighting'), doctalk: true, competitor: t('comparison.linksToPage') },
     { name: t('compareAskyourpdf.featureChromeExtension'), doctalk: false, competitor: true },
     { name: t('compareAskyourpdf.featureZoteroPlugin'), doctalk: false, competitor: true },
     { name: t('compareAskyourpdf.featureApiAccess'), doctalk: false, competitor: true },
     { name: t('compareAskyourpdf.featureInterfaceLanguages'), doctalk: t('compareAskyourpdf.featureInterfaceLanguagesDocTalk'), competitor: t('compareAskyourpdf.featureInterfaceLanguagesCompetitor') },
-    { name: t('compareAskyourpdf.featureNoSignupDemo'), doctalk: true, competitor: false },
+    { name: t('compareAskyourpdf.featureNoSignupDemo'), doctalk: true, competitor: t('comparison.notVerified') },
     { name: t('compareAskyourpdf.featureMultipleAIModes'), doctalk: t('compareAskyourpdf.featureMultipleAIModesDocTalk'), competitor: t('compareAskyourpdf.featureMultipleAIModesCompetitor') },
     { name: t('compareAskyourpdf.featureFreeTier'), doctalk: t('compareAskyourpdf.featureFreeTierDocTalk'), competitor: t('compareAskyourpdf.featureFreeTierCompetitor') },
-    { name: t('compareAskyourpdf.featureDarkMode'), doctalk: true, competitor: false },
+    { name: t('compareAskyourpdf.featureDarkMode'), doctalk: true, competitor: t('comparison.notVerified') },
   ];
 
   const faqItems = [

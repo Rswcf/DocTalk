@@ -6,7 +6,7 @@ import { buildMarketingMetadata } from '../../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'DocTalk vs Humata: AI Document Tool Comparison',
   description:
-    'Compare DocTalk and Humata for AI document analysis, including citation quality, team features, language support, pricing, and video support.',
+    'Compare DocTalk and Humata for AI document analysis, including citation quality, team features, language support, and pricing.',
   path: '/compare/humata',
   localized: true,
   keywords: ['doctalk vs humata', 'humata alternative', 'humata ai comparison'],

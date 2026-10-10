@@ -23,10 +23,10 @@ export default async function AskyourpdfAltsContent({ locale }: { locale: string
 
   const quickCompare = [
     { name: t('altsAskyourpdf.tableFileFormats'), doctalk: t('altsAskyourpdf.table7Formats'), competitor: t('altsAskyourpdf.tablePdfOnly') },
-    { name: t('altsAskyourpdf.tableCitationHighlighting'), doctalk: true, competitor: false },
-    { name: t('altsAskyourpdf.tableLanguages'), doctalk: '11', competitor: '1' },
+    { name: t('altsAskyourpdf.tableCitationHighlighting'), doctalk: true, competitor: t('comparison.linksToPage') },
+    { name: t('altsAskyourpdf.tableLanguages'), doctalk: '11', competitor: t('comparison.notVerified') },
     { name: t('altsAskyourpdf.tableFreeTier'), doctalk: t('altsAskyourpdf.tableFreeTierDoctalk'), competitor: t('altsAskyourpdf.tableFreeTierCompetitor') },
-    { name: t('altsAskyourpdf.tableStartingPrice'), doctalk: '$9.99/mo', competitor: '$14.99/mo' },
+    { name: t('altsAskyourpdf.tableStartingPrice'), doctalk: '$9.99/mo', competitor: t('altsAskyourpdf.tableStartingPriceCompetitor') },
   ];
 
   const faqItems = [

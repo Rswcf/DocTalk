@@ -23,10 +23,10 @@ export default async function ChatpdfAltsContent({ locale }: { locale: string })
 
   const quickCompare = [
     { name: t('altsChatpdf.tableFileFormats'), doctalk: t('altsChatpdf.table7Formats'), competitor: t('altsChatpdf.tablePdfOnly') },
-    { name: t('altsChatpdf.tableCitationHighlighting'), doctalk: true, competitor: false },
-    { name: t('altsChatpdf.tableLanguages'), doctalk: '11', competitor: '1' },
+    { name: t('altsChatpdf.tableCitationHighlighting'), doctalk: true, competitor: t('comparison.jumpsToSource') },
+    { name: t('altsChatpdf.tableLanguages'), doctalk: '11', competitor: t('comparison.notVerified') },
     { name: t('altsChatpdf.tableFreeTier'), doctalk: t('altsChatpdf.tableFreeTierDoctalk'), competitor: t('altsChatpdf.tableFreeTierChatpdf') },
-    { name: t('altsChatpdf.tableStartingPrice'), doctalk: '$9.99/mo', competitor: '$19.99/mo' },
+    { name: t('altsChatpdf.tableStartingPrice'), doctalk: '$9.99/mo', competitor: t('comparison.notPublished') },
   ];
 
   const faqItems = [

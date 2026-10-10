@@ -21,15 +21,15 @@ export default async function HumataContent({ locale }: { locale: string }) {
 
   const features = [
     { name: t('compareHumata.featureSupportedFormats'), doctalk: t('compareHumata.featureSupportedFormatsDocTalk'), competitor: t('compareHumata.featureSupportedFormatsCompetitor') },
-    { name: t('compareHumata.featureCitationHighlighting'), doctalk: true, competitor: false },
-    { name: t('compareHumata.featureVideoSupport'), doctalk: false, competitor: true },
+    { name: t('compareHumata.featureCitationHighlighting'), doctalk: true, competitor: true },
+    { name: t('compareHumata.featureVideoSupport'), doctalk: false, competitor: t('comparison.notVerified') },
     { name: t('compareHumata.featureTeamCollaboration'), doctalk: false, competitor: true },
     { name: t('compareHumata.featureInterfaceLanguages'), doctalk: t('compareHumata.featureInterfaceLanguagesDocTalk'), competitor: t('compareHumata.featureInterfaceLanguagesCompetitor') },
     { name: t('compareHumata.featureNoSignupDemo'), doctalk: true, competitor: false },
     { name: t('compareHumata.featureFreeTier'), doctalk: t('compareHumata.featureFreeTierDocTalk'), competitor: t('compareHumata.featureFreeTierCompetitor') },
     { name: t('compareHumata.featureMultipleAIModes'), doctalk: t('compareHumata.featureMultipleAIModesDocTalk'), competitor: t('compareHumata.featureMultipleAIModesCompetitor') },
     { name: t('compareHumata.featureStartingPrice'), doctalk: t('compareHumata.featureStartingPriceDocTalk'), competitor: t('compareHumata.featureStartingPriceCompetitor') },
-    { name: t('compareHumata.featureDarkMode'), doctalk: true, competitor: false },
+    { name: t('compareHumata.featureDarkMode'), doctalk: true, competitor: t('comparison.notVerified') },
   ];
 
   const faqItems = [

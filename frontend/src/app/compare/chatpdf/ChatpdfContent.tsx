@@ -21,15 +21,15 @@ export default async function ChatpdfContent({ locale }: { locale: string }) {
 
   const features = [
     { name: t('compareChatpdf.table.supportedFormats'), doctalk: t('compareChatpdf.table.doctalk.supportedFormats'), competitor: t('compareChatpdf.table.competitor.supportedFormats') },
-    { name: t('compareChatpdf.table.citationHighlighting'), doctalk: true, competitor: false },
+    { name: t('compareChatpdf.table.citationHighlighting'), doctalk: true, competitor: t('comparison.jumpsToSource') },
     { name: t('compareChatpdf.table.interfaceLanguages'), doctalk: t('compareChatpdf.table.doctalk.interfaceLanguages'), competitor: t('compareChatpdf.table.competitor.interfaceLanguages') },
     { name: t('compareChatpdf.table.freeTier'), doctalk: t('compareChatpdf.table.doctalk.freeTier'), competitor: t('compareChatpdf.table.competitor.freeTier') },
-    { name: t('compareChatpdf.table.noSignupDemo'), doctalk: true, competitor: false },
+    { name: t('compareChatpdf.table.noSignupDemo'), doctalk: true, competitor: true },
     { name: t('compareChatpdf.table.multipleAiModels'), doctalk: t('compareChatpdf.table.doctalk.multipleAiModels'), competitor: t('compareChatpdf.table.competitor.multipleAiModels') },
     { name: t('compareChatpdf.table.docSizeLimit'), doctalk: t('compareChatpdf.table.doctalk.docSizeLimit'), competitor: t('compareChatpdf.table.competitor.docSizeLimit') },
-    { name: t('compareChatpdf.table.darkMode'), doctalk: true, competitor: false },
-    { name: t('compareChatpdf.table.webUrlIngestion'), doctalk: true, competitor: false },
-    { name: t('compareChatpdf.table.customInstructions'), doctalk: t('compareChatpdf.table.doctalk.customInstructions'), competitor: false },
+    { name: t('compareChatpdf.table.darkMode'), doctalk: true, competitor: t('comparison.notVerified') },
+    { name: t('compareChatpdf.table.webUrlIngestion'), doctalk: true, competitor: true },
+    { name: t('compareChatpdf.table.customInstructions'), doctalk: t('compareChatpdf.table.doctalk.customInstructions'), competitor: t('comparison.notVerified') },
   ];
 
   const faqItems = [

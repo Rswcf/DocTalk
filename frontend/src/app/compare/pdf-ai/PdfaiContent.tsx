@@ -21,15 +21,14 @@ export default async function PdfaiContent({ locale }: { locale: string }) {
 
   const features = [
     { name: t('comparePdfai.featureSupportedFormats'), doctalk: t('comparePdfai.featureSupportedFormatsDocTalk'), competitor: t('comparePdfai.featureSupportedFormatsCompetitor') },
-    { name: t('comparePdfai.featureCitationHighlighting'), doctalk: true, competitor: false },
+    { name: t('comparePdfai.featureCitationHighlighting'), doctalk: true, competitor: t('comparison.sourcesListed') },
     { name: t('comparePdfai.featureInterfaceLanguages'), doctalk: t('comparePdfai.featureInterfaceLanguagesDocTalk'), competitor: t('comparePdfai.featureInterfaceLanguagesCompetitor') },
     { name: t('comparePdfai.featureNoSignupDemo'), doctalk: true, competitor: false },
     { name: t('comparePdfai.featureMultipleAIModes'), doctalk: t('comparePdfai.featureMultipleAIModesDocTalk'), competitor: t('comparePdfai.featureMultipleAIModesCompetitor') },
     { name: t('comparePdfai.featureFreeTier'), doctalk: t('comparePdfai.featureFreeTierDocTalk'), competitor: t('comparePdfai.featureFreeTierCompetitor') },
     { name: t('comparePdfai.featureWebUrlIngestion'), doctalk: true, competitor: false },
-    { name: t('comparePdfai.featureDarkMode'), doctalk: true, competitor: false },
+    { name: t('comparePdfai.featureDarkMode'), doctalk: true, competitor: t('comparison.notVerified') },
     { name: t('comparePdfai.featureDataEncryption'), doctalk: t('comparePdfai.featureDataEncryptionDocTalk'), competitor: t('comparePdfai.featureDataEncryptionCompetitor') },
-    { name: t('comparePdfai.featureActiveDevelopment'), doctalk: t('comparePdfai.featureActiveDevelopmentDocTalk'), competitor: t('comparePdfai.featureActiveDevelopmentCompetitor') },
   ];
 
   const faqItems = [
