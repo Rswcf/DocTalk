@@ -82,9 +82,9 @@ export default async function NotebooklmContent({ locale }: { locale: string }) 
 
       <EdSection title={t('compareNotebooklm.whatIsNotebookLM')}>
         <EdProse>
+          <p>{t('compareNotebooklm.whatIsNotebookLMDescription')}</p>
           <p>
-            <a href="https://notebooklm.google.com" target="_blank" rel="noopener noreferrer">NotebookLM</a>{' '}
-            {t('compareNotebooklm.whatIsNotebookLMDescription')}
+            <a href="https://notebook.google.com" target="_blank" rel="noopener noreferrer">notebook.google.com</a>
           </p>
         </EdProse>
       </EdSection>

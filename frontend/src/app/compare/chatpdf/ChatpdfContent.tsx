@@ -82,9 +82,9 @@ export default async function ChatpdfContent({ locale }: { locale: string }) {
 
       <EdSection title={t('compareChatpdf.whatIsChatPDF')}>
         <EdProse>
+          <p>{t('compareChatpdf.whatIsChatPDFDescription')}</p>
           <p>
-            <a href="https://chatpdf.com" target="_blank" rel="noopener noreferrer">ChatPDF</a>{' '}
-            {t('compareChatpdf.whatIsChatPDFDescription')}
+            <a href="https://www.chatpdf.com" target="_blank" rel="noopener noreferrer">chatpdf.com</a>
           </p>
         </EdProse>
       </EdSection>

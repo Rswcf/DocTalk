@@ -78,9 +78,9 @@ export default async function HumataContent({ locale }: { locale: string }) {
 
       <EdSection title={t('compareHumata.whatIsHumataTitle')}>
         <EdProse>
+          <p>{t('compareHumata.whatIsHumataDescription')}</p>
           <p>
-            <a href="https://www.humata.ai" target="_blank" rel="noopener noreferrer">Humata</a>{' '}
-            {t('compareHumata.whatIsHumataDescription')}
+            <a href="https://www.humata.ai" target="_blank" rel="noopener noreferrer">humata.ai</a>
           </p>
         </EdProse>
       </EdSection>

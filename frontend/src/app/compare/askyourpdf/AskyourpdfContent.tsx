@@ -78,9 +78,9 @@ export default async function AskyourpdfContent({ locale }: { locale: string }) 
 
       <EdSection title={t('compareAskyourpdf.whatIsAskyourpdfTitle')}>
         <EdProse>
+          <p>{t('compareAskyourpdf.whatIsAskyourpdfDescription')}</p>
           <p>
-            <a href="https://askyourpdf.com" target="_blank" rel="noopener noreferrer">AskYourPDF</a>{' '}
-            {t('compareAskyourpdf.whatIsAskyourpdfDescription')}
+            <a href="https://askyourpdf.com" target="_blank" rel="noopener noreferrer">askyourpdf.com</a>
           </p>
         </EdProse>
       </EdSection>

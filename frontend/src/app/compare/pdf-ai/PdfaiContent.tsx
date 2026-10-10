@@ -77,9 +77,9 @@ export default async function PdfaiContent({ locale }: { locale: string }) {
 
       <EdSection title={t('comparePdfai.whatIsPdfaiTitle')}>
         <EdProse>
+          <p>{t('comparePdfai.whatIsPdfaiDescription')}</p>
           <p>
-            <a href="https://pdf.ai" target="_blank" rel="noopener noreferrer">PDF.ai</a>{' '}
-            {t('comparePdfai.whatIsPdfaiDescription')}
+            <a href="https://pdf.ai" target="_blank" rel="noopener noreferrer">pdf.ai</a>
           </p>
         </EdProse>
       </EdSection>
