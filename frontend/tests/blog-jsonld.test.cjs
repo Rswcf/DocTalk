@@ -82,12 +82,40 @@ test('every real post with an FAQ section yields complete question/answer pairs'
 });
 
 test('the ranked comparison posts list every numbered pick', () => {
-  for (const slug of ['chatpdf-alternatives-2026', 'best-ai-pdf-tools-2026']) {
+  for (const [slug, count] of [['chatpdf-alternatives-2026', 7], ['best-ai-pdf-tools-2026', 7], ['notebooklm-alternatives-2026', 5]]) {
     const post = posts.find((p) => p.slug === slug);
     assert.equal(post.category, 'comparisons');
     const items = schema.extractRankedItems(post.body);
-    assert.equal(items.length, 7, `${slug}: ${items.length} ranked items`);
-    assert.deepEqual(items.map((i) => i.position), [1, 2, 3, 4, 5, 6, 7]);
+    assert.equal(items.length, count, `${slug}: ${items.length} ranked items`);
+    assert.deepEqual(items.map((i) => i.position), Array.from({ length: count }, (_, i) => i + 1));
     assert.equal(items[0].name, 'DocTalk');
+    const ids = [...headings.extractHeadingIdsByOffset(post.body).values()];
+    for (const item of items) assert.ok(ids.includes(item.anchor), `${slug}: ${item.anchor}`);
   }
+});
+
+test('only ranked comparison posts get an ItemList', () => {
+  const withList = posts
+    .filter((p) => p.category === 'comparisons' && schema.extractRankedItems(p.body).length > 0)
+    .map((p) => p.slug)
+    .sort();
+  assert.deepEqual(withList, ['best-ai-pdf-tools-2026', 'chatpdf-alternatives-2026', 'notebooklm-alternatives-2026']);
+  const academic = posts.find((p) => p.slug === 'best-ai-tools-academic-research-2026');
+  assert.deepEqual(schema.extractRankedItems(academic.body), []);
+});
+
+test('ItemList puts each name and in-page URL under ListItem.item', () => {
+  const list = schema.buildRankedItemList('T', 'https://www.doctalk.site/blog/x', [
+    { position: 1, name: 'DocTalk', anchor: '1-doctalk' },
+    { position: 2, name: 'ChatPDF', anchor: '2-chatpdf' },
+  ]);
+  assert.equal(list['@type'], 'ItemList');
+  assert.equal(list.numberOfItems, 2);
+  assert.deepEqual(list.itemListElement[0], {
+    '@type': 'ListItem',
+    position: 1,
+    item: { '@type': 'Thing', name: 'DocTalk', url: 'https://www.doctalk.site/blog/x#1-doctalk' },
+  });
+  const faq = schema.buildFaqPage([{ question: 'Q?', answer: 'A.' }]);
+  assert.deepEqual(faq.mainEntity[0], { '@type': 'Question', name: 'Q?', acceptedAnswer: { '@type': 'Answer', text: 'A.' } });
 });

@@ -79,6 +79,34 @@ export function extractRankedItems(content: string): RankedItem[] {
   return items.length >= 2 ? items : [];
 }
 
+/** schema.org ItemList for an all-in-one-page ranked list: each ListItem carries its name and in-page anchor under `item`. */
+export function buildRankedItemList(title: string, postUrl: string, items: RankedItem[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: title,
+    numberOfItems: items.length,
+    itemListElement: items.map(({ position, name, anchor }) => ({
+      '@type': 'ListItem',
+      position,
+      item: { '@type': 'Thing', name, url: `${postUrl}#${anchor}` },
+    })),
+  };
+}
+
+/** schema.org FAQPage built from the post's FAQ pairs. */
+export function buildFaqPage(items: FaqItem[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map(({ question, answer }) => ({
+      '@type': 'Question',
+      name: question,
+      acceptedAnswer: { '@type': 'Answer', text: answer },
+    })),
+  };
+}
+
 /** JSON for a <script type="application/ld+json">, with "<" escaped so text can never close the tag. */
 export function jsonLdString(data: unknown): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');

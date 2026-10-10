@@ -1,7 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllPosts, getPostBySlug } from '../../../lib/blog';
-import { extractFaq, extractRankedItems, jsonLdString } from '../../../lib/blogSchema';
+import {
+  buildFaqPage,
+  buildRankedItemList,
+  extractFaq,
+  extractRankedItems,
+  jsonLdString,
+} from '../../../lib/blogSchema';
 import BlogPostClient from './BlogPostClient';
 import {
   buildArticleJsonLd,
@@ -119,15 +125,7 @@ export default function BlogPostPage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLdString({
-              '@context': 'https://schema.org',
-              '@type': 'FAQPage',
-              mainEntity: faq.map(({ question, answer }) => ({
-                '@type': 'Question',
-                name: question,
-                acceptedAnswer: { '@type': 'Answer', text: answer },
-              })),
-            }),
+            __html: jsonLdString(buildFaqPage(faq)),
           }}
         />
       )}
@@ -135,18 +133,7 @@ export default function BlogPostPage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLdString({
-              '@context': 'https://schema.org',
-              '@type': 'ItemList',
-              name: post.title,
-              numberOfItems: ranked.length,
-              itemListElement: ranked.map(({ position, name, anchor }) => ({
-                '@type': 'ListItem',
-                position,
-                name,
-                url: `${postUrl}#${anchor}`,
-              })),
-            }),
+            __html: jsonLdString(buildRankedItemList(post.title, postUrl, ranked)),
           }}
         />
       )}
