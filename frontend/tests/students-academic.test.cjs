@@ -47,6 +47,14 @@ test('the zh and es search titles carry the academic long-tail terms', () => {
   assert.match(es['useCasesStudents.metaTitle'], /IA para investigar gratis/i);
 });
 
+test('the ja search title carries 論文AI and the body names 文献 (Ahrefs 2026-10-10: Japan is the largest 論文ai market)', () => {
+  const ja = messages.ja;
+  assert.match(ja['useCasesStudents.metaTitle'], /論文\s*AI/);
+  assert.equal(ja['useCasesStudents.hero.title'], ja['useCasesStudents.metaTitle']);
+  assert.ok(`${ja['useCasesStudents.metaTitle']} ${ja['useCasesStudents.metaDescription']}`.includes('文献'), 'ja meta lacks 文献');
+  assert.ok(ja['useCasesStudents.helps.quotes.description'].includes(ja['quoteFinder.toolbarLabel']), 'ja quotes card does not name the feature as the UI does');
+});
+
 test('the citations feature page links to the students page in the reader\'s locale', () => {
   // Its use-case cards passed a bare path, so /zh/features/citations sent readers to the English students page.
   const content = fs.readFileSync(path.join(src, 'app/features/citations/CitationsContent.tsx'), 'utf8');
