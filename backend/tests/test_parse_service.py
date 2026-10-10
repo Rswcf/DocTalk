@@ -291,3 +291,167 @@ class TestChunkDocumentIntegrity:
         chunks = self.svc.chunk_document([page])
 
         assert chunks[0].text == "这是第一句，继续说明。"
+
+
+ATTENTION_SEED_PDF = BACKEND_DIR / "seed_data" / "attention-paper.pdf"
+ARXIV_STAMP = "arXiv:1706.03762v7"
+
+
+class TestMarginStampIsNotContent:
+    """arXiv prints a vertical stamp ("arXiv:1706.03762v7 [cs.CL] 2 Aug 2023")
+    in the left margin of page 1. At 20pt it passed the heading font-size test,
+    became the section title of every following chunk, and so prefixed every
+    citation snippet of the production demo doc (2026-10-10)."""
+
+    def setup_method(self):
+        self.svc = ParseService()
+
+    def test_seed_pdf_stamp_is_neither_section_title_nor_chunk_text(self):
+        pages = self.svc.extract_pages(ATTENTION_SEED_PDF.read_bytes())
+
+        chunks = self.svc.chunk_document(pages)
+
+        assert chunks
+        assert not any(ARXIV_STAMP in (c.section_title or "") for c in chunks)
+        assert not any(ARXIV_STAMP in c.text for c in chunks)
+        # The stamp's bbox (x≈11–38pt of 612) must not reach the highlights.
+        assert all(b["x"] >= 0.1 for c in chunks for b in c.bboxes if b["page"] == 1)
+        # The page-1 title (17pt) is now the heading the stamp used to shadow.
+        page_one_titles = {c.section_title for c in chunks if c.page_start == 1 and c.section_title}
+        assert page_one_titles == {"Attention Is All You Need"}
+
+    def test_seed_pdf_stamp_is_not_a_heading_element(self):
+        pages = self.svc.extract_pages(ATTENTION_SEED_PDF.read_bytes())
+
+        elements = self.svc.extract_elements(pages)
+
+        assert not any(ARXIV_STAMP in e.text for e in elements)
+        assert not any(
+            ARXIV_STAMP in (e.metadata_json.get("section_title") or "") for e in elements
+        )
+
+    def test_extract_pages_records_line_direction(self):
+        pages = self.svc.extract_pages(ATTENTION_SEED_PDF.read_bytes())
+
+        stamp = [b for b in pages[0].blocks if b.text.startswith(ARXIV_STAMP)]
+
+        assert len(stamp) == 1
+        assert stamp[0].direction == (0.0, -1.0)
+        assert all(b.direction == (1.0, 0.0) for b in pages[0].blocks if b is not stamp[0])
+
+    def test_line_without_direction_defaults_to_horizontal(self):
+        lines = [{"bbox": (50, 50, 300, 62), "spans": [{"text": "Plain line", "size": 10}]}]
+
+        blocks = self.svc._extract_line_blocks(1, lines)
+
+        assert blocks[0].direction == (1.0, 0.0)
+
+    def test_rotated_text_inside_the_body_stays_content_but_is_not_a_heading(self):
+        # A rotated table label mid-page: real content, never a section title.
+        page = PageInfo(
+            page_number=1,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=1, text="Results", bbox=(50, 50, 300, 70), font_size=18),
+                BlockInfo(page=1, text="First body sentence here.", bbox=(50, 100, 450, 116), font_size=10),
+                BlockInfo(
+                    page=1, text="QUARTERLY TOTALS", bbox=(280, 130, 296, 260),
+                    font_size=18, direction=(0.0, -1.0),
+                ),
+                BlockInfo(page=1, text="Second body sentence here.", bbox=(50, 300, 450, 316), font_size=10),
+            ],
+        )
+
+        chunks = self.svc.chunk_document([page])
+
+        assert "QUARTERLY TOTALS" in " ".join(c.text for c in chunks)
+        assert {c.section_title for c in chunks} == {"Results"}
+
+    def test_vertical_writing_page_keeps_its_headings(self):
+        # Tategaki: every line runs top-to-bottom, so vertical is the page's
+        # own direction, not a margin artifact. Nothing may be dropped.
+        down = (0.0, 1.0)
+        page = PageInfo(
+            page_number=1,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=1, text="第一章", bbox=(540, 40, 560, 180), font_size=18, direction=down),
+                BlockInfo(page=1, text="本文の一行目です。", bbox=(500, 60, 512, 400), font_size=10, direction=down),
+                BlockInfo(page=1, text="本文の二行目です。", bbox=(480, 60, 492, 400), font_size=10, direction=down),
+                BlockInfo(page=1, text="余白の注記です。", bbox=(20, 60, 32, 400), font_size=10, direction=down),
+            ],
+        )
+
+        chunks = self.svc.chunk_document([page])
+        text = "".join(c.text for c in chunks)
+
+        assert chunks[0].section_title == "第一章"
+        assert "本文の一行目です。" in text
+        assert "余白の注記です。" in text
+
+    def test_horizontal_text_in_the_margin_is_kept(self):
+        # Pleading-paper line numbers and non-PDF extractor blocks sit at
+        # x≈0 but run with the page: only OFF-axis margin text is dropped.
+        page = PageInfo(
+            page_number=1,
+            width_pt=612,
+            height_pt=792,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=1, text="Margin note text.", bbox=(5, 100, 40, 112), font_size=10),
+                BlockInfo(page=1, text="Body sentence one.", bbox=(80, 100, 500, 112), font_size=10),
+            ],
+        )
+
+        chunks = self.svc.chunk_document([page])
+
+        assert "Margin note text." in chunks[0].text
+
+    def test_margin_band_uses_unrotated_page_size(self):
+        # /Rotate 90: PageInfo carries the rotated rect (792 x 612) while line
+        # bboxes stay in unrotated space (612 x 792). y0=600 is mid-page there,
+        # so this rotated chart label is content, not a bottom-margin artifact.
+        page = PageInfo(
+            page_number=1,
+            width_pt=792,
+            height_pt=612,
+            rotation=90,
+            blocks=[
+                BlockInfo(page=1, text="Body sentence one.", bbox=(80, 100, 500, 112), font_size=10),
+                BlockInfo(
+                    page=1, text="Axis label", bbox=(300, 600, 310, 650),
+                    font_size=10, direction=(0.0, -1.0),
+                ),
+            ],
+        )
+
+        cleaned = self.svc.clean_text_blocks(
+            page.blocks, page.width_pt, page.height_pt, rotation=page.rotation
+        )
+
+        assert [b.text for b in cleaned] == ["Body sentence one.", "Axis label"]
+        assert cleaned[1].off_axis is True
+
+    def test_arxiv_identifier_line_is_never_a_heading(self):
+        # Regex guard for a stamp whose direction was lost (e.g. OCR output).
+        page = PageInfo(
+            page_number=1,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=1, text="Introduction", bbox=(50, 50, 300, 70), font_size=18),
+                BlockInfo(page=1, text="arXiv:2101.00001v2 [cs.LG] 5 Jan 2021", bbox=(50, 90, 400, 110), font_size=20),
+                BlockInfo(page=1, text="Body sentence follows here.", bbox=(50, 130, 450, 146), font_size=10),
+                BlockInfo(page=1, text="Another body sentence here.", bbox=(50, 160, 450, 176), font_size=10),
+                BlockInfo(page=1, text="A third body sentence here.", bbox=(50, 190, 450, 206), font_size=10),
+            ],
+        )
+
+        chunks = self.svc.chunk_document([page])
+
+        assert {c.section_title for c in chunks} == {"Introduction"}
