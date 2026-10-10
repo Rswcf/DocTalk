@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 # Parse pipeline version — bump when parse/OCR logic changes materially so the backfill
 # finder can tell which documents predate a fix (R2b). v2 = Unicode-aware quality OCR
 # trigger + OSD-narrowed OCR language set. v3 = off-axis text is never a heading, and
-# off-axis text or an arXiv stamp in the page margin is dropped from chunks.
+# off-axis text or an arXiv stamp in the page margin is dropped from chunks (vertical
+# writing mode excepted).
 PARSE_PIPELINE_VERSION = 3
 
 # A line that starts with an arXiv identifier is a submission stamp or a wrapped
@@ -234,6 +235,9 @@ class BlockInfo:
     # PyMuPDF line "dir" (cos, sin) in unrotated page space; (1, 0) = left-to-right.
     # Non-PDF extractors never set it, so their blocks always run with the page.
     direction: Tuple[float, float] = (1.0, 0.0)
+    # PyMuPDF line "wmode" == 1: the font itself is in vertical writing mode
+    # (tategaki), so the line is body text, never a rotated margin stamp.
+    vertical_writing: bool = False
 
 
 @dataclass
@@ -476,8 +480,10 @@ class ParseService:
             if is_bottom and text_norm in footer_texts:
                 continue
             off_axis = self._is_off_axis(b.direction, dominant_angle)
-            if self._in_margin_band(b.bbox, band_w, band_h) and (
-                off_axis or _ARXIV_ID_LINE_RE.match(text_norm)
+            if (
+                not b.vertical_writing
+                and self._in_margin_band(b.bbox, band_w, band_h)
+                and (off_axis or _ARXIV_ID_LINE_RE.match(text_norm))
             ):
                 continue
 
@@ -844,14 +850,14 @@ class ParseService:
 
         Relative, not absolute: on a vertical-writing (tategaki) page or a page drawn
         rotated, vertical lines ARE the content and must not count as off-axis.
-        Only lines outside the margin band vote, so a long vertical stamp cannot
-        outvote a sparse body (a figure page with one caption). A page with no text
-        outside the band takes `fallback_angle`.
+        Only body lines vote — outside the margin band, or in vertical writing mode
+        anywhere — so a long vertical stamp cannot outvote a sparse body (a figure
+        page with one caption). A page with no voters takes `fallback_angle`.
         """
         weights: Counter = Counter()
         for b in blocks:
             chars = len(b.text.strip())
-            if chars and not self._in_margin_band(b.bbox, band_w, band_h):
+            if chars and (b.vertical_writing or not self._in_margin_band(b.bbox, band_w, band_h)):
                 weights[self._snapped_angle(b.direction)] += chars
         return float(weights.most_common(1)[0][0]) if weights else fallback_angle
 
@@ -873,7 +879,7 @@ class ParseService:
                     continue
                 angle = self._snapped_angle(b.direction)
                 everything[angle] += chars
-                if not self._in_margin_band(b.bbox, band_w, band_h):
+                if b.vertical_writing or not self._in_margin_band(b.bbox, band_w, band_h):
                     interior[angle] += chars
         weights = interior or everything
         return float(weights.most_common(1)[0][0]) if weights else 0.0
@@ -1022,6 +1028,7 @@ class ParseService:
                           float(line_bbox[2]), float(line_bbox[3])),
                     font_size=avg_size,
                     direction=(float(line_dir[0]), float(line_dir[1])),
+                    vertical_writing=line.get("wmode") == 1,
                 )
             )
         return result

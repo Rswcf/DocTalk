@@ -297,6 +297,42 @@ ATTENTION_SEED_PDF = BACKEND_DIR / "seed_data" / "attention-paper.pdf"
 ARXIV_STAMP = "arXiv:1706.03762v7"
 
 
+def _vertical_writing_pdf() -> bytes:
+    """One-page PDF with a genuine vertical-writing (tategaki) line in the right
+    margin band — a Type0 font on the predefined UniJIS-UTF16-V CMap, which
+    PyMuPDF reports as wmode=1 — and a rotated horizontal arXiv stamp (wmode=0)
+    in the left margin."""
+    content = (
+        b"BT /F1 14 Tf 1 0 0 1 560 700 Tm <65E5672C8A9E306E7E2667F8304D3002> Tj ET\n"
+        b"BT /F2 20 Tf 0 1 -1 0 30 200 Tm (arXiv:1706.03762v7 [cs.CL] 2 Aug 2023) Tj ET\n"
+    )
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+        b"/Resources << /Font << /F1 4 0 R /F2 7 0 R >> >> /Contents 6 0 R >>",
+        b"<< /Type /Font /Subtype /Type0 /BaseFont /KozMinPr6N-Regular "
+        b"/Encoding /UniJIS-UTF16-V /DescendantFonts [5 0 R] >>",
+        b"<< /Type /Font /Subtype /CIDFontType0 /BaseFont /KozMinPr6N-Regular "
+        b"/CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 6 >> /FontDescriptor 8 0 R >>",
+        b"<< /Length %d >>\nstream\n" % len(content) + content + b"endstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Type /FontDescriptor /FontName /KozMinPr6N-Regular /Flags 4 /FontBBox [0 -120 1000 880] "
+        b"/ItalicAngle 0 /Ascent 880 /Descent -120 /CapHeight 700 /StemV 80 >>",
+    ]
+    pdf = b"%PDF-1.7\n"
+    offsets = []
+    for i, obj in enumerate(objs, 1):
+        offsets.append(len(pdf))
+        pdf += b"%d 0 obj\n" % i + obj + b"\nendobj\n"
+    xref = len(pdf)
+    pdf += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+    for off in offsets:
+        pdf += b"%010d 00000 n \n" % off
+    pdf += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
+    return pdf
+
+
 class TestMarginStampIsNotContent:
     """arXiv prints a vertical stamp ("arXiv:1706.03762v7 [cs.CL] 2 Aug 2023")
     in the left margin of page 1. At 20pt it passed the heading font-size test,
@@ -497,6 +533,47 @@ class TestMarginStampIsNotContent:
 
         assert "最後の一行です。" in single and "最後の二行目です。" in single
         assert "最後の一行です。" in both and "本文の一行目です。" in both
+
+    def test_real_vertical_writing_in_the_margin_band_is_kept(self):
+        # Codex r3, on real PDF bytes: a tategaki line inside the right band
+        # (x≈553 of 612) is body text (wmode=1); the rotated arXiv stamp
+        # (wmode=0) next to it is still dropped.
+        pages = self.svc.extract_pages(_vertical_writing_pdf())
+
+        assert {b.vertical_writing for b in pages[0].blocks if b.text.startswith("arXiv")} == {False}
+        assert {b.vertical_writing for b in pages[0].blocks if not b.text.startswith("arXiv")} == {True}
+        text = "".join(c.text for c in self.svc.chunk_document(pages))
+        # MuPDF extracts this hand-built font one glyph per line and skips 書.
+        assert "日本語の縦" in text
+        assert "arXiv" not in text
+
+    def test_vertical_writing_page_in_the_band_survives_a_horizontal_document(self):
+        # Codex r3 probe: page 1 is horizontal, page 2 is tategaki whose only
+        # lines sit in the right band; the document fallback says horizontal.
+        down = (0.0, 1.0)
+        body = PageInfo(
+            page_number=1,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[BlockInfo(page=1, text="Horizontal body sentence.", bbox=(80, 100, 500, 112), font_size=10)],
+        )
+        tail = PageInfo(
+            page_number=2,
+            width_pt=600,
+            height_pt=800,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=2, text="最後の一行です。", bbox=(560, 90, 572, 700), font_size=10,
+                          direction=down, vertical_writing=True),
+                BlockInfo(page=2, text="最後の二行目です。", bbox=(545, 90, 557, 700), font_size=10,
+                          direction=down, vertical_writing=True),
+            ],
+        )
+
+        text = "".join(c.text for c in self.svc.chunk_document([body, tail]))
+
+        assert "最後の一行です。" in text and "最後の二行目です。" in text
 
     def test_arxiv_stamp_without_direction_in_the_margin_is_dropped(self):
         # Codex r2: OCR can lose the stamp's direction; the identifier regex
