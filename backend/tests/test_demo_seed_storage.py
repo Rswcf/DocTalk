@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 from minio.error import S3Error
+from sqlalchemy import select
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
@@ -341,6 +342,84 @@ class TestRefreshStaleDemoParses:
         assert "refresh_stale_demo_parses" in celery_app.tasks
 
 
+class _FakeSeedSession:
+    """Sync session double for seed_demo_documents with one existing row: the
+    first execute is the by-slug lookup, every later one is a claim UPDATE."""
+
+    def __init__(self, existing, events: list) -> None:
+        self.existing = existing
+        self.events = events
+        self.statements: list = []
+        self.deleted: list = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, stmt):
+        self.statements.append(stmt)
+        if len(self.statements) == 1:
+            existing = self.existing
+            return SimpleNamespace(scalar_one_or_none=lambda: existing)
+        self.events.append("claim")
+        return SimpleNamespace(rowcount=1)
+
+    def commit(self):
+        self.events.append("commit")
+
+    def rollback(self):
+        self.events.append("rollback")
+
+    def delete(self, obj):
+        self.deleted.append(obj)
+
+
+class TestErroredDemoDocIsReparsedInPlace:
+    """Codex r1: the version refresh adds a new way for a healthy demo doc to
+    reach 'error' (a transient Qdrant/embedding failure on the re-parse).
+    Startup used to delete such a row and re-create it under a new uuid,
+    breaking the public /d/<id> link and dropping its sessions."""
+
+    def test_errored_demo_row_is_claimed_and_reparsed_under_the_same_id(self, monkeypatch):
+        from app.services.storage_service import storage_service
+        from app.workers import parse_worker
+
+        doc = _doc("attention-paper", "documents/def/Attention Is All You Need.pdf")
+        doc.status = "error"
+        events: list = []
+        session = _FakeSeedSession(doc, events)
+        ensured: list = []
+        dispatched: list = []
+        uploads: list = []
+
+        monkeypatch.setattr(demo_seed, "DEMO_DOCS", [s for s in demo_seed.DEMO_DOCS if s["slug"] == "attention-paper"])
+        monkeypatch.setattr(demo_seed, "SyncSessionLocal", lambda: session)
+        monkeypatch.setattr(demo_seed, "_ensure_demo_files", lambda docs: ensured.append(list(docs)) or 0)
+        monkeypatch.setattr(demo_seed, "_get_minio_client", lambda: SimpleNamespace(put_object=lambda *a, **k: uploads.append(a)))
+        monkeypatch.setattr(demo_seed, "refresh_stale_demo_parses", lambda: 0)
+        monkeypatch.setattr(storage_service, "object_exists", lambda key: True)
+
+        def _delay(doc_id):
+            events.append("delay")
+            dispatched.append(doc_id)
+
+        monkeypatch.setattr(parse_worker.parse_document, "delay", _delay)
+
+        demo_seed.seed_demo_documents()
+
+        assert session.deleted == []
+        assert uploads == []  # no new object, so no new document row either
+        assert [doc] in ensured
+        assert dispatched == [str(doc.id)]
+        assert events == ["claim", "commit", "delay"]
+        claim = _sql(session.statements[1])
+        assert claim.startswith("UPDATE documents SET status='parsing', parse_requested_locale=NULL, updated_at=now()")
+        assert f"documents.id = '{doc.id}'" in claim
+        assert "documents.status = 'error'" in claim
+
+
 @pytest.mark.integration
 class TestRefreshStaleDemoParsesPostgres:
     """Real-Postgres proof of the claim: only ready demo rows below the current
@@ -433,4 +512,47 @@ class TestRefreshStaleDemoParsesPostgres:
                     row = db.get(Document, did)
                     if row:
                         db.delete(row)
+                db.commit()
+
+    def test_startup_reparses_an_errored_demo_row_under_the_same_id(self, monkeypatch):
+        from app.models.sync_database import SyncSessionLocal
+        from app.models.tables import Document
+        from app.services.storage_service import storage_service
+        from app.workers import parse_worker
+
+        slug = f"refresh-errored-{uuid.uuid4().hex[:8]}"
+        monkeypatch.setattr(demo_seed, "DEMO_DOCS", [{"slug": slug, "local_path": "seed_data/none.pdf"}])
+        monkeypatch.setattr(demo_seed, "_ensure_demo_files", lambda docs: 0)
+        monkeypatch.setattr(storage_service, "object_exists", lambda key: True)
+        dispatched: list[str] = []
+        monkeypatch.setattr(parse_worker.parse_document, "delay", lambda doc_id: dispatched.append(doc_id))
+
+        with SyncSessionLocal() as db:
+            row = Document(
+                filename="errored.pdf",
+                file_size=1,
+                storage_key=f"documents/{uuid.uuid4()}/errored.pdf",
+                status="error",
+                demo_slug=slug,
+                parse_requested_locale="ja",
+            )
+            db.add(row)
+            db.commit()
+            doc_id = row.id
+
+        try:
+            demo_seed.seed_demo_documents()
+
+            assert dispatched == [str(doc_id)]
+            with SyncSessionLocal() as db:
+                rows = db.execute(
+                    select(Document.id, Document.status, Document.parse_requested_locale).where(
+                        Document.demo_slug == slug
+                    )
+                ).all()
+            assert [tuple(r) for r in rows] == [(doc_id, "parsing", None)]
+        finally:
+            with SyncSessionLocal() as db:
+                for r in db.execute(select(Document).where(Document.demo_slug == slug)).scalars():
+                    db.delete(r)
                 db.commit()

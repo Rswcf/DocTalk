@@ -457,9 +457,9 @@ class ParseService:
         footer_texts = footer_texts or set()
         top_cutoff = page_height * self.HEADER_FOOTER_REGION_RATIO
         bottom_cutoff = page_height * (1.0 - self.HEADER_FOOTER_REGION_RATIO)
-        dominant_angle = self._dominant_line_angle(blocks)
         # Line bboxes are in unrotated page space; page_width/height are the rotated rect.
         band_w, band_h = (page_height, page_width) if rotation % 180 == 90 else (page_width, page_height)
+        dominant_angle = self._dominant_line_angle(blocks, band_w, band_h)
 
         cleaned: List[CleanBlock] = []
         for b in blocks:
@@ -820,16 +820,23 @@ class ParseService:
     def _line_angle(direction: Tuple[float, float]) -> float:
         return math.degrees(math.atan2(direction[1], direction[0]))
 
-    def _dominant_line_angle(self, blocks: Sequence[BlockInfo]) -> float:
+    def _dominant_line_angle(
+        self, blocks: Sequence[BlockInfo], band_w: float, band_h: float
+    ) -> float:
         """Character-weighted line direction of a page, snapped to 0/90/180/270°.
 
         Relative, not absolute: on a vertical-writing (tategaki) page or a page drawn
         rotated, vertical lines ARE the content and must not count as off-axis.
+        Only lines outside the margin band vote, so a long vertical stamp cannot
+        outvote a sparse body (a figure page with one caption). A page with no text
+        outside the band falls back to left-to-right.
         """
         weights: Counter = Counter()
         for b in blocks:
-            snapped = (round(self._line_angle(b.direction) / 90.0) * 90) % 360
-            weights[snapped] += len(b.text.strip())
+            chars = len(b.text.strip())
+            if not chars or self._in_margin_band(b.bbox, band_w, band_h):
+                continue
+            weights[(round(self._line_angle(b.direction) / 90.0) * 90) % 360] += chars
         return float(weights.most_common(1)[0][0]) if weights else 0.0
 
     def _is_off_axis(self, direction: Tuple[float, float], dominant_angle: float) -> bool:

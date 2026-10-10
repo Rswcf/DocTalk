@@ -411,6 +411,52 @@ class TestMarginStampIsNotContent:
 
         assert "Margin note text." in chunks[0].text
 
+    def test_long_margin_stamp_cannot_outvote_sparse_body_text(self):
+        # Codex r1: on a figure page with one caption line, a long vertical
+        # licence stamp has more characters than the body. Margin-band lines
+        # must not vote on the page direction while the interior has text.
+        stamp = "For the exclusive use of a licensee. " * 6
+        page = PageInfo(
+            page_number=1,
+            width_pt=612,
+            height_pt=792,
+            rotation=0,
+            blocks=[
+                BlockInfo(page=1, text="Results", bbox=(80, 60, 300, 80), font_size=18),
+                BlockInfo(page=1, text="Figure 2: Sparse caption.", bbox=(80, 600, 400, 612), font_size=10),
+                BlockInfo(page=1, text="Second caption line.", bbox=(80, 620, 400, 632), font_size=10),
+                BlockInfo(page=1, text=stamp, bbox=(8, 100, 18, 700), font_size=10, direction=(0.0, -1.0)),
+            ],
+        )
+
+        cleaned = self.svc.clean_text_blocks(page.blocks, page.width_pt, page.height_pt)
+        chunks = self.svc.chunk_document([page])
+
+        assert [b.text for b in cleaned] == ["Results", "Figure 2: Sparse caption.", "Second caption line."]
+        assert not any(b.off_axis for b in cleaned)
+        assert chunks[0].section_title == "Results"
+
+    def test_page_with_text_only_in_the_margin_band_reads_left_to_right(self):
+        # No interior text to align to (a full-page image): a vertical stamp
+        # is still off-axis against the default direction and is dropped.
+        page = PageInfo(
+            page_number=1,
+            width_pt=612,
+            height_pt=792,
+            rotation=0,
+            blocks=[
+                BlockInfo(
+                    page=1, text="arXiv:1706.03762v7 [cs.CL] 2 Aug 2023", bbox=(11, 214, 38, 555),
+                    font_size=20, direction=(0.0, -1.0),
+                ),
+                BlockInfo(page=1, text="7", bbox=(300, 740, 306, 752), font_size=10),
+            ],
+        )
+
+        cleaned = self.svc.clean_text_blocks(page.blocks, page.width_pt, page.height_pt)
+
+        assert [b.text for b in cleaned] == ["7"]
+
     def test_margin_band_uses_unrotated_page_size(self):
         # /Rotate 90: PageInfo carries the rotated rect (792 x 612) while line
         # bboxes stay in unrotated space (612 x 792). y0=600 is mid-page there,
