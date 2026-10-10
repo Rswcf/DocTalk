@@ -56,6 +56,9 @@ def fetch(url: str) -> tuple[int, str]:
             return resp.status, resp.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as err:
         return err.code, ""
+    except (urllib.error.URLError, TimeoutError) as err:
+        # status 0 = no HTTP response (DNS, TLS, timeout); every caller treats it as a failure.
+        return 0, f"fetch error: {getattr(err, 'reason', err)}"
 
 
 def to_url(arg: str) -> str:
@@ -69,10 +72,10 @@ def validate(urls: list[str]) -> list[str]:
     problems = []
     status, body = fetch(f"{BASE}/{KEY}.txt")
     if status != 200 or body.strip() != KEY:
-        return [f"key file: HTTP {status}, content does not match"]
+        return [f"key file: HTTP {status}, content does not match" + (f" ({body})" if status == 0 else "")]
     status, sitemap = fetch(f"{BASE}/sitemap.xml")
     if status != 200:
-        return [f"sitemap: HTTP {status}"]
+        return [f"sitemap: HTTP {status}" + (f" ({sitemap})" if status == 0 else "")]
     listed = set(re.findall(r"<loc>([^<]+)</loc>", sitemap))
     for url in urls:
         if not url.startswith(f"{BASE}/") and url != BASE:
@@ -83,7 +86,7 @@ def validate(urls: list[str]) -> list[str]:
             continue
         status, html = fetch(url)
         if status != 200:
-            problems.append(f"{url}: HTTP {status}")
+            problems.append(f"{url}: HTTP {status}" + (f" ({html})" if status == 0 else ""))
         elif NOINDEX.search(html):
             problems.append(f"{url}: noindex")
     return problems
@@ -104,6 +107,9 @@ def submit(urls: list[str]) -> int:
     except urllib.error.HTTPError as err:
         print(f"IndexNow HTTP {err.code} {err.reason} {err.read()[:300]!r}")
         return 2
+    except (urllib.error.URLError, TimeoutError) as err:
+        print(f"IndexNow request failed, outcome unknown: {getattr(err, 'reason', err)}")
+        return 3
 
 
 def main() -> int:

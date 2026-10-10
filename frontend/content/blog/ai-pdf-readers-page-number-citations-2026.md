@@ -45,7 +45,7 @@ For each tool we read the vendor's homepage, feature pages and help center on 10
 
 ### 1. DocTalk
 
-**What it documents:** for a PDF, every citation in an answer carries the page (or page range) it came from; for slides and spreadsheets it names the slide or sheet. Click the citation, and the viewer opens that page and highlights the cited passage. [Quote Finder](/features/citations) goes one step further for quoting: it returns passages taken from the document, checked against the source text by machine before they are shown, with the page each one comes from, and copies them with an APA in-text citation.
+**What it documents:** for a PDF, every citation in an answer shows the page or page range it came from, for example "Page 8". Click the citation, and the viewer opens the cited location and highlights the cited passage. [Quote Finder](/features/citations) goes one step further for quoting: it returns passages taken from the document, checked against the source text by machine before they are shown, with the page each one comes from, and copies them with an APA in-text citation.
 
 **What we tested:** on 10 October 2026 we asked DocTalk's [public demo](/demo) two questions about "Attention Is All You Need" (Vaswani et al., 2017, arXiv:1706.03762), with no account:
 
@@ -130,16 +130,16 @@ The two answers used five different citations, and every one carried a page numb
 
 ## Other Tools We Checked
 
-We read the pages of eight more tools. Two document page numbers clearly enough to mention:
+We read the pages of nine more tools. Two document page numbers clearly enough to mention:
 
 - **[Otio](https://otio.ai)** says its "citations include the paper title, author, page number, and the exact passage from the text," and that a click jumps to the passage.
 - **[Sharly AI](https://www.sharly.ai/cite)** says "every answer shows the passage it came from, with page numbers for PDFs." Its free plan lists inline citations as "Limited".
 
-The other six do not document a page number for chat answers. **Anara** cites "the exact passage, page or figure" and jumps to it on click. **Humata** says it cites relevant sections and links into your files. **PDF.ai** says every response is "backed by sources". **Elicit** uses sentence-level citations. **Smallpdf** documents clickable page references for its PDF Summarizer, not for Chat with PDF. **Docalysis** and **UPDF AI** say nothing about how answers cite sources.
+The other seven do not document a page number for chat answers. **Anara** cites "the exact passage, page or figure" and jumps to it on click. **Humata** says it cites relevant sections and links into your files. **PDF.ai** says every response is "backed by sources". **Elicit** uses sentence-level citations. **Smallpdf** documents clickable page references for its PDF Summarizer, not for Chat with PDF. **Docalysis** and **UPDF AI** say nothing about how answers cite sources.
 
 ## Why the Page Number Matters
 
-A jump to the passage tells you the answer is grounded. A page number lets you *use* it. APA style asks for a page number with every direct quotation, for example (Vaswani et al., 2017, p. 8), and most citation styles do the same. If your tool only jumps to a quote, you have to work out the page yourself before the quote can go into a paper.
+A jump to the passage tells you the answer is grounded. A page number lets you *use* it. APA 7 asks for the author, year and page number when you quote directly from a source that has pages, for example (Vaswani et al., 2017, p. 8); for a source without page numbers, it asks for another locator, such as a paragraph number or a heading. If your tool only jumps to a quote, you have to work out the page yourself before the quote can go into a paper.
 
 A page number also makes mistakes visible. In our DocTalk test, one citation pointed to page 1 when the exact sentence was on page 8. Because the page was on the citation, checking it took a few seconds. Without a page number you can still check, but only from inside the tool.
 
