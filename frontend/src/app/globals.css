@@ -196,6 +196,23 @@ h3,
 .pdf-evidence-number { position: absolute; display: flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 3px; border: 1px solid #aa842d; border-radius: 4px; background: #fff0c2; color: #6b4400; font: 11px/1 var(--dt-mono), monospace; }
 @keyframes evidenceArrive { from { opacity: 0.35; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .pdf-evidence-line { animation: none; } }
+/* Citation evidence inside rendered Markdown (TextViewer): marks from
+   lib/rehypeMarkRanges. "region" = the cited chunk, "exact" = the focus. */
+mark[data-dt-evidence] {
+  color: inherit;
+  background-color: var(--highlight-base);
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  box-shadow: inset 0 -1px 0 var(--highlight-glow);
+  transition: background-color 220ms ease-out, box-shadow 220ms ease-out;
+}
+mark[data-dt-evidence="exact"] {
+  background-color: var(--highlight-strong);
+  box-shadow: inset 0 -2px 0 var(--highlight-line);
+}
+[data-evidence-hidden="true"] mark[data-dt-evidence] { background-color: transparent; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { mark[data-dt-evidence] { transition: none; } }
 .dt-citation-card[aria-current="location"] { border-color: var(--reader-evidence); background: var(--reader-evidence-soft); }
 
 /* Shiki dual-theme: switch CSS variables based on .dark class */

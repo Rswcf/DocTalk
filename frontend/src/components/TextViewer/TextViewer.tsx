@@ -1,14 +1,74 @@
 "use client";
 
-import React, { Suspense, useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { Suspense, createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import remarkGfm from 'remark-gfm';
-import { Search, ChevronLeft, ChevronRight, X, ExternalLink, Globe2, ListTree } from 'lucide-react';
-import { PROXY_BASE } from '../../lib/api';
+import type { Options as MarkdownOptions } from 'react-markdown';
+import { Search, ChevronLeft, ChevronRight, X, ExternalLink, Globe2, ListTree, Eye, EyeOff } from 'lucide-react';
+import { PROXY_BASE, getChunkDetail } from '../../lib/api';
 import { useLocale } from '../../i18n';
 import { Spinner } from '../spell';
+import { citationChunkText, citationPageRange, dropTrailingFragment } from '../../lib/citationText';
+import { locateTextEvidence, type TextEvidence } from '../../lib/textEvidence';
+import { rehypeMarkRanges, type MarkRange } from '../../lib/rehypeMarkRanges';
 import type { Citation } from '../../types';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
+
+type PluggableList = NonNullable<MarkdownOptions['rehypePlugins']>;
+
+// Stable references: MarkdownContent is memoized, and react-markdown re-parses
+// on every render, so only the cited page may receive new plugin options.
+const REMARK_PLUGINS: PluggableList = [remarkGfm];
+const NO_REHYPE_PLUGINS: PluggableList = [];
+const NO_MARKS: MarkRange[] = [];
+const NO_MARKS_BY_PAGE = new Map<number, MarkRange[]>();
+
+type EvidenceStatus = TextEvidence['kind'] | 'loading' | 'unavailable';
+interface EvidenceState { citation: Citation; status: EvidenceStatus; byPage: Map<number, MarkRange[]> }
+
+// The anchor mark scrolls the cited passage into view once it mounts: marks
+// render inside <Suspense> and may wait for the full chunk text.
+const EvidenceAnchorContext = createContext<((element: HTMLElement | null) => void) | null>(null);
+
+function EvidenceMark(props: React.ComponentPropsWithoutRef<'mark'> & { node?: unknown }) {
+  const { node, ...rest } = props;
+  void node;
+  const onAnchor = useContext(EvidenceAnchorContext);
+  const isAnchor = (rest as Record<string, unknown>)['data-dt-evidence-anchor'] === 'true';
+  return <mark {...rest} ref={isAnchor && onAnchor ? onAnchor : undefined} />;
+}
+
+const MARKDOWN_COMPONENTS = { mark: EvidenceMark };
+
+// Chat context_text stops at 900 characters; tables and long chunks need the
+// whole chunk. Quote Finder and saved quotes have no context text at all.
+const chunkTextCache = new Map<string, Promise<string | null>>();
+function fetchChunkText(chunkId: string): Promise<string | null> {
+  let pending = chunkTextCache.get(chunkId);
+  if (!pending) {
+    pending = getChunkDetail(chunkId).then(
+      (chunk) => chunk.text || null,
+      () => { chunkTextCache.delete(chunkId); return null; },
+    );
+    chunkTextCache.set(chunkId, pending);
+  }
+  return pending;
+}
+
+function marksByPage(evidence: TextEvidence): Map<number, MarkRange[]> {
+  const byPage = new Map<number, MarkRange[]>();
+  for (const range of evidence.ranges) {
+    const marks = byPage.get(range.page) || [];
+    marks.push({
+      start: range.start,
+      end: range.end,
+      kind: range.emphasis ? 'exact' : 'region',
+      anchor: evidence.anchor?.page === range.page && evidence.anchor.start === range.start,
+    });
+    byPage.set(range.page, marks);
+  }
+  return byPage;
+}
 
 interface TextPage {
   page_number: number;
@@ -141,7 +201,7 @@ function findAllMatches(text: string, query: string): number[] {
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function TextViewer({ documentId, fileType, targetPage, scrollNonce, highlightSnippet }: Props) {
+export default function TextViewer({ documentId, fileType, targetPage, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer }: Props) {
   const [pages, setPages] = useState<TextPage[]>([]);
   const [sourceMeta, setSourceMeta] = useState<SourceMeta>({
     isUrlSource: fileType === 'url',
@@ -157,6 +217,14 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const { t } = useLocale();
   const isUrlSource = sourceMeta.isUrlSource || fileType === 'url';
   const isMarkdown = isUrlSource || shouldRenderMarkdown(fileType);
+  const [evidence, setEvidence] = useState<EvidenceState | null>(null);
+  const [hiddenEvidence, setHiddenEvidence] = useState(false);
+  // The citation whose anchor should scroll into view when it mounts; cleared
+  // once it has, or when the reader scrolls first.
+  const pendingAnchor = useRef<Citation | null>(null);
+  const citationRef = useRef(citation);
+  citationRef.current = citation;
+  const markdownCitation = isMarkdown ? citation ?? null : null;
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
@@ -257,12 +325,17 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
     if (!targetPage || pages.length === 0) return;
     const openingPage = !initialPageApplied.current && targetPage > 1;
     if (!scrollNonce && !openingPage) return;
+    const active = scrollNonce && isMarkdown ? citationRef.current ?? null : null;
+    pendingAnchor.current = active;
     // Use requestAnimationFrame to wait for highlight render
     const frame = requestAnimationFrame(() => {
       initialPageApplied.current = true;
+      // The cited passage's anchor already scrolled itself into view.
+      if (active && pendingAnchor.current !== active) return;
       if (highlightRef.current) {
         highlightRef.current.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
       } else {
+        // Page start is the immediate fallback; a late anchor still scrolls.
         const el = pageRefs.current.get(targetPage);
         if (el) {
           el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
@@ -270,17 +343,62 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       }
     });
     return () => cancelAnimationFrame(frame);
-  }, [targetPage, scrollNonce, pages]);
+  }, [targetPage, scrollNonce, pages, isMarkdown]);
+
+  // Locate the cited chunk in the Markdown page text. Chat citations carry
+  // the chunk (cut at 900 characters) in context_text; anything shorter than
+  // the whole chunk is completed from /api/chunks/{id}, and a failed fetch
+  // falls back to what the citation carries.
+  useEffect(() => {
+    if (!markdownCitation || pages.length === 0) { setEvidence(null); return; }
+    const target = markdownCitation;
+    const lastPage = Math.max(target.pageEnd || target.page, target.page);
+    if (!pages.some((page) => page.page_number >= target.page && page.page_number <= lastPage)) {
+      setEvidence({ citation: target, status: 'unavailable', byPage: NO_MARKS_BY_PAGE });
+      return;
+    }
+    const focus = highlightFocus ?? target.focusSnippet ?? null;
+    const settle = (chunkText: string | null) => {
+      const result = locateTextEvidence(pages, target, chunkText, focus);
+      setEvidence({ citation: target, status: result.kind, byPage: marksByPage(result) });
+    };
+    const known = citationChunkText(target);
+    if (known && !known.truncated) { settle(known.text); return; }
+    let cancelled = false;
+    setEvidence({ citation: target, status: 'loading', byPage: NO_MARKS_BY_PAGE });
+    void fetchChunkText(target.chunkId).then((full) => {
+      if (cancelled) return;
+      settle(full ?? (known ? dropTrailingFragment(known.text) : target.textSnippet || null));
+    });
+    return () => { cancelled = true; };
+  }, [markdownCitation, highlightFocus, pages]);
+
+  useEffect(() => { setHiddenEvidence(false); }, [citation]);
+
+  const currentEvidence = evidence && evidence.citation === markdownCitation ? evidence : null;
+  const evidenceStatus: EvidenceStatus = currentEvidence?.status ?? 'loading';
+  const evidenceByPage = currentEvidence?.byPage ?? NO_MARKS_BY_PAGE;
+  const captionPage = markdownCitation && evidenceStatus === 'page' ? markdownCitation.page : null;
+
+  // A new evidence state gets a new callback, so React re-attaches it to the
+  // anchor mark even when the element itself is reused.
+  const onAnchor = useCallback((element: HTMLElement | null) => {
+    if (!element || !currentEvidence || pendingAnchor.current !== currentEvidence.citation) return;
+    pendingAnchor.current = null;
+    element.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+  }, [currentEvidence]);
+  const cancelPendingAnchor = useCallback(() => { pendingAnchor.current = null; }, []);
 
   // Compute which page has a highlight match
+  // Plain text (TXT, missing-file PDFs) keeps matching the backend snippet.
   const highlightMatch = useMemo(() => {
-    if (!highlightSnippet || !targetPage) return null;
+    if (isMarkdown || !highlightSnippet || !targetPage) return null;
     const page = pages.find(p => p.page_number === targetPage);
     if (!page) return null;
     const match = findSnippetInPage(page.text, highlightSnippet);
     if (!match) return null;
     return { pageNumber: targetPage, start: match[0], length: match[1] };
-  }, [highlightSnippet, targetPage, pages, scrollNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [highlightSnippet, targetPage, pages, scrollNonce, isMarkdown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcut: Ctrl+F to open search
   useEffect(() => {
@@ -314,8 +432,43 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
     );
   }
 
+  const hasMarks = evidenceByPage.size > 0;
+
   return (
-    <div ref={containerRef} className="h-full flex flex-col" tabIndex={-1}>
+    <EvidenceAnchorContext.Provider value={onAnchor}>
+    <div
+      ref={containerRef}
+      className="h-full flex flex-col"
+      tabIndex={-1}
+      data-evidence-hidden={hiddenEvidence ? 'true' : undefined}
+      onWheelCapture={cancelPendingAnchor}
+      onPointerDownCapture={cancelPendingAnchor}
+      onKeyDownCapture={cancelPendingAnchor}
+    >
+      {markdownCitation && (
+        <div className="dt-evidence-bar flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] px-3 py-1.5 text-xs">
+          <span role="status" className="dt-evidence-status min-w-0" tabIndex={-1}>
+            {t('evidence.reference', { index: markdownCitation.refIndex, page: citationPageRange(markdownCitation) })}
+            {' · '}{t(hiddenEvidence && hasMarks ? 'evidence.hidden' : `evidence.${evidenceStatus}`)}
+          </span>
+          <span className="flex flex-wrap items-center gap-1">
+            {hasMarks && (
+              <button type="button" aria-pressed={hiddenEvidence} onClick={() => setHiddenEvidence((value) => !value)}
+                aria-label={t(hiddenEvidence ? 'evidence.show' : 'evidence.hide')} title={t(hiddenEvidence ? 'evidence.show' : 'evidence.hide')}
+                className="flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded px-2 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10">
+                {hiddenEvidence ? <Eye size={14} aria-hidden="true" /> : <EyeOff size={14} aria-hidden="true" />}
+                <span className="hidden sm:inline">{t(hiddenEvidence ? 'evidence.show' : 'evidence.hide')}</span>
+              </button>
+            )}
+            {onReturnToAnswer && (
+              <button type="button" onClick={onReturnToAnswer}
+                className="min-h-9 rounded border border-[var(--reader-evidence-border)] px-2 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-white/10">
+                {t('evidence.return')}
+              </button>
+            )}
+          </span>
+        </div>
+      )}
       {/* Search bar */}
       {searchOpen && (
         <div className="flex items-center gap-2 text-sm shrink-0 px-3 py-1.5 bg-white/90 dark:bg-zinc-800/90 backdrop-blur border-b border-zinc-200 dark:border-zinc-700">
@@ -361,7 +514,8 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
           pages={pages}
           sourceMeta={sourceMeta}
           pageRefs={pageRefs}
-          highlightMatch={highlightMatch}
+          captionPage={captionPage}
+          evidenceByPage={evidenceByPage}
           highlightRef={highlightRef}
           onOpenSearch={() => {
             setSearchOpen(true);
@@ -400,8 +554,8 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
                 {isMarkdown ? (
                   <MarkdownContent
                     text={page.text}
-                    citationMatch={citationMatch}
-                    citationPage={citationMatch ? page.page_number : null}
+                    captionPage={captionPage === page.page_number ? captionPage : null}
+                    markRanges={evidenceByPage.get(page.page_number) || NO_MARKS}
                     highlightRef={highlightRef}
                   />
                 ) : (
@@ -424,6 +578,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
         </div>
       )}
     </div>
+    </EvidenceAnchorContext.Provider>
   );
 }
 
@@ -431,14 +586,16 @@ function WebArticleView({
   pages,
   sourceMeta,
   pageRefs,
-  highlightMatch,
+  captionPage,
+  evidenceByPage,
   highlightRef,
   onOpenSearch,
 }: {
   pages: TextPage[];
   sourceMeta: SourceMeta;
   pageRefs: React.MutableRefObject<Map<number, HTMLElement>>;
-  highlightMatch: { pageNumber: number; start: number; length: number } | null;
+  captionPage: number | null;
+  evidenceByPage: Map<number, MarkRange[]>;
   highlightRef: React.RefObject<HTMLSpanElement>;
   onOpenSearch: () => void;
 }) {
@@ -467,6 +624,26 @@ function WebArticleView({
       })
       .slice(0, 12);
   }, [pages]);
+
+  // Each section renders its body without the leading heading, so evidence
+  // offsets (into the page text) shift by where the body starts.
+  const articlePages = useMemo(() => pages.map((page) => {
+    const pageTitle = page.section_title?.trim() || leadingMarkdownHeading(page.text);
+    const body = stripLeadingMatchingHeading(page.text, pageTitle);
+    return { page, pageTitle, body, bodyStart: page.text.indexOf(body) };
+  }), [pages]);
+  const bodyMarks = useMemo(() => {
+    const byPage = new Map<number, MarkRange[]>();
+    for (const { page, body, bodyStart } of articlePages) {
+      const marks = evidenceByPage.get(page.page_number);
+      if (!marks || bodyStart < 0) continue;
+      const shifted = bodyStart === 0 ? marks : marks
+        .filter((mark) => mark.start >= bodyStart)
+        .map((mark) => ({ ...mark, start: mark.start - bodyStart, end: Math.min(mark.end - bodyStart, body.length) }));
+      if (shifted.length) byPage.set(page.page_number, shifted);
+    }
+    return byPage;
+  }, [articlePages, evidenceByPage]);
 
   const jumpToPage = useCallback((pageNumber: number) => {
     const el = pageRefs.current.get(pageNumber);
@@ -542,23 +719,7 @@ function WebArticleView({
 
         <article className="min-w-0 flex-1">
           <div className="mx-auto max-w-[780px]">
-            {pages.map((page) => {
-              const citationMatch = highlightMatch?.pageNumber === page.page_number ? highlightMatch : null;
-              const pageTitle = page.section_title?.trim() || leadingMarkdownHeading(page.text);
-              const body = stripLeadingMatchingHeading(page.text, pageTitle);
-              const bodyStart = page.text.indexOf(body);
-              const adjustedCitationMatch = citationMatch && bodyStart >= 0
-                ? {
-                    ...citationMatch,
-                    start: citationMatch.start - bodyStart,
-                  }
-                : citationMatch;
-              const bodyCitationMatch = adjustedCitationMatch
-                && adjustedCitationMatch.start >= 0
-                && adjustedCitationMatch.start < body.length
-                ? adjustedCitationMatch
-                : null;
-
+            {articlePages.map(({ page, pageTitle, body }) => {
               return (
                 <section
                   key={page.page_number}
@@ -581,8 +742,8 @@ function WebArticleView({
                   )}
                   <MarkdownContent
                     text={body}
-                    citationMatch={bodyCitationMatch}
-                    citationPage={bodyCitationMatch ? page.page_number : null}
+                    captionPage={captionPage === page.page_number ? captionPage : null}
+                    markRanges={bodyMarks.get(page.page_number) || NO_MARKS}
                     highlightRef={highlightRef}
                     articleMode
                   />
@@ -706,21 +867,27 @@ function PlainTextContent({
   );
 }
 
-/** Markdown renderer with citation highlight support */
-function MarkdownContent({
+/** Markdown renderer with inline citation evidence. Memoized: the viewer is
+ * not virtualized and react-markdown re-parses on every render. */
+const MarkdownContent = React.memo(function MarkdownContent({
   text,
-  citationMatch,
-  citationPage,
+  captionPage,
+  markRanges,
   highlightRef,
   articleMode = false,
 }: {
   text: string;
-  citationMatch: { start: number; length: number } | null;
-  citationPage?: number | null;
+  /** The cited page when no passage could be located: show a page caption. */
+  captionPage: number | null;
+  markRanges: MarkRange[];
   highlightRef: React.RefObject<HTMLSpanElement>;
   articleMode?: boolean;
 }) {
   const { t } = useLocale();
+  const rehypePlugins = useMemo<PluggableList>(
+    () => (markRanges.length ? [[rehypeMarkRanges, { ranges: markRanges, source: text }]] : NO_REHYPE_PLUGINS),
+    [markRanges, text],
+  );
   const markdownFallback = (
     <div className="flex items-center justify-center py-8">
       <Spinner variant="circle" size="md" label={t('common.loading')} />
@@ -740,27 +907,24 @@ function MarkdownContent({
       prose-strong:text-zinc-900 prose-strong:dark:text-zinc-100
     `}>
       {/*
-        I25 (Wave-2 Batch I, 2026-05-20): When a citation lands on a markdown
-        page we used to render a duplicated amber-preview box above the full
-        ReactMarkdown render — the user saw the cited passage twice (raw +
-        rendered) and the rendered copy had no visual marker. We replaced
-        the preview box with a small mono caption that just tells the user
-        which page jumped. The `highlightRef` is attached to the caption so
-        scrolling still lands near the cited passage. Trade-off acknowledged:
-        the rendered markdown passage is no longer visually highlighted —
-        full inline highlighting via a remark plugin or AST post-processor
-        is deferred.
+        I25 (Wave-2 Batch I, 2026-05-20) replaced a duplicated amber preview
+        box with a small caption naming the page. Since 2026-10-11 the cited
+        passage is highlighted inline instead: lib/textEvidence.ts locates the
+        chunk in this page's Markdown source and lib/rehypeMarkRanges.ts wraps
+        the covered text in <mark data-dt-evidence> through hast source
+        positions. The caption remains only when no unique passage was found
+        (status "page"), and `highlightRef` sits on it for scrolling.
       */}
-      {citationMatch && citationPage != null && (
+      {captionPage != null && (
         <p dir="auto" className="not-prose mb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
           <span ref={highlightRef}>
-            {t('citation.page', { page: citationPage })}
+            {t('citation.page', { page: captionPage })}
           </span>
         </p>
       )}
       <Suspense fallback={markdownFallback}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={rehypePlugins} components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
       </Suspense>
     </div>
   );
-}
+});

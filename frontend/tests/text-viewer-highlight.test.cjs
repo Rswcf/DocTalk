@@ -141,3 +141,74 @@ test('end to end: a DOCX chunk with a glued title highlights its table cells', (
     'exact:The chair asked for a revised forecast.',
   ]);
 });
+
+// ---- TextViewer: status line, caption fallback, scroll, rendering cost ----
+const VIEWER = 'components/TextViewer/TextViewer.tsx';
+
+test('the text view has a focusable evidence status line for the mobile focus hook', () => {
+  const code = stripComments(read(VIEWER));
+  assert.match(code, /<span role="status" className="dt-evidence-status min-w-0" tabIndex=\{-1\}>/);
+  assert.match(code, /t\('evidence\.reference', \{ index: markdownCitation\.refIndex, page: citationPageRange\(markdownCitation\) \}\)/);
+  assert.match(code, /`evidence\.\$\{evidenceStatus\}`/);
+  // The reader focuses the first .dt-evidence-status after a mobile citation tap.
+  assert.match(stripComments(read(READER)), /document\.querySelector<HTMLElement>\('\.dt-evidence-status'\)\?\.focus/);
+});
+
+test('every evidence status the text view can show has a key in all 11 locales', () => {
+  const statuses = ['loading', 'exact', 'region', 'page', 'unavailable', 'hidden', 'hide', 'show', 'return', 'reference'];
+  const dir = path.join(SRC, 'i18n/locales');
+  const files = fs.readdirSync(dir).filter(name => name.endsWith('.json'));
+  assert.equal(files.length, 11);
+  for (const file of files) {
+    const messages = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+    for (const status of statuses) assert.ok(messages[`evidence.${status}`], `${file} has evidence.${status}`);
+  }
+});
+
+test('the page caption is the fallback only when no passage was located', () => {
+  const code = stripComments(read(VIEWER));
+  assert.match(code, /const captionPage = markdownCitation && evidenceStatus === 'page' \? markdownCitation\.page : null;/);
+  assert.match(code, /\{captionPage != null && \(/);
+  // Plain text keeps matching the backend snippet; Markdown never uses it.
+  assert.match(code, /if \(isMarkdown \|\| !highlightSnippet \|\| !targetPage\) return null;/);
+});
+
+test('the anchor mark scrolls once per navigation; the page start stays the immediate fallback', () => {
+  const code = stripComments(read(VIEWER));
+  assert.match(code, /pendingAnchor\.current = active;/);
+  assert.match(code, /if \(active && pendingAnchor\.current !== active\) return;/);
+  assert.match(code, /if \(!element \|\| !currentEvidence \|\| pendingAnchor\.current !== currentEvidence\.citation\) return;/);
+  for (const handler of ['onWheelCapture', 'onPointerDownCapture', 'onKeyDownCapture']) {
+    assert.match(code, new RegExp(`${handler}=\\{cancelPendingAnchor\\}`), `${handler} cancels a late scroll`);
+  }
+  assert.match(code, /mark: EvidenceMark/);
+});
+
+test('a late chunk fetch for an earlier citation is dropped', () => {
+  const code = stripComments(read(VIEWER));
+  const effect = code.slice(code.indexOf('const settle = (chunkText'), code.indexOf('}, [markdownCitation, highlightFocus, pages]);'));
+  assert.match(effect, /let cancelled = false;/);
+  assert.match(effect, /if \(cancelled\) return;/);
+  assert.match(effect, /return \(\) => \{ cancelled = true; \};/);
+  assert.match(code, /const currentEvidence = evidence && evidence\.citation === markdownCitation \? evidence : null;/);
+});
+
+test('Markdown pages are memoized with stable plugin lists', () => {
+  const code = stripComments(read(VIEWER));
+  assert.match(code, /const MarkdownContent = React\.memo\(function MarkdownContent/);
+  assert.match(code, /const REMARK_PLUGINS: PluggableList = \[remarkGfm\];/);
+  assert.match(code, /markRanges\.length \? \[\[rehypeMarkRanges, \{ ranges: markRanges, source: text \}\]\] : NO_REHYPE_PLUGINS/);
+  assert.match(code, /markRanges=\{evidenceByPage\.get\(page\.page_number\) \|\| NO_MARKS\}/);
+  assert.match(code, /markRanges=\{bodyMarks\.get\(page\.page_number\) \|\| NO_MARKS\}/);
+  assert.doesNotMatch(code, /remarkPlugins=\{\[remarkGfm\]\}/);
+});
+
+test('evidence marks use highlight tokens and respect reduced motion', () => {
+  const css = read('app/globals.css');
+  const block = css.slice(css.indexOf('mark[data-dt-evidence] {'), css.indexOf('@media (prefers-reduced-motion: reduce) { mark[data-dt-evidence]'));
+  assert.match(block, /var\(--highlight-base\)/);
+  assert.match(block, /var\(--highlight-strong\)/);
+  assert.doesNotMatch(block, /transition:\s*all|#[0-9a-f]{3,6}/i, 'no transition-all, no hard-coded colours');
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ mark\[data-dt-evidence\] \{ transition: none; \} \}/);
+  assert.doesNotMatch(stripComments(read(VIEWER)), /transition-all/);
+});
