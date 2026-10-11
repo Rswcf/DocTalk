@@ -42,6 +42,13 @@ const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script
 const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const REGION_MIN_PIECES = 2;
 const REGION_MIN_CHARS = 40;
+// The extractors cut section titles at 200 characters, so a longer head left
+// over by a page-start split is content, not a title.
+const TITLE_MAX = 200;
+// Share of the chunk's canonical text that must be located in its page range.
+// Real citations of generated DOCX/PPTX/XLSX/MD/URL corpora located >= 0.65;
+// the same chunks cited on pages that do not hold them located <= 0.07.
+const MIN_CHUNK_COVERAGE = 0.3;
 
 interface PageIndex { number: number; raw: string; canon: string; offsets: Array<{ start: number; end: number }> }
 /** Canonical offsets within one page. */
@@ -104,48 +111,97 @@ function findAll(pages: PageIndex[], needle: string, limit = 2): Hit[] {
   return hits;
 }
 
+function cutsAt(text: string, index: number): boolean {
+  return text[index - 1] === ' ' || UNSPACED.test(charBefore(text, index)) || UNSPACED.test(charAt(text, index));
+}
+
+/** `text` ends with the end of `page`, possibly followed by the next page's
+ * glued title (at most TITLE_MAX characters, dropped). Returns the page hit
+ * and where the match starts in `text`; the match must be unique. */
+function matchPageEnd(text: string, page: PageIndex, pages: PageIndex[]): { hit: Hit; start: number } | null {
+  const canon = page.canon.trimEnd();
+  for (let j = text.length; j > 0 && text.length - j <= TITLE_MAX + 1; j--) {
+    if (j < text.length && !cutsAt(text, j)) continue;
+    const body = text.slice(0, j).trimEnd();
+    let length = 0;
+    while (length < body.length && length < canon.length
+      && body[body.length - 1 - length] === canon[canon.length - 1 - length]) length++;
+    for (; length >= minPiece(body); length--) {
+      const from = body.length - length;
+      if (body[from] === ' ' || (from > 0 && !cutsAt(body, from))) continue;
+      const match = body.slice(from);
+      if (!boundaryOk(canon, canon.length - length, match)) continue;
+      if (findAll(pages, match).length !== 1) return null;
+      return { hit: { page: page.number, start: canon.length - length, end: canon.length }, start: from };
+    }
+  }
+  return null;
+}
+
+/** Peels consecutive page ends off the end of `text`, starting at page index
+ * `last` (which must be page number `number`) and walking back. `rest` is the
+ * unmatched beginning of `text`. */
+function peelPageEnds(text: string, pages: PageIndex[], last: number, number: number) {
+  const hits: Hit[] = [];
+  let rest = text;
+  for (let q = last; q >= 0 && pages[q].number === number - (last - q) && rest; q--) {
+    const match = matchPageEnd(rest, pages[q], pages);
+    if (!match) break;
+    hits.unshift(match.hit);
+    rest = rest.slice(0, match.start).trimEnd();
+  }
+  return { hits, rest };
+}
+
 /** A piece that is not in the page text as a whole: the tail of it may open a
  * page (title glued on, or the previous page's undelimited end glued on). The
- * tail must start that page and be unique; the head is kept only if it ends
- * the previous page uniquely, else it is dropped as the title. */
-function splitAtPageStart(piece: string, pages: PageIndex[]): Hit[] | null {
+ * tail must start that page and be unique. The head is matched against the
+ * ends of the pages before (a glued title may sit between them); what is left
+ * is dropped as the title (`dropped` is its length in the piece). A page
+ * before the tail's page is in scope only when the chunk runs through its end
+ * (chunks are contiguous), so a unique match there is the chunk's own text. */
+function splitAtPageStart(piece: string, pages: PageIndex[]): { hits: Hit[]; dropped: number } | null {
   const rest = minRemainder(piece);
   for (let p = 0; p < pages.length; p++) {
     const page = pages[p];
     if (!page.canon) continue;
     for (let k = 1; k <= piece.length - rest; k++) {
-      if (piece[k] !== page.canon[0]) continue;
-      const cut = piece[k - 1] === ' ' || UNSPACED.test(charBefore(piece, k)) || UNSPACED.test(charAt(piece, k));
-      if (!cut) continue;
+      if (piece[k] !== page.canon[0] || !cutsAt(piece, k)) continue;
       const tail = piece.slice(k);
       if (!page.canon.startsWith(tail) || !boundaryOk(page.canon, 0, tail)) continue;
       if (findAll(pages, tail).length !== 1) return null;
-      const hits: Hit[] = [{ page: page.number, start: 0, end: tail.length }];
-      const head = piece.slice(0, k).trimEnd();
-      const previous = pages[p - 1];
-      if (previous && previous.number === page.number - 1 && head.length >= minPiece(head)
-        && previous.canon.endsWith(head)
-        && boundaryOk(previous.canon, previous.canon.length - head.length, head)
-        && findAll(pages, head).length === 1) {
-        hits.unshift({ page: previous.number, start: previous.canon.length - head.length, end: previous.canon.length });
-      }
-      return hits;
+      const head = p > 0 ? peelPageEnds(piece.slice(0, k).trimEnd(), pages, p - 1, page.number - 1) : null;
+      return {
+        hits: [...(head?.hits ?? []), { page: page.number, start: 0, end: tail.length }],
+        dropped: head ? head.rest.length : k,
+      };
     }
   }
   return null;
 }
 
 /** Unique hits for one sentence: whole, else split at a page start, else (for
- * multi-line sentences such as table rows) line by line. */
+ * multi-line sentences such as table rows) line by line. A split head too long
+ * to be a title is located line by line as well. */
 function locatePiece(raw: string, pages: PageIndex[], byLine = true): Hit[] {
-  const piece = canonicalize(raw).text;
+  const canon = canonicalize(raw);
+  const piece = canon.text;
   if (piece.length < minPiece(piece)) return [];
   const hits = findAll(pages, piece);
   if (hits.length === 1) return hits;
   if (hits.length > 1) return [];
   const split = splitAtPageStart(piece, pages);
-  if (split) return split;
-  if (!byLine) return [];
+  if (split) {
+    if (!byLine || split.dropped <= TITLE_MAX) return split.hits;
+    // A PPTX title repeated at the end of the head is the tail's own first line.
+    const head = locateLines(raw.slice(0, canon.offsets[split.dropped].start), pages)
+      .filter(hit => !split.hits.some(tail => tail.page === hit.page && hit.start < tail.end && tail.start < hit.end));
+    return [...head, ...split.hits];
+  }
+  return byLine ? locateLines(raw, pages) : [];
+}
+
+function locateLines(raw: string, pages: PageIndex[]): Hit[] {
   const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
   return lines.length > 1 ? lines.flatMap(line => locatePiece(line, pages, false)) : [];
 }
@@ -225,7 +281,13 @@ export function locateTextEvidence(
 
   let region: Hit[] = [];
   if (chunkText) {
-    const located = inOrder(splitSentences(chunkText).flatMap(sentence => locatePiece(sentence, scope))).filter(marked);
+    const found = inOrder(splitSentences(chunkText).flatMap(sentence => locatePiece(sentence, scope)));
+    // A cited chunk sits in its own page range almost whole. A few unique
+    // lines that cover little of it are coincidences (repeated boilerplate, a
+    // range that does not hold the chunk), so nothing is marked, focus included.
+    const covered = found.reduce((sum, hit) => sum + hit.end - hit.start, 0);
+    if (covered < MIN_CHUNK_COVERAGE * canonicalize(chunkText).text.length) return NO_EVIDENCE;
+    const located = found.filter(marked);
     const chars = located.reduce((sum, hit) => sum + hit.end - hit.start, 0);
     if (located.length >= REGION_MIN_PIECES || chars >= REGION_MIN_CHARS) region = mergeAdjacent(located, byNumber);
   }
@@ -237,7 +299,7 @@ export function locateTextEvidence(
       const direct = findAll(scope, quote, Infinity).filter(hit => inside(hit, region));
       if (direct.length === 1) emphasis = direct;
       else if (!direct.length) {
-        const split = splitAtPageStart(quote, scope);
+        const split = splitAtPageStart(quote, scope)?.hits;
         if (split && split.every(hit => inside(hit, region))) emphasis = split;
       }
     } else {

@@ -185,6 +185,69 @@ test('XLSX: the sheet name glued onto the table is dropped', () => {
   assert.deepEqual(marked(pages, result).map(r => r.text), [text]);
 });
 
+test('XLSX: a chunk across two sheets marks both tables, never the sheet names', () => {
+  const s1 = '| Item | Q1 | Q2 |\n| --- | --- | --- |\n| Travel | 1200 | 950 |\n| Software | 4300 | 4300 |';
+  const s2 = '| Team | People |\n| --- | --- |\n| Research | 12 |\n| Support | 7 |';
+  const pages = [{ page_number: 1, text: s1 }, { page_number: 2, text: s2 }];
+  // parse_service output for this workbook (backend/tests/test_extractors_office.py).
+  const chunk = chunkOf(['Budget', ...bodyUnits(s1), 'Headcount', ...bodyUnits(s2)]);
+  assert.ok(chunk.includes('| 4300 | 4300 | Headcount | Team |'), 'sheet name glued between the tables');
+  const result = locateTextEvidence(pages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
+  assert.equal(result.kind, 'region');
+  assert.deepEqual(marked(pages, result).map(r => `${r.page}:${r.text}`), [`1:${s1}`, `2:${s2}`]);
+});
+
+test('a page end glued to the next title is located when the chunk runs through it', () => {
+  const p1 = 'Opening sentence of the slide body.\nRevenue by region\nNorth up four points';
+  const p2 = 'Costs fell for the third quarter running.';
+  const pages = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2 }];
+  const chunk = chunkOf([...bodyUnits(p1), 'Operating Costs', ...bodyUnits(p2)]);
+  assert.ok(chunk.includes('North up four points Operating Costs Costs fell'));
+  const result = locateTextEvidence(pages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
+  assert.deepEqual(marked(pages, result).map(r => `${r.page}:${r.text}`), [`1:${p1}`, `2:${p2}`]);
+  assert.ok(!marked(pages, result).some(r => r.text.includes('Operating Costs')));
+});
+
+test('a glued title that matches the end of a page outside the chunk is not marked', () => {
+  // A contents page ends with the next section's title; the chunk starts at that section.
+  const toc = 'Contents\n1. Introduction and scope\nStudy design and methods';
+  const body = 'The trial enrolled 412 adults across six clinics. Follow-up lasted twelve months.';
+  const pages = [{ page_number: 1, text: toc }, { page_number: 2, text: body }];
+  const chunk = chunkOf(['Study design and methods', ...bodyUnits(body)]);
+  const result = locateTextEvidence(pages, { page: 2, pageEnd: 2, contextText: `[page 2] ${chunk}` }, chunk, null);
+  assert.deepEqual([...new Set(result.ranges.map(r => r.page))], [2]);
+  assert.ok(!marked(pages, result).some(r => r.text.includes('Study design')));
+});
+
+test('a page end that repeats elsewhere in the chunk range is not marked', () => {
+  const p1 = 'First page opens here.\n| Total | 4,200 |';
+  const p2 = 'Second page opens here.\n| Total | 4,200 |';
+  const p3 = 'Third page carries the conclusion of the report.';
+  const pages = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2 }, { page_number: 3, text: p3 }];
+  const piece = chunkOf(['| Total | 4,200 |', 'Summary', ...bodyUnits(p3)]);
+  const result = locateTextEvidence(pages, { page: 1, pageEnd: 3, contextText: `[page 1–3] ${piece}` }, piece, null);
+  assert.ok(!result.ranges.some(r => r.page !== 3), 'the ambiguous table row stays unmarked');
+});
+
+test('a split head longer than any title is located line by line', () => {
+  const lines = [
+    'Pricing implementation status for every plan tier',
+    'Credit rescaling deployed across all existing ledgers',
+    'Free tier reduced so that upgrade pressure appears early',
+    'Plus tier launched for casual users between Free and Pro',
+    'Annual pricing introduced with a twenty percent discount',
+  ];
+  const p1 = [...lines, 'Credit packs repriced against the subscriptions'].join('\n');
+  const p2 = 'Current pricing structure\n| Tier | Monthly |\n| --- | --- |\n| Free | 0 |';
+  const pages = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2 }];
+  // The chunk's copy of page 1 lacks its last line, so no page-end match exists.
+  const chunk = chunkOf([lines.join('\n'), 'Current pricing structure', ...bodyUnits(p2)]);
+  const result = locateTextEvidence(pages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
+  const text = marked(pages, result).map(r => `${r.page}:${r.text}`);
+  // The last line carries the glued title, so it cannot be told apart from it.
+  assert.deepEqual(text, [`1:${lines.slice(0, 4).join('\n')}`, `2:${p2}`]);
+});
+
 test('a chunk spanning two pages marks both; a narrowed citation marks only its page', () => {
   const p1 = 'Opening statement of the report sits here.\n| A | B |\n| --- | --- |\n| 1 | 2 |';
   const p2 = 'The second page begins with this sentence. It ends here with a conclusion.';
@@ -207,12 +270,29 @@ test('uniqueness is checked over the chunk range, not only the narrowed page', (
 });
 
 test('an out-of-order coincidence is dropped, keeping the chunk order', () => {
-  const text = 'Second sentence of the chunk sits first here. Filler text between them stays. First sentence of the chunk sits last here.';
+  const text = 'Second sentence of the chunk sits first here. Filler text between them stays. First sentence of the chunk sits last here. Third sentence closes the chunk on this page.';
   const pages = [{ page_number: 1, text }];
-  const chunk = 'First sentence of the chunk sits last here. Middle sentence is not on the page. Second sentence of the chunk sits first here. Third sentence is not on the page either.';
+  const chunk = 'First sentence of the chunk sits last here. Second sentence of the chunk sits first here. Third sentence closes the chunk on this page.';
   const result = locateTextEvidence(pages, cite(1), chunk, null);
-  assert.equal(result.ranges.length, 1, 'only one of the two crossed sentences is kept');
-  assert.equal(result.kind, 'region', 'one ordered sentence of 40+ characters is still a region');
+  assert.equal(result.kind, 'region');
+  assert.deepEqual(marked(pages, result).map(r => r.text), ['First sentence of the chunk sits last here. Third sentence closes the chunk on this page.']);
+});
+
+test('a chunk mostly absent from its pages marks nothing, focus included', () => {
+  // Two boilerplate lines are unique on the page, but the chunk is elsewhere.
+  const text = 'participant API as FastAPI\nparticipant Q as Qdrant service\nAn unrelated paragraph about deployment follows here.';
+  const pages = [{ page_number: 4, text }];
+  const chunk = [
+    'participant API as FastAPI',
+    'participant Q as Qdrant service',
+    'API->>Q: search the vectors for the question embedding',
+    'Q-->>API: the top ranked chunks with their scores',
+    'API->>API: rerank, build the prompt and stream the answer',
+    'Note over API: citations are verified before the done event',
+  ].join('\n');
+  const result = locateTextEvidence(pages, cite(4), chunk, 'participant Q as Qdrant service');
+  assert.equal(result.kind, 'page');
+  assert.deepEqual(result.ranges, []);
 });
 
 test('focus without chunk text (Quote Finder, saved quote) is exact only when unique', () => {
