@@ -181,3 +181,27 @@ it.** Prefill can come later as a separate improvement.
 - Live vs restored citation count on the same answer (see Verification).
 - Backend, pre-existing (stream-guard record): a Free Domain Mode send during a pending delete of the
   open conversation can consume a trial slot.
+
+## Release
+
+The fix ships from `release/chat-session-restore`, built on production `stable` 69a6f356. `main`
+already carried the undeployed parse v3 backend change (427501d6), and the fix branch was based on it,
+so neither could go to `stable` without shipping parse v3. The 11 fix commits were cherry-picked onto
+`stable` with no conflicts. The 7 files they change are byte-identical to `verify/chat-session-restore`.
+
+SHAs in this record and in `2026-10-11-session-menu-stream-guard.md` refer to the pre-release commits.
+Their release equivalents:
+
+| Pre-release | Release | Commit |
+|---|---|---|
+| 1f36ba8b | f8b411ff | Reader chat: publish a session id only with its transcript |
+| 187448be | 04d092e6 | r1 fixes |
+| 6ad43c3a | 807edaa8 | r2 fixes |
+| efde1f1c | 86ee25e0 | r3 fix: one menu latch per document |
+| 3e9291ed | cb239434 | Record (3 rounds) |
+| 331f4fe1 | eea9cf89 | Record: A -> B -> A latch window |
+| eb95c412 | a713d3f1 | Session menu stream guard |
+| 23192a0b | 0db32f24 | Record: stream guard |
+| 1d93875c | d1138701 | r4 fixes |
+| 2dd068b7 | 972b8936 | r5 fix |
+| 0cf0d0cb | cd69f8ab | Record: r4–r6 |
