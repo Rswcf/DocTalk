@@ -775,7 +775,7 @@ graph TD
         ArtifactCard["ChatArtifactCard<br/>job 状态 + 预览<br/>下载 + 引用"]
         PdfViewer["PdfViewer<br/>react-pdf"]
         ViewToggle["视图切换<br/>幻灯片 / 文本<br/>(PPTX/DOCX)"]
-        TextViewer["TextViewer<br/>非 PDF 查看器<br/>Markdown 渲染 + 搜索<br/>片段高亮"]
+        TextViewer["TextViewer<br/>非 PDF 查看器<br/>Markdown 渲染 + 搜索<br/>行内引文标记"]
     end
 
     subgraph ChatComp["Chat 组件"]
@@ -846,6 +846,8 @@ PDF 引用仅使用一套覆盖层：完整、唯一且属于引用页/区域的
 - **自动摘要**：新会话注入一条合成的 assistant 消息，展示 AI 生成的文档摘要
 - **重新生成**：重新发送上一条用户消息，获取新的 AI 回答
 - **导出**：将完整对话下载为 Markdown 文件，引用转为脚注（通过 "+" 菜单访问）
+
+**非 PDF 引文高亮**（MD、DOCX/PPTX 文本视图、XLSX、URL）：`TextViewer` 在页面存储的 Markdown 中定位被引用的分块（`lib/textEvidence.ts`），再通过 rehype 插件（`lib/rehypeMarkRanges.ts`）行内标记，状态行与 PDF 阅读器共用 `evidence.*`。每个被标记的句子必须在该分块自身的页码范围内唯一，且定位到的文本至少覆盖分块的 30%；否则状态为"仅定位到页面"。DOCX/PPTX 页面视图显示 LibreOffice 生成的 PDF，其第 N 页并不是 DOCX 提取器的第 N 页（提取器按标题分节或按 3,000 字符切分）：在那里，文本层候选只有在整个转换文档中只出现一次、且出现在被引用页时才会保留。
 
 **PDF 搜索**：Ctrl+F 触发阅读器内搜索栏。通过 `pdfjs page.getTextContent()` 提取文本，使用 `customTextRenderer` 的 `<mark>` 标签高亮匹配，上下翻页在匹配项之间滚动。
 

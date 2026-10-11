@@ -3,7 +3,7 @@ import { canonicalize } from './pdfEvidence';
 /**
  * DOCX/PPTX slide view shows LibreOffice's PDF, whose page N is not the
  * extractor's page N (a DOCX "page" is a heading section or a 3,000-character
- * split; hidden PPTX slides are not exported). A text-layer match on the cited
+ * split; LibreOffice may also skip hidden PPTX slides). A text-layer match on the cited
  * page is trusted only when the text occurs exactly once in the whole
  * converted document and that occurrence is inside the cited page range.
  * Whitespace is ignored when counting, so a word that the text layer splits

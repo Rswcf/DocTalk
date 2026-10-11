@@ -880,7 +880,7 @@ graph TD
         ArtifactCard["ChatArtifactCard<br/>job status + preview<br/>download + citations"]
         PdfViewer["PdfViewer<br/>react-pdf"]
         ViewToggle["View Toggle<br/>Slides / Text<br/>(PPTX/DOCX)"]
-        TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Markdown Rendering + Search<br/>Snippet Highlights"]
+        TextViewer["TextViewer<br/>Non-PDF Viewer<br/>Markdown Rendering + Search<br/>Inline Citation Marks"]
     end
 
     subgraph ChatComp["Chat Components"]
@@ -961,6 +961,16 @@ PDF citation evidence uses one overlay: a complete unique quote, restricted to t
   excluded. Repeated copies of the same snapshot reuse its token; changed
   snapshots get new tokens. The dialog can revoke all versions of that answer.
   Existing full-conversation links retain their conversation scope.
+
+**Non-PDF citation highlights** (MD, DOCX/PPTX text view, XLSX, URL): `TextViewer`
+locates the cited chunk in the page's stored Markdown (`lib/textEvidence.ts`) and
+marks it inline through a rehype plugin (`lib/rehypeMarkRanges.ts`), with the same
+`evidence.*` status line as the PDF viewer. Every marked sentence must be unique in
+the chunk's own page range and the located text must cover at least 30% of the
+chunk; otherwise the status is "Page location only". The DOCX/PPTX slide view shows
+the LibreOffice PDF, whose page N is not a DOCX extractor page N (a heading section
+or a 3,000-character split): there a text-layer candidate is kept only when it
+occurs once in the whole converted document, on the cited page.
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 
