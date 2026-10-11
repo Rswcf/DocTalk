@@ -171,14 +171,12 @@ def _valid_bbox(bb: dict[str, Any]) -> bool:
 def _citation_from_chunk(
     ref_num: int, chunk: Chunk, score: float = 0.0
 ) -> dict[str, Any]:
-    snippet = (
-        (f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or "")
-    )[:140]
     return {
         "ref_index": ref_num,
         "chunk_id": str(chunk.id),
         **citation_location(chunk.page_start, chunk.page_end, chunk.bboxes),
-        "text_snippet": snippet,
+        # Chunk text only: the reader searches the page for it.
+        "text_snippet": (chunk.text or "")[:140],
         "offset": 0,
         "confidence_score": round(float(score or 0.0), 3),
         "context_text": (chunk.text or "")[:300],

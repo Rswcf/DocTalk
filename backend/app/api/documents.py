@@ -617,14 +617,14 @@ def _brief_chunk_ids(*groups: list[dict]) -> list[uuid.UUID]:
 
 def _brief_ref_payload(chunk) -> dict:
     bboxes = chunk.bboxes if isinstance(chunk.bboxes, list) else []
-    snippet = ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:180]
     return {
         "chunk_id": str(chunk.id),
         "chunk_index": int(chunk.chunk_index),
         "page": int(chunk.page_start),
         "page_end": int(chunk.page_end),
         "bboxes": bboxes,
-        "text_snippet": snippet,
+        # Chunk text only: the reader searches the page for it.
+        "text_snippet": (chunk.text or "")[:180],
     }
 
 

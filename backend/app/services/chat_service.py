@@ -271,12 +271,17 @@ def _citation_payload(
     ref_num: int, chunk: "_ChunkInfo", offset: int, claim_text: str = ""
 ) -> Dict[str, Any]:
     is_summary = chunk.retrieval_modality == "summary"
+    # The snippet is quoted on shared answers and exports and is searched for in
+    # the reader's page text, so it is the chunk's own text only. The heading
+    # travels separately: the claim verifier still reads it as evidence.
     citation_data: Dict[str, Any] = {
         "ref_index": ref_num,
         "chunk_id": str(chunk.id),
-        "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + (chunk.text or ""))[:100],
+        "text_snippet": (chunk.text or "")[:100],
         "offset": offset,
     }
+    if chunk.section_title and not is_summary:
+        citation_data["section_title"] = chunk.section_title
     # Sentence-level focus: when the answer claim near this citation clearly maps
     # to one sentence of the chunk, attach it (verbatim) so the UI can highlight
     # just that sentence instead of the whole chunk. None → keep whole-chunk.

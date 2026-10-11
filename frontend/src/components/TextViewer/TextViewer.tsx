@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import type { Options as MarkdownOptions } from 'react-markdown';
 import { Search, ChevronLeft, ChevronRight, X, ExternalLink, Globe2, ListTree, Eye, EyeOff } from 'lucide-react';
 import { PROXY_BASE, getChunkDetail } from '../../lib/api';
+import { findSnippetInPage } from '../../lib/snippetMatch';
 import { useLocale } from '../../i18n';
 import { Spinner } from '../spell';
 import { citationChunkText, citationPageRange, dropTrailingFragment } from '../../lib/citationText';
@@ -136,43 +137,6 @@ function estimateReadableUnits(text: string): number {
   const latinWords = text.match(/[A-Za-z0-9][A-Za-z0-9'-]*/g)?.length ?? 0;
   const cjkChars = text.match(/[\u3400-\u9fff]/g)?.length ?? 0;
   return latinWords + Math.ceil(cjkChars / 2);
-}
-
-/**
- * Find the best matching substring of `snippet` within `pageText`.
- * Returns [startIndex, matchLength] or null if no match found.
- *
- * Strategy: try progressively shorter prefixes of the snippet
- * (since backend truncates at 100 chars). Also strips section title
- * prefix ("Title — ...") if present.
- */
-function findSnippetInPage(pageText: string, snippet: string): [number, number] | null {
-  if (!snippet || !pageText) return null;
-
-  const pageLower = pageText.toLowerCase();
-
-  // Try matching with and without section title prefix
-  const candidates = [snippet];
-  const dashIdx = snippet.indexOf(' — ');
-  if (dashIdx !== -1 && dashIdx < snippet.length - 4) {
-    candidates.push(snippet.slice(dashIdx + 3));
-  }
-
-  for (const candidate of candidates) {
-    const searchText = candidate.toLowerCase().trim();
-    if (searchText.length < 10) continue;
-
-    // Try full text first, then progressively shorter prefixes
-    for (let len = searchText.length; len >= Math.min(30, searchText.length); len -= 5) {
-      const prefix = searchText.slice(0, len);
-      const idx = pageLower.indexOf(prefix);
-      if (idx !== -1) {
-        return [idx, len];
-      }
-    }
-  }
-
-  return null;
 }
 
 /** Find all case-insensitive matches of a query in text */

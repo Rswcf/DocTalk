@@ -158,6 +158,7 @@ def _citation_context(citation: dict) -> str:
         citation.get("table_context"),
         citation.get("context_text"),
         citation.get("text_snippet"),
+        citation.get("section_title"),
     ]
     return " ".join(str(part or "") for part in parts)
 
