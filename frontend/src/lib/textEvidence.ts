@@ -95,8 +95,9 @@ function indexPage(page: TextEvidencePage): PageIndex {
  * text, and /text-content serves no title for them when they were glued, so
  * their glued titles cannot be verified here. Such a title is dropped only
  * where page text brackets it: right after the located literal end of the
- * page before and right before the located start of its page, and at most
- * GLUED_TITLE_MAX characters (see matchPageEnd, splitAtPageStart). Other
+ * page before and right before the located start of its page, at most
+ * GLUED_TITLE_MAX characters, and never the whole text of a page (see
+ * matchPageEnd, splitAtPageStart). Other
  * unverified text in front of a page start may be real content that changes
  * what the page sentence means ("The court rejected" + the page's claim at
  * the chunk start), so it is never dropped.
@@ -140,12 +141,14 @@ function joinUnits(units: string[]): string {
  * in a chunk without being located itself: the glued title of `opens`
  * (verified, see pageTitles), the literal end of the page before it (too
  * short or too common to be located on its own), or that end followed by the
- * title. Nothing else is dropped. */
+ * title. The end is a proper end: a page's whole text is that page, and
+ * dropping it would carry the region over a page that was never located.
+ * Nothing else is dropped. */
 function explainsGap(text: string, opens: PageIndex, search: Search): boolean {
   if (!text) return true;
   const previous = search.pages.get(opens.number - 1);
-  const endsPrevious = (end: string) => !end || Boolean(previous && previous.canon.endsWith(end)
-    && boundaryOk(previous.canon, previous.canon.length - end.length, end));
+  const endsPrevious = (end: string) => !end || Boolean(previous && end.length < previous.canon.length
+    && previous.canon.endsWith(end) && boundaryOk(previous.canon, previous.canon.length - end.length, end));
   if (endsPrevious(text)) return true;
   return opens.titles.some(title => {
     const cut = text.length - title.length;
@@ -234,7 +237,7 @@ function matchPageEnd(text: string, page: PageIndex, next: PageIndex, search: Se
     const last = canon.at(-1);
     for (let cut = text.length - 1; cut > 0 && text.length - cut <= GLUED_TITLE_MAX; cut--) {
       if (text[cut] === ' ' || !cutsAt(text, cut) || cuts.includes(cut)) continue;
-      if (text.slice(0, cut).trimEnd().at(-1) === last) cuts.push(cut);
+      if (text.slice(0, cut).trimEnd().at(-1) === last && !wholePage(text.slice(cut), search)) cuts.push(cut);
     }
   }
   for (const j of cuts) {
@@ -285,6 +288,12 @@ function gluedTitle(text: string): boolean {
   return text.length <= GLUED_TITLE_MAX;
 }
 
+/** Text that is the whole of a page is that page, never an unverified title
+ * dropped between two others. */
+function wholePage(text: string, search: Search): boolean {
+  return search.all.some(page => page.canon === text);
+}
+
 /** A piece that is not in the page text as a whole: the tail of it may open a
  * page (title glued on, or the previous page's undelimited end glued on). The
  * tail must start that page and be unique. The head is matched against the
@@ -315,7 +324,8 @@ function splitAtPageStart(piece: string, search: Search, options: PieceOptions =
       // its page; see explainsGap for what the leftover may be.
       const first = head.hits[0];
       const opens = first ? (first.start === 0 ? search.pages.get(first.page) : undefined) : page;
-      const afterPrevious = options.glued && opens !== undefined && options.afterEnd === opens.number - 1 && gluedTitle(head.rest);
+      const afterPrevious = options.glued && opens !== undefined && options.afterEnd === opens.number - 1
+        && gluedTitle(head.rest) && !wholePage(head.rest, search);
       if (head.rest && !(opens && (explainsGap(head.rest, opens, search) || afterPrevious))) return null;
       return [...head.hits, { page: page.number, start: 0, end: tail.length }];
     }

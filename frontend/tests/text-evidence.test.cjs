@@ -354,6 +354,32 @@ test('Browser P2-1: unbracketed text in front of a page start is still never dro
   }
 });
 
+test('Codex r4 #3: a whole page is never dropped as the end of the page before, or as a title', () => {
+  const pages = [
+    { page_number: 1, text: 'Alpha sentence closes page one with enough unique words.' },
+    { page_number: 2, text: 'Short body' },
+    { page_number: 3, text: 'Gamma sentence starts page three with enough unique words.' },
+  ];
+  const cite = { page: 1, pageEnd: 3 };
+  const show = (input, chunk) => marked(input, locateTextEvidence(input, { ...cite, contextText: `[page 1–3] ${chunk}` }, chunk, null))
+    .map(r => `${r.page}:${r.text}`);
+  // Page 2 is never located, so the region does not jump over it to page 3.
+  assert.deepEqual(show(pages, pages.map(p => p.text).join(' ')), [`1:${pages[0].text}`]);
+  // The same with page 3's verified title behind it.
+  const titled = pages.map(p => (p.page_number === 3 ? { ...p, section_title: 'Gamma heading' } : p));
+  assert.deepEqual(show(titled, `${pages[0].text} Short body Gamma heading ${pages[2].text}`), [`1:${pages[0].text}`]);
+  // Between the located end of one page and the start of the next, text that
+  // is a whole page of the document is not dropped as an unverified title,
+  // whether the previous piece ends the page or the page end is glued on.
+  const stray = [pages[0], { page_number: 2, text: pages[2].text }, { page_number: 3, text: 'Short body' }];
+  assert.deepEqual(show(stray, `${stray[0].text} Short body ${stray[1].text}`), [`1:${pages[0].text}`]);
+  const glued = [{ ...stray[0], text: stray[0].text.slice(0, -1) }, stray[1], stray[2]];
+  assert.ok(!show(glued, `${glued[0].text} Short body ${glued[1].text}`).some(r => r.startsWith('2:')));
+  // A proper end of the page before, too short to locate, is still accounted for.
+  const noted = [pages[0], { page_number: 2, text: 'The second page holds a sentence long enough to be located. Note 4' }, pages[2]];
+  assert.ok(show(noted, noted.map(p => p.text).join(' ')).includes(`3:${pages[2].text}`));
+});
+
 test('a glued title that matches the end of a page outside the chunk is not marked', () => {
   // A contents page ends with the next section's title; the chunk starts at that section.
   const toc = 'Contents\n1. Introduction and scope\nStudy design and methods';
