@@ -341,19 +341,20 @@ function mergeAdjacent(hits: Hit[], pages: Map<number, PageIndex>): Hit[] {
 /** The unspaced-script exemption in boundaryOk lets a match begin or end
  * beside a letter, because chunk sentences are rejoined without spaces there.
  * Inside a located chunk region that is harmless: the region confines it. A
- * focus located on its own has nothing to confine it, and a short Han/Kana/
- * Thai fragment can sit inside a longer, unrelated run ("合同有效期限" in
- * "本合同有效期限届满后…"). So where its first or last character is unspaced,
- * the page must have a non-letter there (punctuation, a space, a line or
- * page edge): the boundary rule of the PDF text-layer matcher
+ * focus located on its own has nothing to confine it, and a fragment can sit
+ * inside a longer, unrelated unspaced run ("合同有效期限" in "本合同有效期限
+ * 届满后…", "AI合同有效期限" in "本AI合同…"). So where the focus begins or
+ * ends with a letter or digit, the page must have a non-letter there
+ * (punctuation, a space, a line or page edge), whatever the script on either
+ * side: the boundary rule of the PDF text-layer matcher
  * (pdfEvidence.findEvidenceRange). */
 function standsAlone(hits: Hit[], pages: Map<number, PageIndex>): boolean {
   const first = hits[0];
   const last = hits[hits.length - 1];
   const opening = pages.get(first.page)!.canon;
   const closing = pages.get(last.page)!.canon;
-  return !(UNSPACED.test(charAt(opening, first.start)) && WORD.test(charBefore(opening, first.start)))
-    && !(UNSPACED.test(charBefore(closing, last.end)) && WORD.test(charAt(closing, last.end)));
+  return !(WORD.test(charAt(opening, first.start)) && WORD.test(charBefore(opening, first.start)))
+    && !(WORD.test(charBefore(closing, last.end)) && WORD.test(charAt(closing, last.end)));
 }
 
 function inside(hit: Hit, spans: Hit[]): boolean {

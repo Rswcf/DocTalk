@@ -420,6 +420,25 @@ test('Codex r1 #4: a short CJK focus inside a longer run is not marked on its ow
   assert.equal(locateTextEvidence(thai, cite(1), null, 'ญญานี้มีผลบังคับ').kind, 'page');
 });
 
+test('Codex r2 #1: a mixed Latin and CJK focus inside a longer run is not marked on its own', () => {
+  const cases = [
+    ['本AI合同有效期限。', 'AI合同有效期限'], // starts in Latin, Han before it
+    ['前文AI契約有効期限。', 'AI契約有効期限'], // Kana/Han before a Latin start
+    ['本合同有效期限AI版本已签署。', '本合同有效期限AI'], // ends in Latin, Han after it
+    ['依据第5条规定执行。', '据第5条规定'], // a Han start with Han before it
+  ];
+  for (const [text, focus] of cases) {
+    const result = locateTextEvidence([{ page_number: 1, text }], cite(1), null, focus);
+    assert.equal(result.kind, 'page', focus);
+    assert.deepEqual(result.ranges, [], focus);
+  }
+  // Bounded by punctuation, the same focus is exact.
+  const pages = [{ page_number: 1, text: '根据「AI合同有效期限」条款。' }];
+  const result = locateTextEvidence(pages, cite(1), null, 'AI合同有效期限');
+  assert.equal(result.kind, 'exact');
+  assert.deepEqual(marked(pages, result).map(r => r.text), ['AI合同有效期限']);
+});
+
 test('a CJK focus bounded by punctuation or a page edge is exact on its own', () => {
   const text = '第一条　总则。\n本合同有效期限届满后自动续约，除非双方提前书面终止。\n第二条　费用';
   const pages = [{ page_number: 1, text }];
