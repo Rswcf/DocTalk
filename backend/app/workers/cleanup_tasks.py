@@ -87,3 +87,11 @@ def cleanup_empty_demo_sessions() -> int:
         return deleted
     finally:
         engine.dispose()
+
+
+@celery_app.task(name="refresh_stale_demo_parses")
+def refresh_stale_demo_parses_task() -> int:
+    """Re-parse demo documents left on an older parse pipeline (see demo_seed)."""
+    from app.services.demo_seed import refresh_stale_demo_parses
+
+    return refresh_stale_demo_parses()

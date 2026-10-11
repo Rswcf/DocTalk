@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
 import subprocess
@@ -17,8 +18,18 @@ logger = logging.getLogger(__name__)
 
 # Parse pipeline version — bump when parse/OCR logic changes materially so the backfill
 # finder can tell which documents predate a fix (R2b). v2 = Unicode-aware quality OCR
-# trigger + OSD-narrowed OCR language set.
-PARSE_PIPELINE_VERSION = 2
+# trigger + OSD-narrowed OCR language set. v3 = off-axis text is never a heading, and
+# off-axis text or an arXiv stamp in the page margin is dropped from chunks (vertical
+# writing mode excepted).
+PARSE_PIPELINE_VERSION = 3
+
+# A line that starts with an arXiv identifier is a submission stamp or a wrapped
+# reference, never a section title; inside the page margin band it is the stamp and is
+# dropped. Backs up the geometric off-axis rule for a stamp whose line direction was
+# lost (e.g. OCR output).
+_ARXIV_ID_LINE_RE = re.compile(
+    r"^arXiv:\s*(?:\d{4}\.\d{4,5}|[A-Za-z][A-Za-z\-]*(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?\b"
+)
 
 # OCR language resolution (Phase 2 C4 + R2b). Scanned / non-Latin PDFs need the matching
 # Tesseract traineddata; eng+chi_sim alone produced garbage for Urdu/Arabic (U13/U40).
@@ -221,6 +232,12 @@ class BlockInfo:
     text: str
     bbox: Tuple[float, float, float, float]  # x0, y0, x1, y1 in PDF points
     font_size: float
+    # PyMuPDF line "dir" (cos, sin) in unrotated page space; (1, 0) = left-to-right.
+    # Non-PDF extractors never set it, so their blocks always run with the page.
+    direction: Tuple[float, float] = (1.0, 0.0)
+    # PyMuPDF line "wmode" == 1: the font itself is in vertical writing mode
+    # (tategaki), so the line is body text, never a rotated margin stamp.
+    vertical_writing: bool = False
 
 
 @dataclass
@@ -245,6 +262,8 @@ class CleanBlock:
     text: str
     bbox: Tuple[float, float, float, float]
     font_size: float
+    # Runs against the page's dominant direction (rotated label, vertical stamp).
+    off_axis: bool = False
 
 
 @dataclass
@@ -279,6 +298,10 @@ class ParseService:
 
     HEADER_FOOTER_REGION_RATIO = 0.10  # top/bottom 10%
     HEADER_FOOTER_FREQ_THRESHOLD = 0.60  # appears in >60% pages
+    # Off-axis text (see _is_off_axis) lying wholly in the outer 10% of the page is a
+    # margin artifact such as the vertical arXiv stamp, not document content.
+    MARGIN_BAND_RATIO = 0.10
+    OFF_AXIS_TOLERANCE_DEG = 15.0
 
     TARGET_MIN_TOKENS = 150
     TARGET_MAX_TOKENS = 300
@@ -425,17 +448,25 @@ class ParseService:
         page_height: float,
         header_texts: Optional[set[str]] = None,
         footer_texts: Optional[set[str]] = None,
+        rotation: int = 0,
+        fallback_angle: float = 0.0,
     ) -> List[CleanBlock]:
         """Remove common header/footer texts and fix hyphenations.
 
         - Removes any block whose text matches a commonly repeated header/footer
           phrase that appears in the top/bottom 10% region across >60% pages.
+        - Removes off-axis text lying wholly in the page margin band (margin stamps)
+          and marks the remaining off-axis blocks so they are never headings.
+          `fallback_angle` is the direction for a page with no text outside the
+          band (see _document_line_angle).
         - Returns cleaned blocks with basic normalization.
         """
         header_texts = header_texts or set()
         footer_texts = footer_texts or set()
         top_cutoff = page_height * self.HEADER_FOOTER_REGION_RATIO
         bottom_cutoff = page_height * (1.0 - self.HEADER_FOOTER_REGION_RATIO)
+        band_w, band_h = self._band_dims(page_width, page_height, rotation)
+        dominant_angle = self._dominant_line_angle(blocks, band_w, band_h, fallback_angle)
 
         cleaned: List[CleanBlock] = []
         for b in blocks:
@@ -448,8 +479,17 @@ class ParseService:
                 continue
             if is_bottom and text_norm in footer_texts:
                 continue
+            off_axis = self._is_off_axis(b.direction, dominant_angle)
+            if (
+                not b.vertical_writing
+                and self._in_margin_band(b.bbox, band_w, band_h)
+                and (off_axis or _ARXIV_ID_LINE_RE.match(text_norm))
+            ):
+                continue
 
-            cleaned.append(CleanBlock(page=b.page, text=text_norm, bbox=b.bbox, font_size=b.font_size))
+            cleaned.append(
+                CleanBlock(page=b.page, text=text_norm, bbox=b.bbox, font_size=b.font_size, off_axis=off_axis)
+            )
 
         return cleaned
 
@@ -466,6 +506,7 @@ class ParseService:
         """
         # 1) Header/footer detection
         header_texts, footer_texts = self._detect_header_footer_texts(pages)
+        document_angle = self._document_line_angle(pages)
 
         # 2) Clean and collect blocks, also gather font sizes for median
         all_clean_blocks: List[CleanBlock] = []
@@ -473,7 +514,13 @@ class ParseService:
         for p in pages:
             page_dims[p.page_number] = (p.width_pt, p.height_pt)
             cleaned = self.clean_text_blocks(
-                p.blocks, p.width_pt, p.height_pt, header_texts=header_texts, footer_texts=footer_texts
+                p.blocks,
+                p.width_pt,
+                p.height_pt,
+                header_texts=header_texts,
+                footer_texts=footer_texts,
+                rotation=p.rotation,
+                fallback_angle=document_angle,
             )
             all_clean_blocks.extend(self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt))
 
@@ -633,6 +680,7 @@ class ParseService:
         structure from arbitrary chunk windows.
         """
         header_texts, footer_texts = self._detect_header_footer_texts(pages)
+        document_angle = self._document_line_angle(pages)
 
         all_clean_blocks: List[CleanBlock] = []
         page_dims: dict[int, Tuple[float, float]] = {}
@@ -644,6 +692,8 @@ class ParseService:
                 p.height_pt,
                 header_texts=header_texts,
                 footer_texts=footer_texts,
+                rotation=p.rotation,
+                fallback_angle=document_angle,
             )
             all_clean_blocks.extend(self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt))
 
@@ -766,6 +816,8 @@ class ParseService:
         text = block.text.strip()
         if not text or len(text) > 220:
             return False
+        if block.off_axis or _ARXIV_ID_LINE_RE.match(text):
+            return False
         if text[-1:] in self.SENTENCE_DELIMS and len(text) > 45:
             return False
         if not any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" for ch in text):
@@ -778,6 +830,75 @@ class ParseService:
             if alpha and alpha.isupper():
                 return True
         return False
+
+    @staticmethod
+    def _line_angle(direction: Tuple[float, float]) -> float:
+        return math.degrees(math.atan2(direction[1], direction[0]))
+
+    def _snapped_angle(self, direction: Tuple[float, float]) -> int:
+        return (round(self._line_angle(direction) / 90.0) * 90) % 360
+
+    @staticmethod
+    def _band_dims(page_width: float, page_height: float, rotation: int) -> Tuple[float, float]:
+        # Line bboxes are in unrotated page space; page_width/height are the rotated rect.
+        return (page_height, page_width) if rotation % 180 == 90 else (page_width, page_height)
+
+    def _dominant_line_angle(
+        self, blocks: Sequence[BlockInfo], band_w: float, band_h: float, fallback_angle: float = 0.0
+    ) -> float:
+        """Character-weighted line direction of a page, snapped to 0/90/180/270°.
+
+        Relative, not absolute: on a vertical-writing (tategaki) page or a page drawn
+        rotated, vertical lines ARE the content and must not count as off-axis.
+        Only body lines vote — outside the margin band, or in vertical writing mode
+        anywhere — so a long vertical stamp cannot outvote a sparse body (a figure
+        page with one caption). A page with no voters takes `fallback_angle`.
+        """
+        weights: Counter = Counter()
+        for b in blocks:
+            chars = len(b.text.strip())
+            if chars and (b.vertical_writing or not self._in_margin_band(b.bbox, band_w, band_h)):
+                weights[self._snapped_angle(b.direction)] += chars
+        return float(weights.most_common(1)[0][0]) if weights else fallback_angle
+
+    def _document_line_angle(self, pages: Sequence[PageInfo]) -> float:
+        """Direction for pages with no text outside the margin band.
+
+        The whole document's interior vote: an image-only page of a horizontal paper
+        stays horizontal, so its vertical stamp is still dropped, while the margin-only
+        last page of a vertical-writing book stays vertical. A document with no
+        interior text at all votes with every line, else reads left-to-right.
+        """
+        interior: Counter = Counter()
+        everything: Counter = Counter()
+        for p in pages:
+            band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
+            for b in p.blocks:
+                chars = len(b.text.strip())
+                if not chars:
+                    continue
+                angle = self._snapped_angle(b.direction)
+                everything[angle] += chars
+                if b.vertical_writing or not self._in_margin_band(b.bbox, band_w, band_h):
+                    interior[angle] += chars
+        weights = interior or everything
+        return float(weights.most_common(1)[0][0]) if weights else 0.0
+
+    def _is_off_axis(self, direction: Tuple[float, float], dominant_angle: float) -> bool:
+        diff = abs(self._line_angle(direction) - dominant_angle) % 360.0
+        return min(diff, 360.0 - diff) > self.OFF_AXIS_TOLERANCE_DEG
+
+    def _in_margin_band(
+        self, bbox: Tuple[float, float, float, float], width: float, height: float
+    ) -> bool:
+        x0, y0, x1, y1 = bbox
+        r = self.MARGIN_BAND_RATIO
+        return (
+            x1 <= width * r
+            or x0 >= width * (1.0 - r)
+            or y1 <= height * r
+            or y0 >= height * (1.0 - r)
+        )
 
     @staticmethod
     def _is_cjk_context(ch: str) -> bool:
@@ -898,6 +1019,7 @@ class ParseService:
                 continue
 
             avg_size = (sum(sizes) / len(sizes)) if sizes else 12.0
+            line_dir = line.get("dir") or (1.0, 0.0)
             result.append(
                 BlockInfo(
                     page=page,
@@ -905,6 +1027,8 @@ class ParseService:
                     bbox=(float(line_bbox[0]), float(line_bbox[1]),
                           float(line_bbox[2]), float(line_bbox[3])),
                     font_size=avg_size,
+                    direction=(float(line_dir[0]), float(line_dir[1])),
+                    vertical_writing=line.get("wmode") == 1,
                 )
             )
         return result
