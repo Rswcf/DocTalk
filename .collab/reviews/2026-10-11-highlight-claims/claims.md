@@ -353,3 +353,39 @@ applied with that wording.
   pt `useCasesLawyers.steps.verify.description`), the new value is a full translation, so those values grow.
 - Competitor cells: ChatPDF DOCX ✓ (`MultiFormatContent.tsx:106`); ChatPDF click-to-highlight =
   `comparison.jumpsToSource` (`CitationsContent.tsx:73`). Other competitor cells unchanged (see the hand-off).
+- ChatPDF URL ✓ (`MultiFormatContent.tsx`, same basis as the live `compareChatpdf.table.webUrlIngestion`): re-checked
+  2026-10-11 by a direct fetch of `https://www.chatpdf.com/`. The hero says "Chat with any file, video or website"
+  and the input says "CTRL V to paste text or links". Recorded under ChatPDF in `competitor-facts-2026-09-30.md`.
+
+## Phase 3 (Claude, 2026-10-11): compare and alternatives pages
+
+The audit above excluded `compare*`/`alts*` keys because the competitor-facts batch (live 2026-10-10) had covered
+them. That batch fixed 12 values but missed these. All are DocTalk values on live pages:
+
+- `compareHumata.citationsDocTalk` said "For other formats, it uses text-snippet matching". False: only `.txt`
+  uses it (`TextViewer.tsx:34-35`, `:737`). Rewritten to PDF (bounding box) + .txt (snippet) + "other formats jump
+  to the cited location without a passage highlight". "Pixel-perfect" and "real-time" removed.
+- `compareAskyourpdf.heroDescription` / `metaDescription` said "real-time citation highlighting across seven
+  document formats". Rewritten in 9 locales; zh and fr did not couple the two and stay unchanged. The meta value
+  equals the hero value in every locale before and after (asserted).
+- `compareChatpdf`, `compareHumata`, `comparePdfai`, `compareAskyourpdf` `.whatIsDocTalkDescription` paired
+  "seven formats" with "click any citation … visually highlights the passage". Each now says citations scroll to
+  the source and the passage is highlighted in PDF and .txt files. `comparePdfai` also loses "fully localized".
+- `compareNotebooklm.table.doctalk.citationHighlighting` ("Real-time visual highlighting") and
+  `altsNotebooklm.adv1` ("Real-time citation highlighting"): Gemini Notebook reads many formats, so the cell now
+  carries the PDF/.txt limit.
+
+`compareHumata.citationsDocTalk`, `compareChatpdf/Askyourpdf/Pdfai.whatIsDocTalkDescription`: translations follow
+the new English value in full, keeping each locale's link-lead ending. `compareHumata.whatIsDocTalkDescription`,
+`comparePdfai.whatIsDocTalkDescription` and the hero: only the highlight clause changed per locale (exact fragment
+replacement), so prices and other sentences are byte-identical.
+
+Left as is (same rule as the competitor-facts batch): values that list highlighting and format count as two
+separate features ("highlights the cited passage, reads seven formats"), `alts*.adv*` "Real-time citation
+highlighting" on PDF-tool pages (ChatPDF, Humata, AskYourPDF, PDF.ai), and `featuresCitations.heroTitle`/`metaTitle`
+("Real-Time Highlighting", metaTitle rule).
+
+Cross-page check (vendor cells on `/features/*` vs the live `/compare/*` and `/alternatives/*` tables), all
+consistent: ChatPDF formats PDF/DOC(X)/PPT(X)/MD/TXT + URL ✓, click = "Jumps to source"; AskYourPDF formats
+PDF/DOCX/EPUB/TXT/URL (no PPTX), click = "Links to the cited page"; Humata highlight ✓, formats "others not
+listed" (multi-format citations = not verified); Gemini Notebook DOCX/PPTX/TXT/MD/URL ✓, no XLSX listed.

@@ -8,6 +8,7 @@ Positioning: no-signup AI chat with a PDF/DOC/PPT/file, "like ChatGPT for PDFs."
 - Paid: FAQ names a "ChatPDF Plus" plan with "unlimited document analysis" but **states no price**. `chatpdf.com/pricing` returns a live 404 — there is no public pricing page right now.
 - The commonly-quoted $19.99/mo, 120 pages, 10MB, 50 q/day figures are **search-only**, though corroborated independently by PDF.ai's own comparison page (pdf.ai/resources/pdfai-vs-chatpdf, direct fetch) citing "$19.99/month," "2 PDFs every day, each up to 120 pages." Other search snippets disagree (3 PDFs/day per one reviewer; $4.99–$5/mo per others) — unresolved, flag as PPP/region variance or stale reviews.
 - Formats (direct): PDF, DOC/DOCX, PPT/PPTX, MD, TXT, plus chat-with-website/YouTube.
+  - Website/URL re-checked 2026-10-11 (direct fetch of `https://www.chatpdf.com/`): hero "Chat with any file, video or website"; input hint "CTRL V to paste text or links".
 - Citations (direct): yes — "Cited Sources," clickable citations that "scroll to the exact source," side-by-side view. Uses GPT-4o/GPT-4o-mini dynamic routing, not a fixed model.
 - Confidence: medium (core mechanics direct; exact price/limits are search-only, official page silent).
 
