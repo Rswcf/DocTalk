@@ -127,8 +127,11 @@ reload of the same URL from sending it again).
 - Stream writes target "the last message" (`store/index.ts` `updateLastMessage` & co). Targeting the
   assistant placeholder by id would turn any future ordering bug of this kind into a no-op.
 - New Chat and delete-current need a post-await stream guard (r3 (P), pre-existing).
-- With a menu request stalled for up to 30 s, a quick A → B → A document round trip lets the stale
-  continuation open the session picked on the first visit to A. It publishes the id together with
-  its transcript, so the invariant holds; it is only a surprising pick.
+- The per-document latch (efde1f1c) leaves one window, bounded by the 30 s proxy timeout. A menu
+  request stalls on document A; the user moves to B, runs a menu action there, and returns to A. A
+  fresh latch then lets a New Chat or switch on A run beside the stale request. If the stale request
+  resolves last, it replaces that New Chat or switch (the r1 MAJOR shape). The id is still published
+  with its own transcript. Without a menu action on B, the stale latch still locks A's menu until the
+  request settles.
 - "New Chat" after a `?question=` link that did not fire sends the question into the new chat
   (behaviour on `main`, unchanged).
