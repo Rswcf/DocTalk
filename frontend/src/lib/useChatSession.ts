@@ -78,6 +78,9 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
         try {
           const msgsData = await getMessages(storedDemoSession);
           if (cancelled) return;
+          // A New Chat from the session menu may have published a session
+          // while this loaded; keep it (it installed its own accounting).
+          if (useDocTalkStore.getState().sessionId) return;
           setSessionId(storedDemoSession);
           // Populate the sessions list (not []) so SessionDropdown shows the
           // adopted session instead of an empty "New Chat"-only placeholder.
@@ -117,8 +120,10 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             // Confirmed gone or inaccessible (pruned by nightly cleanup, or
             // an authed caller inheriting an anon-owned key) — clear the
             // pointer and fall through to the normal listSessions/
-            // createSession flow below.
-            clearDemoSession(documentId);
+            // createSession flow below. Only while the pointer still names
+            // this session: a New Chat from the session menu may have moved
+            // it meanwhile.
+            if (readDemoSession(documentId) === storedDemoSession) clearDemoSession(documentId);
           } else {
             // Transient failure (network blip, 5xx) — the pointer is still
             // valid and the session most likely still exists. Falling
@@ -134,6 +139,10 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
         }
       }
 
+      // From here on, a session the menu opened or created while the steps
+      // above awaited wins over the one this effect would pick or create.
+      if (useDocTalkStore.getState().sessionId) return;
+
       try {
         const sessionsData = await listSessions(documentId);
         if (cancelled) return;
@@ -141,9 +150,22 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
         setSessions(sessionsData.sessions);
         if (sessionsData.sessions.length > 0) {
           const latest = sessionsData.sessions[0];
-          setSessionId(latest.session_id);
+          // Fetch the transcript BEFORE publishing the session id, as the
+          // adoption branch above does. The reader mounts ChatPanel as soon
+          // as sessionId is set, and ChatPanel reads an empty transcript as
+          // a fresh session: a demo `?question=` link auto-submits into it.
+          // A transcript that lands after that send replaces the local
+          // question/answer pair, and every streamed token is then appended
+          // to whatever message is last — the question the backend has
+          // already committed (2026-10-10: the answer rendered inside the
+          // user bubble), or the previous answer.
           const msgsData = await getMessages(latest.session_id);
-          if (!cancelled) setMessages(msgsData.messages);
+          if (cancelled) return;
+          // The session menu lists the rows published above, so the user
+          // may already have opened one while this loaded; keep it.
+          if (useDocTalkStore.getState().sessionId) return;
+          setSessionId(latest.session_id);
+          setMessages(msgsData.messages);
           sessionReady = true;
         }
       } catch (e) {
@@ -151,9 +173,13 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
       }
 
       if (!sessionReady && !cancelled) {
+        if (useDocTalkStore.getState().sessionId) return;
         try {
           const s = await createSession(documentId);
           if (cancelled) return;
+          // An empty server session left unused is acceptable; replacing the
+          // conversation the user opened from the menu meanwhile is not.
+          if (useDocTalkStore.getState().sessionId) return;
 
           setSessionId(s.session_id);
           if (s.demo_messages_used != null) {
