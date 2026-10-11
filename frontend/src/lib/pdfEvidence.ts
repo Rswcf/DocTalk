@@ -20,7 +20,7 @@ export function evidenceOverlap(a: NormalizedBBox, b: NormalizedBBox): boolean {
 
 // Preserve punctuation and word boundaries. Only normalize typographical
 // equivalents, whitespace, ligatures and explicit line-end hyphenation.
-function canonicalize(text: string) {
+export function canonicalize(text: string) {
   let normalized = '';
   const offsets: Array<{ start: number; end: number }> = [];
   for (let i = 0; i < text.length;) {

@@ -43,3 +43,207 @@ test('the converted-PDF passage never ends in a cut fragment', () => {
   assert.equal(citationText.dropTrailingFragment('| a | b |\n| 1 | 2'), '| a | b |');
   assert.equal(citationText.dropTrailingFragment('v3.5 is out'), '');
 });
+
+// ---- locateTextEvidence ----------------------------------------------------
+const { locateTextEvidence, splitSentences } = require(path.resolve(__dirname, '../src/lib/textEvidence.ts'));
+
+// Emulates parse_service: each page body is one block; its sentences are
+// stripped and rejoined with one space (none beside CJK); a title block that is
+// not classified as a heading is its own unit, glued on with a space.
+const CJK = /[　-〿぀-ヿ一-鿿＀-￯]/;
+function chunkOf(units) {
+  let text = '';
+  for (const raw of units) {
+    const part = raw.trim();
+    if (!part) continue;
+    if (!text) { text = part; continue; }
+    const prev = text.at(-1), first = part[0];
+    const space = !' \n([{'.includes(prev) && !' \n,.;:!?)]}。！？；，、'.includes(first) && !CJK.test(prev) && !CJK.test(first);
+    text += (space ? ' ' : '') + part;
+  }
+  return text;
+}
+const bodyUnits = (text) => splitSentences(text.replace(/ /g, ' ').trim());
+const marked = (pages, result) => result.ranges.map(r => ({
+  page: r.page, emphasis: r.emphasis, text: pages.find(p => p.page_number === r.page).text.slice(r.start, r.end),
+}));
+const cite = (page, extra = {}) => ({ page, pageEnd: page, ...extra });
+
+const DOCX_PAGE = [
+  'The committee met on 4 March to review the annual budget.',
+  'Spending on research rose by 12 percent compared with last year.',
+  '',
+  '| Item | Amount |',
+  '| --- | --- |',
+  '| Research | 4.2 million |',
+  '| Travel | 0.3 million |',
+  '',
+  'The chair asked for a revised forecast by June.',
+].join('\n');
+
+test('sentence split mirrors parse_service (ASCII only before whitespace, CJK always)', () => {
+  assert.deepEqual(splitSentences('Version 3.5 is out. See e.g. the notes! 第一句。第二句'), ['Version 3.5 is out.', 'See e.g.', 'the notes!', '第一句。', '第二句']);
+});
+
+test('a glued title is dropped and the whole page body, tables included, is the region', () => {
+  const pages = [{ page_number: 1, text: DOCX_PAGE }];
+  const chunk = chunkOf(['Budget Review', ...bodyUnits(DOCX_PAGE)]);
+  assert.ok(chunk.startsWith('Budget Review The committee met'), 'title glued onto the first sentence');
+  const result = locateTextEvidence(pages, cite(1), chunk, null);
+  assert.equal(result.kind, 'region');
+  const text = marked(pages, result).map(r => r.text).join('|');
+  assert.match(text, /^The committee met on 4 March/);
+  assert.match(text, /\| Research \| 4\.2 million \|/);
+  assert.match(text, /revised forecast by June\.$/);
+  assert.ok(!text.includes('Budget Review'));
+});
+
+test('the focus sentence is the exact emphasis inside the region', () => {
+  const pages = [{ page_number: 1, text: DOCX_PAGE }];
+  const chunk = chunkOf(bodyUnits(DOCX_PAGE));
+  const result = locateTextEvidence(pages, cite(1), chunk, 'Spending on research rose by 12 percent compared with last year.');
+  assert.equal(result.kind, 'exact');
+  const exact = marked(pages, result).filter(r => r.emphasis);
+  assert.deepEqual(exact.map(r => r.text), ['Spending on research rose by 12 percent compared with last year.']);
+  assert.equal(result.anchor.start, DOCX_PAGE.indexOf('Spending'));
+});
+
+test('a focus that the page does not contain verbatim is not emphasised', () => {
+  const pages = [{ page_number: 1, text: DOCX_PAGE }];
+  const result = locateTextEvidence(pages, cite(1), chunkOf(bodyUnits(DOCX_PAGE)), 'Spending on research rose by 13 percent compared with last year.');
+  assert.equal(result.kind, 'region');
+  assert.ok(result.ranges.every(r => !r.emphasis));
+});
+
+test('whitespace drift (newlines rejoined as spaces) still matches', () => {
+  const text = 'First line of the note.\nSecond line continues here.\n\nA new paragraph starts now.';
+  const pages = [{ page_number: 2, text }];
+  const chunk = chunkOf(bodyUnits(text));
+  assert.ok(!chunk.includes('\n\n'));
+  const result = locateTextEvidence(pages, cite(2), chunk, null);
+  assert.equal(result.kind, 'region');
+  assert.deepEqual(marked(pages, result).map(r => r.text), [text]);
+});
+
+test('a repeated passage is never highlighted, even when the chunk contains it', () => {
+  const text = 'Terms apply to all customers.\nPayment is due in 30 days.\nTerms apply to all customers.';
+  const pages = [{ page_number: 1, text }];
+  const result = locateTextEvidence(pages, cite(1), 'Terms apply to all customers.', 'Terms apply to all customers.');
+  assert.equal(result.kind, 'page');
+  assert.deepEqual(result.ranges, []);
+});
+
+test('an unlocated sentence splits the region; it is never bridged', () => {
+  const text = 'Alpha sentence is long enough here. The middle sentence reads one way. Gamma sentence is long enough too.';
+  const pages = [{ page_number: 1, text }];
+  // The middle sentence differs from the page text.
+  const chunk = 'Alpha sentence is long enough here. The middle sentence reads another way. Gamma sentence is long enough too.';
+  const ranges = marked(pages, locateTextEvidence(pages, cite(1), chunk, null)).map(r => r.text);
+  assert.deepEqual(ranges, ['Alpha sentence is long enough here.', 'Gamma sentence is long enough too.']);
+});
+
+test('one short located sentence is not enough for a region', () => {
+  const pages = [{ page_number: 1, text: 'Revenue rose. Costs fell sharply in the third quarter of the year.' }];
+  assert.equal(locateTextEvidence(pages, cite(1), 'Revenue rose. Costs fell by half.', null).kind, 'page');
+});
+
+test('a text from another document locates nothing', () => {
+  const pages = [{ page_number: 1, text: DOCX_PAGE }];
+  const other = 'Completely different content about weather patterns in spring.';
+  assert.equal(locateTextEvidence(pages, cite(1), other, other).kind, 'page');
+});
+
+test('word boundaries hold: a needle inside a longer word does not match', () => {
+  const pages = [{ page_number: 1, text: 'The therapist reviewed the positions carefully.' }];
+  assert.equal(locateTextEvidence(pages, cite(1), null, 'rapist reviewed the position').kind, 'page');
+});
+
+test('Markdown syntax and entities are compared as stored on both sides', () => {
+  const text = 'Use the **bold** form for emphasis.\nPrices &amp; fees are listed below in the table.';
+  const pages = [{ page_number: 1, text }];
+  const result = locateTextEvidence(pages, cite(1), chunkOf(bodyUnits(text)), 'Use the **bold** form for emphasis.');
+  assert.equal(result.kind, 'exact');
+  assert.equal(marked(pages, result).find(r => r.emphasis).text, 'Use the **bold** form for emphasis.');
+});
+
+test('PPTX: a repeated title and speaker notes stay inside one slide region', () => {
+  const text = 'Quarterly Results\nRevenue up in every region\nMargins held steady\n\n**Speaker Notes:**\nMention the new contract in Spain.';
+  const pages = [{ page_number: 3, text }];
+  const chunk = chunkOf(['Quarterly Results', ...bodyUnits(text)]);
+  const result = locateTextEvidence(pages, cite(3), chunk, null);
+  assert.equal(result.kind, 'region');
+  assert.match(marked(pages, result)[0].text, /^Quarterly Results\nRevenue up/);
+  assert.match(marked(pages, result).at(-1).text, /new contract in Spain\.$/);
+});
+
+test('XLSX: the sheet name glued onto the table is dropped', () => {
+  const text = '| Region | Q1 | Q2 |\n| --- | --- | --- |\n| North | 120 | 140 |\n| South | 95 | 101 |';
+  const pages = [{ page_number: 1, text }, { page_number: 2, text: '| Region | Q1 |\n| --- | --- |\n| West | 7 |' }];
+  const chunk = chunkOf(['Sales 2026', ...bodyUnits(text)]);
+  const result = locateTextEvidence(pages, cite(1), chunk, null);
+  assert.equal(result.kind, 'region');
+  assert.deepEqual(marked(pages, result).map(r => r.text), [text]);
+});
+
+test('a chunk spanning two pages marks both; a narrowed citation marks only its page', () => {
+  const p1 = 'Opening statement of the report sits here.\n| A | B |\n| --- | --- |\n| 1 | 2 |';
+  const p2 = 'The second page begins with this sentence. It ends here with a conclusion.';
+  const pages = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2 }];
+  const chunk = chunkOf([...bodyUnits(p1), ...bodyUnits(p2)]);
+  const both = locateTextEvidence(pages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
+  assert.deepEqual([...new Set(both.ranges.map(r => r.page))], [1, 2]);
+  assert.ok(marked(pages, both).some(r => r.text.endsWith('| 1 | 2 |')), 'the undelimited table end is located on page 1');
+  const narrowed = locateTextEvidence(pages, { page: 2, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
+  assert.deepEqual([...new Set(narrowed.ranges.map(r => r.page))], [2]);
+});
+
+test('uniqueness is checked over the chunk range, not only the narrowed page', () => {
+  const sentence = 'This exact sentence appears on both pages of the file.';
+  const pages = [{ page_number: 1, text: sentence }, { page_number: 2, text: `${sentence} Another line follows it here.` }];
+  const result = locateTextEvidence(pages, { page: 2, pageEnd: 2, contextText: '[page 1–2] x' }, null, sentence);
+  assert.equal(result.kind, 'page');
+  // Without the chunk's own range, page 2 alone would make it look unique.
+  assert.equal(locateTextEvidence(pages, { page: 2, pageEnd: 2 }, null, sentence).kind, 'exact');
+});
+
+test('an out-of-order coincidence is dropped, keeping the chunk order', () => {
+  const text = 'Second sentence of the chunk sits first here. Filler text between them stays. First sentence of the chunk sits last here.';
+  const pages = [{ page_number: 1, text }];
+  const chunk = 'First sentence of the chunk sits last here. Middle sentence is not on the page. Second sentence of the chunk sits first here. Third sentence is not on the page either.';
+  const result = locateTextEvidence(pages, cite(1), chunk, null);
+  assert.equal(result.ranges.length, 1, 'only one of the two crossed sentences is kept');
+  assert.equal(result.kind, 'region', 'one ordered sentence of 40+ characters is still a region');
+});
+
+test('focus without chunk text (Quote Finder, saved quote) is exact only when unique', () => {
+  const pages = [{ page_number: 4, text: DOCX_PAGE }];
+  const quote = 'The chair asked for a revised forecast by June.';
+  const result = locateTextEvidence(pages, { page: 4, pageEnd: 4, focusSnippet: quote }, null);
+  assert.equal(result.kind, 'exact');
+  assert.deepEqual(marked(pages, result).map(r => r.text), [quote]);
+});
+
+test('CJK: sentences without spaces match, and a glued title is split off', () => {
+  const text = '本研究分析了三年的销售数据。结果显示，线上渠道增长最快。\n线下门店保持稳定。';
+  const pages = [{ page_number: 1, text }];
+  const chunk = chunkOf(['研究概述', ...bodyUnits(text)]);
+  assert.ok(chunk.startsWith('研究概述本研究'), 'no space is inserted beside CJK');
+  const result = locateTextEvidence(pages, cite(1), chunk, '结果显示，线上渠道增长最快。');
+  assert.equal(result.kind, 'exact');
+  assert.equal(marked(pages, result).find(r => r.emphasis).text, '结果显示，线上渠道增长最快。');
+  assert.ok(!marked(pages, result).some(r => r.text.includes('研究概述')));
+});
+
+test('Arabic: right-to-left text matches as stored', () => {
+  const text = 'يتكون النموذج من ست طبقات متطابقة. تم تدريب النموذج لمدة ثلاثة أيام ونصف.';
+  const pages = [{ page_number: 1, text }];
+  const result = locateTextEvidence(pages, cite(1), chunkOf(bodyUnits(text)), 'تم تدريب النموذج لمدة ثلاثة أيام ونصف.');
+  assert.equal(result.kind, 'exact');
+  assert.equal(marked(pages, result).find(r => r.emphasis).text, 'تم تدريب النموذج لمدة ثلاثة أيام ونصف.');
+});
+
+test('missing pages and empty input fall back to page', () => {
+  assert.equal(locateTextEvidence([], cite(1), 'Anything at all here.', null).kind, 'page');
+  assert.equal(locateTextEvidence([{ page_number: 1, text: DOCX_PAGE }], cite(9), chunkOf(bodyUnits(DOCX_PAGE)), null).kind, 'page');
+  assert.equal(locateTextEvidence([{ page_number: 1, text: DOCX_PAGE }], cite(1), null, null).kind, 'page');
+});
