@@ -21,6 +21,13 @@ also shows no passage highlight, for a different reason.
 
 Files to edit in Phase 2: **25** — 11 locale JSONs, 4 TSX files, `llms.txt`, 9 blog posts.
 
+All 26 keys exist, translated, in all 11 locale files: **286 values** to change in Phase 2 (checked by script).
+
+Surfaces with **zero user-visible hits** (only code comments matched): `/pricing`, `/trust`, `/about` and `/demo`
+page components, `/tools` page components (their locale keys are listed in table A), the marketing header and the
+rest of `components/marketing/*`, `app/[locale]/*`, and every `*JsonLd.tsx` file except layout-translation (which
+only matched "visual context"). JSON-LD text comes from the locale keys in table A.
+
 Search terms: highlight / highlighted / highlighting, "exact passage", "exact source", "real-time citation",
 visual, overlay, "every citation", "any citation", plus snippet, yellow, "bounding box" (highlight mechanism).
 Code identifiers and comments (`CTABanner` `variant='highlight'`, `CitationField.tsx` comments, `chrome.ts` types,
