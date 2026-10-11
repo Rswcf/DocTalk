@@ -563,3 +563,24 @@ test('a stale demo adoption never clears the pointer a New Chat moved meanwhile'
   assert.equal(store.getState().sessionId, 'fresh');
   assert.deepEqual(listed, []);
 });
+
+// Codex r3 (R): the header keeps SessionDropdown mounted across documents, so
+// a menu request stalled on one document must not lock the menu on the next.
+test('a menu action stalled on one document does not lock the menu on the next', async () => {
+  const created = [];
+  const h = dropdownHarness({
+    getMessages: () => new Promise(() => {}),
+    createSession: async (docId) => { created.push(docId); return { session_id: 'd2-fresh', created_at: '2026-10-11' }; },
+  });
+  void h.switchTo('older');
+  await settle();
+  const state = h.store.getState();
+  state.setDocument('doc-2');
+  state.setDocumentStatus('ready');
+  state.setSessions([row('d2-current', 1)]);
+  state.setSessionId('d2-current');
+  await h.click('session.newChat');
+
+  assert.deepEqual(created, ['doc-2']);
+  assert.equal(h.store.getState().sessionId, 'd2-fresh');
+});

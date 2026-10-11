@@ -14,7 +14,7 @@ import { getBillingErrorMessage, startPlanAwareBillingAction } from '../lib/bill
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 import { clearDemoSession, readDemoSession, writeDemoSession } from '../lib/demoSessionStorage';
 import { useUserProfile } from '../lib/useUserProfile';
-import { acquireSingleFlight } from '../lib/singleFlight';
+import { acquireSingleFlight, type SingleFlightLatch } from '../lib/singleFlight';
 
 export default function SessionDropdown() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -39,7 +39,7 @@ export default function SessionDropdown() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
-  const menuActionLatchRef = useRef(false);
+  const menuActionLatchRef = useRef<{ documentId: string | null; latch: SingleFlightLatch }>({ documentId: null, latch: { current: false } });
 
   useEffect(() => {
     setSessionErrorCopy(null);
@@ -80,9 +80,17 @@ export default function SessionDropdown() {
   // publishes a session, so two in flight could resume over each other (a
   // late switch overwriting a New Chat, or opening a conversation that is
   // being deleted). Clicks during a pending action are ignored.
+  // The latch belongs to one document. The header keeps this menu mounted
+  // across documents, and a request stalled on the previous one (the proxy
+  // gives up only after 30 s) must not lock the menu here; its late result is
+  // dropped by the document checks in the actions themselves.
   const runMenuAction = async (action: () => Promise<void>) => {
+    const liveDocumentId = useDocTalkStore.getState().documentId;
+    if (menuActionLatchRef.current.documentId !== liveDocumentId) {
+      menuActionLatchRef.current = { documentId: liveDocumentId, latch: { current: false } };
+    }
     const release = acquireSingleFlight(
-      menuActionLatchRef,
+      menuActionLatchRef.current.latch,
       () => useDocTalkStore.getState().isStreaming,
     );
     if (!release) return;
