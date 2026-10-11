@@ -946,33 +946,71 @@ class TestHeadingDetection:
             self._body(100),
             BlockInfo(page=1, text="PART II — 2026 RESULTS", bbox=(72, 120, 240, 130), font_size=10),
             self._body(140),
+            # Codex r3: an ordinal indicator is a letter that str.islower() accepts.
+            BlockInfo(page=1, text="SEÇÃO Nº 2", bbox=(72, 160, 160, 170), font_size=10),
+            self._body(180),
         )
 
         chunks = self.svc.chunk_document([page])
         headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
 
-        assert headings == ["PART II — 2026 RESULTS"]
+        assert headings == ["PART II — 2026 RESULTS", "SEÇÃO Nº 2"]
         assert cjk_line in " ".join(c.text for c in chunks)
 
-    def test_numbered_heading_directly_above_its_subheading(self):
-        # Codex r2: "2 Methods" and "2.1 Data" share a size and column. Two numbers
-        # of different depth are a heading and its subheading, not a list.
+    def test_numbered_heading_above_a_spaced_subheading_of_the_same_size(self):
+        # Codex r2: "2 Methods" over "2.1 Data" in one size. Section spacing puts
+        # more than one font size between them, so they are not a run. In the
+        # corpus all 20 such pairs are spaced 14.8-17pt apart or differ in size.
         page = self._page(
             self._body(60),
             BlockInfo(page=1, text="2 Methods", bbox=(72, 100, 150, 112), font_size=12),
-            BlockInfo(page=1, text="2.1 Data", bbox=(72, 116, 140, 128), font_size=12),
-            self._body(140),
-            self._body(152),
-            BlockInfo(page=1, text="3", bbox=(72, 180, 78, 192), font_size=12),
-            BlockInfo(page=1, text="Results", bbox=(90, 180, 150, 192), font_size=12),
-            BlockInfo(page=1, text="3.1", bbox=(72, 196, 90, 208), font_size=12),
-            BlockInfo(page=1, text="Accuracy", bbox=(102, 196, 170, 208), font_size=12),
-            *(self._body(220 + 12 * i) for i in range(5)),
+            BlockInfo(page=1, text="2.1 Data", bbox=(72, 128, 140, 140), font_size=12),
+            self._body(156),
+            self._body(168),
+            BlockInfo(page=1, text="3", bbox=(72, 196, 78, 208), font_size=12),
+            BlockInfo(page=1, text="Results", bbox=(90, 196, 150, 208), font_size=12),
+            BlockInfo(page=1, text="3.1", bbox=(72, 224, 90, 236), font_size=12),
+            BlockInfo(page=1, text="Accuracy", bbox=(102, 224, 170, 236), font_size=12),
+            *(self._body(252 + 12 * i) for i in range(5)),
         )
 
         headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
 
         assert headings == ["2 Methods", "2.1 Data", "3 Results", "3.1 Accuracy"]
+
+    def test_nested_numbered_list_in_body_text_stays_content(self):
+        # Codex r3: "1 Parent item" directly over "1.1 Child item" at body size,
+        # with chart cells pulling the median below it. Without section spacing
+        # this is a nested list, whatever the depth of its numbers.
+        cells = [
+            BlockInfo(page=1, text=f"{v}%", bbox=(72 + 60 * (i % 6), 400 + 12 * (i // 6), 100 + 60 * (i % 6),
+                                                   409 + 12 * (i // 6)), font_size=9)
+            for i, v in enumerate(range(40))
+        ]
+        page = self._page(
+            BlockInfo(page=1, text="1 Parent item", bbox=(72, 100, 200, 111), font_size=10),
+            BlockInfo(page=1, text="1.1 Child item", bbox=(90, 113, 220, 124), font_size=10),
+            BlockInfo(page=1, text="2 Next parent item", bbox=(72, 126, 220, 137), font_size=10),
+            *cells,
+        )
+
+        text = " ".join(c.text for c in self.svc.chunk_document([page]))
+
+        assert not any(e.element_type == "heading" for e in self.svc.extract_elements([page]))
+        assert "1 Parent item 1.1 Child item 2 Next parent item" in text
+
+    def test_numbered_label_beside_a_smaller_value_cell_is_not_a_heading(self):
+        # Codex r3: the value cell is set smaller than its row label. A narrow cell
+        # holding a figure counts at any size; only a text line must match it.
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="1", bbox=(72, 100, 78, 112), font_size=12),
+            BlockInfo(page=1, text="Revenue Outlook", bbox=(90, 100, 200, 112), font_size=12),
+            BlockInfo(page=1, text="$100m", bbox=(420, 101, 455, 111), font_size=10),
+            *(self._body(130 + 14 * i) for i in range(5)),
+        )
+
+        assert not any(e.element_type == "heading" for e in self.svc.extract_elements([page]))
 
     def test_numbered_heading_beside_a_short_line_in_the_other_column(self):
         # Codex r2: the right column's last paragraph line ("therefore.") is narrow,

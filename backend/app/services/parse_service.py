@@ -37,11 +37,10 @@ _ARXIV_ID_LINE_RE = re.compile(
 # Section numbers: one or two digits per level ("3", "4.2", "4."), so a year ("2025
 # Revenue") or an amount never reads as one. LaTeX sets the number of a \section as a
 # separate line on the title's baseline (_SECTION_NUMBER_RE); other producers keep
-# number and title on one line (_NUMBERED_HEADING_RE: group 1 = the number, group 2 =
-# the title). A report
+# number and title on one line (_NUMBERED_HEADING_RE, group 1 = the title). A report
 # date ("06 February 2026", "8. Januar 2026") has the same shape and is not a heading.
 _SECTION_NUMBER_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?$")
-_NUMBERED_HEADING_RE = re.compile(r"^(\d{1,2}(?:\.\d{1,2}){0,3})\.?\s+(\S.*)$")
+_NUMBERED_HEADING_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?\s+(\S.*)$")
 _DATE_LINE_RE = re.compile(r"^\d{1,2}\.?\s+\S+\s+\d{4}$")
 
 # OCR language resolution (Phase 2 C4 + R2b). Scanned / non-Latin PDFs need the matching
@@ -328,10 +327,12 @@ class ParseService:
     HEADING_SIZE_RATIO = 1.25  # any short line this much above the median size
     NUMBERED_HEADING_SIZE_RATIO = 1.1  # LaTeX \section: 12pt on a 10pt body
     HEADING_MAX_WORDS = 12
-    # A lone line beside a numbered label, narrower than this share of the page and in
-    # the label's font size, is a table cell; the opposite column of a two-column page
-    # is wider, and its last paragraph line is body text, smaller than a heading.
+    # A lone line beside a numbered label, narrower than this share of the page, is a
+    # table cell when it holds a figure ("$100m", "12.5%") or shares the label's font
+    # size; the opposite column of a two-column page is wider, and its last paragraph
+    # line ("therefore.") is body text, smaller than a heading.
     COLUMN_MIN_WIDTH_RATIO = 0.3
+    VALUE_CELL_MAX_LETTERS = 4  # "US$1.2bn"
     # A row neighbour is at most this many times the line's own height: cells in one
     # table row share a size. It also bounds the row lookup's scan window.
     ROW_NEIGHBOUR_MAX_HEIGHT_RATIO = 3.0
@@ -979,7 +980,7 @@ class ParseService:
         m = _NUMBERED_HEADING_RE.match(text)
         if not m or _DATE_LINE_RE.match(text):
             return False
-        title = m.group(2)
+        title = m.group(1)
         first = title[0]
         if not first.isalpha() or first.islower():
             return False
@@ -998,32 +999,25 @@ class ParseService:
             return False
         if text[-1:] in self.SENTENCE_DELIMS:
             return False
-        alpha = [ch for ch in text if ch.isalpha()]
-        return len(alpha) >= self.CAPS_HEADING_MIN_CAPITALS and all(ch.isupper() for ch in alpha)
+        # Ordinal indicators ("Nº", "1ª") and modifier letters are neither capitals nor
+        # body letters; str.islower() is true for "º".
+        letters = [
+            ch for ch in text if ch.isalpha() and ch not in "ªº" and unicodedata.category(ch) != "Lm"
+        ]
+        return len(letters) >= self.CAPS_HEADING_MIN_CAPITALS and all(ch.isupper() for ch in letters)
 
     @staticmethod
     def _continues_run(block: CleanBlock, other: Optional[CleanBlock]) -> bool:
         """`other` is the line above or below `block` in one paragraph or list: same
-        page and size, overlapping columns, at most one font size apart. Section
-        numbers of different depth ("2 Methods" over "2.1 Data") are a heading and
-        its subheading, not a run."""
+        page and size, overlapping columns, at most one font size apart. A heading
+        directly over its subheading in one size ("2 Methods" / "2.1 Data") has
+        section spacing between them; without it, the pair is a nested list."""
         if other is None or other.page != block.page or abs(other.font_size - block.font_size) > 0.3:
             return False
         if other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]:
             return False
         gap = max(other.bbox[1] - block.bbox[3], block.bbox[1] - other.bbox[3])
-        if gap > block.font_size:
-            return False
-        depths = (ParseService._section_depth(block.text), ParseService._section_depth(other.text))
-        return None in depths or depths[0] == depths[1]
-
-    @staticmethod
-    def _section_depth(text: str) -> Optional[int]:
-        """2 for "2.1 Data" or a bare "2.1"; None when the line has no section number."""
-        text = text.strip()
-        m = _NUMBERED_HEADING_RE.match(text)
-        number = m.group(1) if m else (text.rstrip(".") if _SECTION_NUMBER_RE.match(text) else None)
-        return None if number is None else number.count(".") + 1
+        return gap <= block.font_size
 
     @staticmethod
     def _shares_row(a: CleanBlock, b: CleanBlock) -> bool:
@@ -1074,8 +1068,8 @@ class ParseService:
         """True when the line shares its row with table cells: two other lines beside
         it, or one in the same half of the page. One line in the other half is the
         opposite column of a two-column page, so a heading there stays a heading;
-        with `narrow_is_cell`, unless that line is narrower than a column and in the
-        block's font size (a value cell beside a numbered row label)."""
+        with `narrow_is_cell`, unless that line is narrower than a column and holds a
+        figure or shares the block's font size (a cell beside a numbered row label)."""
         if rows is None:
             return False
         cells = self._row_neighbours(block, rows, limit=2)
@@ -1090,9 +1084,12 @@ class ParseService:
                 return True
             return (
                 narrow_is_cell
-                and abs(other.font_size - block.font_size) <= 0.5
                 and (other.bbox[2] - other.bbox[0]) < rows.width * self.COLUMN_MIN_WIDTH_RATIO
+                and (abs(other.font_size - block.font_size) <= 0.5 or self._is_value_cell(other.text))
             )
+
+    def _is_value_cell(self, text: str) -> bool:
+        return any(ch.isdigit() for ch in text) and sum(ch.isalpha() for ch in text) <= self.VALUE_CELL_MAX_LETTERS
         return False
 
     @staticmethod
