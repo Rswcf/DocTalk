@@ -93,6 +93,10 @@ function watchLikeChatPanelAutoSubmit(store) {
   return { seen, didSubmit: () => submitted };
 }
 
+class ApiError extends Error {
+  constructor(status) { super(`HTTP ${status}`); this.status = status; }
+}
+
 function runUseChatSession(store, api, demoStorage = {}) {
   const effects = [];
   const react = {
@@ -101,9 +105,6 @@ function runUseChatSession(store, api, demoStorage = {}) {
   };
   const useStore = (selector) => selector ? selector(store.getState()) : store.getState();
   useStore.getState = store.getState;
-  class ApiError extends Error {
-    constructor(status) { super(`HTTP ${status}`); this.status = status; }
-  }
   const { useChatSession } = load('lib/useChatSession.ts', {
     react,
     './api': { ApiError, ...api },
@@ -242,7 +243,7 @@ test('the other start-up branches already publish session and transcript togethe
 // publish the new id, then fetch). It is reachable from the auto-submit: once
 // a `?question=` link lands on a restored conversation and does not fire,
 // switching to another conversation in the dropdown would fire it there.
-function dropdownHarness({ getMessages, createSession, isDemo = false }) {
+function dropdownHarness({ getMessages, createSession, deleteSession, isDemo = false }) {
   const store = createStore();
   const state = store.getState();
   state.setIsDemo(isDemo);
@@ -284,7 +285,7 @@ function dropdownHarness({ getMessages, createSession, isDemo = false }) {
     '../lib/api': {
       createSession: createSession || (async () => { throw new Error('not under test'); }),
       getMessages,
-      deleteSession: async (id) => { calls.deleted.push(id); },
+      deleteSession: async (id) => { calls.deleted.push(id); if (deleteSession) await deleteSession(id); },
     },
     '../lib/errorCopy': { errorCopy: () => ({ body: 'error' }) },
     '../lib/analytics': { trackEvent() {} },
@@ -294,6 +295,7 @@ function dropdownHarness({ getMessages, createSession, isDemo = false }) {
       clearDemoSession() {}, readDemoSession: () => null,
       writeDemoSession: (...args) => calls.pointers.push(args),
     },
+    '../lib/singleFlight': load('lib/singleFlight.ts'),
     '../lib/useUserProfile': { useUserProfile: () => ({ profile: { plan: 'pro' } }) },
   }).default;
   const render = () => { index = 0; return Component(); };
@@ -320,7 +322,17 @@ function dropdownHarness({ getMessages, createSession, isDemo = false }) {
     assert.ok(target, `Missing session row: ${id}`);
     return target.props.onClick();
   };
-  return { store, calls, switchTo, click };
+  const rowButton = (id, label) => {
+    const row = nodes(render()).findLast((node) => node.type === 'div'
+      && Array.isArray(node.props?.children)
+      && nodes(node.props.children).some((child) => child.props?.title === id));
+    assert.ok(row, `Missing session row: ${id}`);
+    const target = nodes(row.props.children).find((node) => node.type === 'button'
+      && (node.props['aria-label'] === label || textOf(node).trim() === label));
+    assert.ok(target, `Missing ${label} in row ${id}`);
+    return target.props.onClick({ stopPropagation() {} });
+  };
+  return { store, calls, switchTo, click, rowButton };
 }
 
 const olderTranscript = [
@@ -346,19 +358,18 @@ test('switching conversations publishes the new id only together with its transc
   assert.deepEqual(h.store.getState().messages, olderTranscript);
 });
 
-test('the last conversation clicked wins, with its own transcript', async () => {
+test('a second conversation clicked while the first one loads is ignored', async () => {
   const pending = { older: deferred(), oldest: deferred() };
-  const h = dropdownHarness({ getMessages: (id) => pending[id].promise });
+  const fetched = [];
+  const h = dropdownHarness({ getMessages: (id) => { fetched.push(id); return pending[id].promise; } });
   const first = h.switchTo('older');
-  const second = h.switchTo('oldest');
-  const oldestTranscript = [{ id: 'oldest-u', role: 'user', text: 'Oldest question', createdAt: 1 }];
-  pending.oldest.resolve({ messages: oldestTranscript });
-  await second;
+  await h.switchTo('oldest');
   pending.older.resolve({ messages: olderTranscript });
   await first;
 
-  assert.equal(h.store.getState().sessionId, 'oldest');
-  assert.deepEqual(h.store.getState().messages, oldestTranscript);
+  assert.deepEqual(fetched, ['older']);
+  assert.equal(h.store.getState().sessionId, 'older');
+  assert.deepEqual(h.store.getState().messages, olderTranscript);
 });
 
 test('a send on the conversation still on screen cancels the pending switch', async () => {
@@ -386,25 +397,26 @@ test('switching to an anonymous demo conversation installs its accounting with i
   assert.deepEqual(h.calls.pointers, [['doc-1', 'older']]);
 });
 
-// Codex r1 (MAJOR): every session action supersedes a pending switch, not
-// only a later switch click.
-test('a New Chat started while a switch is loading is not overwritten by that switch', async () => {
+// Codex r1 (MAJOR): a New Chat and a pending switch must never both publish
+// (r1 fixed it with a shared ordinal; r2 replaced that with the latch).
+test('a New Chat clicked while a switch is loading is ignored', async () => {
   const transcript = deferred();
+  const created = [];
   const h = dropdownHarness({
     isDemo: true,
     getMessages: () => transcript.promise,
-    createSession: async () => ({ session_id: 'fresh', created_at: '2026-10-11', demo_messages_used: 2 }),
+    createSession: async () => { created.push('create'); return { session_id: 'fresh', created_at: '2026-10-11', demo_messages_used: 2 }; },
   });
   const switching = h.switchTo('older');
   await settle();
   await h.click('session.newChat');
-  assert.equal(h.store.getState().sessionId, 'fresh');
   transcript.resolve({ messages: olderTranscript, demo_messages_used: 2 });
   await switching;
 
-  assert.equal(h.store.getState().sessionId, 'fresh');
-  assert.deepEqual(h.store.getState().messages, []);
-  assert.deepEqual(h.calls.pointers, [['doc-1', 'fresh']], 'the demo pointer must stay on the new chat');
+  assert.deepEqual(created, []);
+  assert.equal(h.store.getState().sessionId, 'older');
+  assert.deepEqual(h.store.getState().messages, olderTranscript);
+  assert.deepEqual(h.calls.pointers, [['doc-1', 'older']], 'one action, one pointer move');
 });
 
 // Codex r1 (MAJOR): the deleted conversation must not stay live while its
@@ -455,4 +467,99 @@ test('a conversation opened while the start-up transcript loads is kept', async 
     assert.equal(store.getState().sessionId, 'picked', branch);
     assert.deepEqual(store.getState().messages, picked, branch);
   }
+});
+
+// Codex r2: session-menu actions run one at a time (the project's
+// single-flight latch), so no action can resume over another one.
+test('a switch clicked while a New Chat is being created is ignored', async () => {
+  const created = deferred();
+  const fetched = [];
+  const h = dropdownHarness({
+    getMessages: async (id) => { fetched.push(id); return { messages: olderTranscript }; },
+    createSession: () => created.promise,
+  });
+  const watcher = watchLikeChatPanelAutoSubmit(h.store);
+  const creating = h.click('session.newChat');
+  await h.switchTo('older');
+  created.resolve({ session_id: 'fresh', created_at: '2026-10-11' });
+  await creating;
+  await settle();
+
+  assert.deepEqual(fetched, [], 'the switch must not run while New Chat is pending');
+  assert.deepEqual(watcher.seen.map((s) => s.sessionId), ['fresh']);
+  assert.equal(h.store.getState().sessionId, 'fresh');
+});
+
+test('a conversation clicked while it is being deleted is never opened', async () => {
+  const deleted = deferred();
+  const fetched = [];
+  const h = dropdownHarness({
+    getMessages: async (id) => { fetched.push(id); return { messages: olderTranscript }; },
+    deleteSession: () => deleted.promise,
+  });
+  h.rowButton('older', 'session.deleteChat');
+  const deleting = h.rowButton('older', 'common.yes');
+  await settle();
+  await h.switchTo('older');
+  deleted.resolve();
+  await deleting;
+  await settle();
+
+  assert.deepEqual(fetched, []);
+  assert.equal(h.store.getState().sessionId, 'current');
+  assert.deepEqual(h.store.getState().messages, earlier);
+  assert.deepEqual(h.store.getState().sessions.map((s) => s.session_id), ['current', 'oldest']);
+});
+
+test('a failed start-up transcript fetch never replaces a conversation opened from the menu', async () => {
+  const store = createStore();
+  const transcript = deferred();
+  const created = [];
+  runUseChatSession(store, {
+    listSessions: async () => ({ sessions: [row('latest', 2), row('picked', 1)] }),
+    getMessages: () => transcript.promise,
+    createSession: async () => { created.push('create'); return { session_id: 'fresh', created_at: '2026-10-11' }; },
+  });
+  await settle();
+  store.getState().setSessionId('picked');
+  store.getState().setMessages(olderTranscript);
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    transcript.reject(new Error('network'));
+    await settle();
+    await settle();
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.deepEqual(created, []);
+  assert.equal(store.getState().sessionId, 'picked');
+  assert.deepEqual(store.getState().messages, olderTranscript);
+});
+
+test('a stale demo adoption never clears the pointer a New Chat moved meanwhile', async () => {
+  const store = createStore();
+  const transcript = deferred();
+  let pointer = 'stored';
+  const listed = [];
+  runUseChatSession(store, {
+    listSessions: async () => { listed.push('list'); return { sessions: [] }; },
+    getMessages: () => transcript.promise,
+    createSession: async () => { throw new Error('must not create'); },
+  }, {
+    readDemoSession: () => pointer,
+    writeDemoSession: (_doc, id) => { pointer = id; },
+    clearDemoSession: () => { pointer = null; },
+  });
+  await settle();
+  // New Chat from the menu while the adoption GET is in flight.
+  store.getState().setSessionId('fresh');
+  pointer = 'fresh';
+  transcript.reject(new ApiError(404));
+  await settle();
+
+  assert.equal(pointer, 'fresh');
+  assert.equal(store.getState().sessionId, 'fresh');
+  assert.deepEqual(listed, []);
 });

@@ -120,8 +120,10 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
             // Confirmed gone or inaccessible (pruned by nightly cleanup, or
             // an authed caller inheriting an anon-owned key) — clear the
             // pointer and fall through to the normal listSessions/
-            // createSession flow below.
-            clearDemoSession(documentId);
+            // createSession flow below. Only while the pointer still names
+            // this session: a New Chat from the session menu may have moved
+            // it meanwhile.
+            if (readDemoSession(documentId) === storedDemoSession) clearDemoSession(documentId);
           } else {
             // Transient failure (network blip, 5xx) — the pointer is still
             // valid and the session most likely still exists. Falling
@@ -136,6 +138,10 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           }
         }
       }
+
+      // From here on, a session the menu opened or created while the steps
+      // above awaited wins over the one this effect would pick or create.
+      if (useDocTalkStore.getState().sessionId) return;
 
       try {
         const sessionsData = await listSessions(documentId);
@@ -167,9 +173,13 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
       }
 
       if (!sessionReady && !cancelled) {
+        if (useDocTalkStore.getState().sessionId) return;
         try {
           const s = await createSession(documentId);
           if (cancelled) return;
+          // An empty server session left unused is acceptable; replacing the
+          // conversation the user opened from the menu meanwhile is not.
+          if (useDocTalkStore.getState().sessionId) return;
 
           setSessionId(s.session_id);
           if (s.demo_messages_used != null) {

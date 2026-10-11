@@ -14,6 +14,7 @@ import { getBillingErrorMessage, startPlanAwareBillingAction } from '../lib/bill
 import { useDropdownKeyboard } from '../lib/useDropdownKeyboard';
 import { clearDemoSession, readDemoSession, writeDemoSession } from '../lib/demoSessionStorage';
 import { useUserProfile } from '../lib/useUserProfile';
+import { acquireSingleFlight } from '../lib/singleFlight';
 
 export default function SessionDropdown() {
   const documentName = useDocTalkStore((s) => s.documentName);
@@ -38,9 +39,7 @@ export default function SessionDropdown() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
-  // Bumped by every session action (switch, New Chat, delete); a pending
-  // switch publishes only while it is still the latest one.
-  const sessionActionRef = useRef(0);
+  const menuActionLatchRef = useRef(false);
 
   useEffect(() => {
     setSessionErrorCopy(null);
@@ -76,10 +75,27 @@ export default function SessionDropdown() {
 
   const toggle = () => setOpen((v) => !v);
 
-  const onNewChat = async () => {
+  // Session-menu actions (open, New Chat, delete) run one at a time, and
+  // never while an answer is streaming: each one awaits the network before it
+  // publishes a session, so two in flight could resume over each other (a
+  // late switch overwriting a New Chat, or opening a conversation that is
+  // being deleted). Clicks during a pending action are ignored.
+  const runMenuAction = async (action: () => Promise<void>) => {
+    const release = acquireSingleFlight(
+      menuActionLatchRef,
+      () => useDocTalkStore.getState().isStreaming,
+    );
+    if (!release) return;
+    try {
+      await action();
+    } finally {
+      release();
+    }
+  };
+
+  const startNewChat = async () => {
     const live = useDocTalkStore.getState();
     if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming) return;
-    sessionActionRef.current += 1;
     setSessionErrorCopy(null);
     try {
       const s = await createSession(documentId);
@@ -126,8 +142,9 @@ export default function SessionDropdown() {
     }
   };
 
-  const onSwitchSession = async (id: string) => {
-    if (isStreaming) return;
+  const onNewChat = () => runMenuAction(startNewChat);
+
+  const openSession = async (id: string) => {
     setSessionErrorCopy(null);
     // Fetch the transcript BEFORE publishing the new session id, and publish
     // both in one synchronous run (same rule as useChatSession). ChatPanel
@@ -137,14 +154,14 @@ export default function SessionDropdown() {
     // answer is then appended to whatever message is last (2026-10-10).
     // Until the fetch resolves, the previous conversation stays on screen
     // under its own id.
-    const action = ++sessionActionRef.current;
     const msgs = await getMessages(id);
     const live = useDocTalkStore.getState();
-    // A later session action (switch, New Chat, delete), a document change,
-    // or a send on the conversation still on screen supersedes this switch.
-    // Publishing over a running stream would orphan it: its writes stop at
-    // the session-id check and nothing clears isStreaming.
-    if (action !== sessionActionRef.current || live.documentId !== documentId || live.isStreaming) return;
+    // Other menu actions wait for this one, but a document change or a send
+    // on the conversation still on screen can happen meanwhile and
+    // supersedes this switch. Publishing over a running stream would orphan
+    // it: its writes stop at the session-id check and nothing clears
+    // isStreaming.
+    if (live.documentId !== documentId || live.isStreaming) return;
     setSessionId(id);
     setMessages(msgs.messages);
     // Same restore contract as useChatSession's reuse branch: switching to a
@@ -172,9 +189,9 @@ export default function SessionDropdown() {
     setOpen(false);
   };
 
-  const onDeleteSessionById = async (targetId: string) => {
-    if (isStreaming) return;
-    sessionActionRef.current += 1;
+  const onSwitchSession = (id: string) => runMenuAction(() => openSession(id));
+
+  const deleteSessionById = async (targetId: string) => {
     setSessionErrorCopy(null);
     setConfirmDeleteId(null);
     await deleteSession(targetId);
@@ -189,8 +206,9 @@ export default function SessionDropdown() {
     if (documentId && readDemoSession(documentId) === targetId) {
       clearDemoSession(documentId);
     }
-    const remaining = useDocTalkStore.getState().sessions;
-    if (targetId === sessionId) {
+    const live = useDocTalkStore.getState();
+    const remaining = live.sessions;
+    if (live.sessionId === targetId) {
       // The open conversation is gone: take it off screen before its
       // replacement loads, so nothing can be sent into it meanwhile. The
       // reader shows its "initializing chat" placeholder until then; if the
@@ -198,13 +216,15 @@ export default function SessionDropdown() {
       setSessionId(null);
       setMessages([]);
       if (remaining.length > 0) {
-        await onSwitchSession(remaining[0].session_id);
+        await openSession(remaining[0].session_id);
       } else {
-        await onNewChat();
+        await startNewChat();
       }
     }
     setOpen(false);
   };
+
+  const onDeleteSessionById = (targetId: string) => runMenuAction(() => deleteSessionById(targetId));
 
   const onDeleteCurrent = () => {
     if (!sessionId || isStreaming) return;

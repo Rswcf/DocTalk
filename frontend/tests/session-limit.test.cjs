@@ -119,6 +119,7 @@ function harness({ isDemo = false, transcript = [userMessage], createError } = {
     },
     '../lib/useDropdownKeyboard': { useDropdownKeyboard: () => () => {} },
     '../lib/demoSessionStorage': demoStorage,
+    '../lib/singleFlight': load('lib/singleFlight.ts'),
     '../lib/useUserProfile': { useUserProfile: () => ({ profile: { plan: 'free' } }) },
   }).default;
   const render = () => { index = 0; return Component(); };
