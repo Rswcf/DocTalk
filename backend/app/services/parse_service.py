@@ -7,6 +7,7 @@ import re
 import subprocess
 import tempfile
 import unicodedata
+from bisect import bisect_left, bisect_right
 from collections import Counter
 from dataclasses import dataclass
 from statistics import median
@@ -278,6 +279,16 @@ class CleanBlock:
 
 
 @dataclass
+class _PageRows:
+    """One page's on-axis lines sorted by top edge, for same-row lookups."""
+
+    width: float  # unrotated page width: line bboxes are in unrotated space
+    lines: List[CleanBlock]
+    tops: List[float]
+    max_height: float
+
+
+@dataclass
 class ChunkInfo:
     text: str
     chunk_index: int
@@ -317,6 +328,9 @@ class ParseService:
     HEADING_SIZE_RATIO = 1.25  # any short line this much above the median size
     NUMBERED_HEADING_SIZE_RATIO = 1.1  # LaTeX \section: 12pt on a 10pt body
     HEADING_MAX_WORDS = 12
+    # A lone line beside a numbered label, narrower than this share of the page, is a
+    # table cell; the opposite column of a two-column page is wider.
+    COLUMN_MIN_WIDTH_RATIO = 0.3
     # "V", "O(1)", "100K", "<EOS>" and "TTM" are formula and table tokens, not titles.
     CAPS_HEADING_MIN_CAPITALS = 4
 
@@ -844,21 +858,29 @@ class ParseService:
         baseline, so the pair is one heading ("3 Model Architecture") and neither
         half is left in the chunk text.
         """
-        joined = self._attach_section_numbers(blocks, median_size)
-        by_page: dict[int, List[CleanBlock]] = {}
-        for b in joined:
-            by_page.setdefault(b.page, []).append(b)
+        joined = self._attach_section_numbers(blocks, median_size, self._page_rows(blocks, page_widths))
+        rows = self._page_rows(joined, page_widths)
         return [
-            (b, self._is_heading_block(b, median_size, by_page[b.page], page_widths.get(b.page, 0.0)))
-            for b in joined
+            (
+                b,
+                self._is_heading_block(
+                    b,
+                    median_size,
+                    rows.get(b.page),
+                    joined[i - 1] if i else None,
+                    joined[i + 1] if i + 1 < len(joined) else None,
+                ),
+            )
+            for i, b in enumerate(joined)
         ]
 
     def _attach_section_numbers(
-        self, blocks: Sequence[CleanBlock], median_size: float
+        self, blocks: Sequence[CleanBlock], median_size: float, rows: dict[int, _PageRows]
     ) -> List[CleanBlock]:
         """Join "3" + "Model Architecture" (adjacent in reading order, same baseline and
-        size, number on the left within two font sizes) when the result reads as a
-        numbered heading. Every other block passes through unchanged."""
+        size, number on the left within two font sizes) when the result is a numbered
+        heading in its context (see _is_numbered_heading_in_context). Every other
+        block, including a pair that fails, passes through unchanged."""
         out: List[CleanBlock] = []
         i = 0
         while i < len(blocks):
@@ -887,7 +909,15 @@ class ParseService:
                         ),
                         font_size=title.font_size,
                     )
-                    if self._is_numbered_heading(joined, median_size):
+                    # The original page lines: number and title lie inside the joined
+                    # bbox, so the row check only sees the other cells of the row.
+                    if self._is_numbered_heading_in_context(
+                        joined,
+                        median_size,
+                        rows.get(joined.page),
+                        blocks[i - 1] if i else None,
+                        blocks[i + 2] if i + 2 < len(blocks) else None,
+                    ):
                         out.append(joined)
                         i += 2
                         continue
@@ -899,9 +929,11 @@ class ParseService:
         self,
         block: CleanBlock,
         median_size: float,
-        page_blocks: Sequence[CleanBlock] = (),
-        page_width: float = 0.0,
+        rows: Optional[_PageRows] = None,
+        prev: Optional[CleanBlock] = None,
+        nxt: Optional[CleanBlock] = None,
     ) -> bool:
+        """`prev`/`nxt` are the neighbours in reading order; `rows` indexes the page."""
         text = block.text.strip()
         if not text or len(text) > 220:
             return False
@@ -913,9 +945,27 @@ class ParseService:
             return False
         if block.font_size > (median_size * self.HEADING_SIZE_RATIO):
             return True
-        if self._is_numbered_heading(block, median_size) or self._is_caps_heading(text):
-            return not self._in_table_row(block, page_blocks, page_width)
-        return False
+        if self._is_numbered_heading_in_context(block, median_size, rows, prev, nxt):
+            return True
+        return self._is_caps_heading(text) and not self._in_table_row(block, rows)
+
+    def _is_numbered_heading_in_context(
+        self,
+        block: CleanBlock,
+        median_size: float,
+        rows: Optional[_PageRows],
+        prev: Optional[CleanBlock],
+        nxt: Optional[CleanBlock],
+    ) -> bool:
+        """A numbered line that is not part of a same-size paragraph or list and not a
+        label in a table row. The 1.1x size test alone is weak: chart and table text
+        can pull the median below the body size, and body list items then pass it."""
+        return (
+            self._is_numbered_heading(block, median_size)
+            and not self._continues_run(block, prev)
+            and not self._continues_run(block, nxt)
+            and not self._in_table_row(block, rows, narrow_is_cell=True)
+        )
 
     def _is_numbered_heading(self, block: CleanBlock, median_size: float) -> bool:
         text = block.text.strip()
@@ -923,10 +973,14 @@ class ParseService:
         if not m or _DATE_LINE_RE.match(text):
             return False
         title = m.group(1)
+        first = title[0]
+        if not first.isalpha() or first.islower():
+            return False
+        # Cased titles need three letters ("20 US$" is a chart axis label); caseless
+        # scripts write real headings in two ("2 引言").
+        min_letters = 3 if first.isupper() else 2
         return (
-            title[0].isupper()
-            # "20 US$" is a chart axis label.
-            and sum(1 for ch in title if ch.isalpha()) >= 3
+            sum(1 for ch in title if ch.isalpha()) >= min_letters
             and block.font_size >= median_size * self.NUMBERED_HEADING_SIZE_RATIO
             and len(text.split()) <= self.HEADING_MAX_WORDS
             and text[-1:] not in self.SENTENCE_DELIMS
@@ -942,33 +996,77 @@ class ParseService:
         return bool(alpha) and alpha.isupper() and capitals >= self.CAPS_HEADING_MIN_CAPITALS
 
     @staticmethod
+    def _continues_run(block: CleanBlock, other: Optional[CleanBlock]) -> bool:
+        """`other` is the line above or below `block` in one paragraph or list: same
+        page and size, overlapping columns, at most one font size apart."""
+        if other is None or other.page != block.page or abs(other.font_size - block.font_size) > 0.3:
+            return False
+        if other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]:
+            return False
+        gap = max(other.bbox[1] - block.bbox[3], block.bbox[1] - other.bbox[3])
+        return gap <= block.font_size
+
+    @staticmethod
     def _shares_row(a: CleanBlock, b: CleanBlock) -> bool:
         """Vertical overlap of at least half the shorter line."""
         overlap = min(a.bbox[3], b.bbox[3]) - max(a.bbox[1], b.bbox[1])
         shorter = min(a.bbox[3] - a.bbox[1], b.bbox[3] - b.bbox[1])
         return shorter > 0 and overlap >= 0.5 * shorter
 
+    @staticmethod
+    def _page_rows(blocks: Sequence[CleanBlock], page_widths: dict[int, float]) -> dict[int, _PageRows]:
+        by_page: dict[int, List[CleanBlock]] = {}
+        for b in blocks:
+            if not b.off_axis:
+                by_page.setdefault(b.page, []).append(b)
+        rows: dict[int, _PageRows] = {}
+        for page, lines in by_page.items():
+            lines.sort(key=lambda b: b.bbox[1])
+            rows[page] = _PageRows(
+                width=page_widths.get(page, 0.0),
+                lines=lines,
+                tops=[b.bbox[1] for b in lines],
+                max_height=max(b.bbox[3] - b.bbox[1] for b in lines),
+            )
+        return rows
+
+    def _row_neighbours(self, block: CleanBlock, rows: _PageRows, limit: int) -> List[CleanBlock]:
+        """Up to `limit` lines beside `block` on its row (horizontally disjoint, see
+        _shares_row). Only a line whose top is at most one line height above the
+        block can overlap it, so the scan is bounded to that window."""
+        lo = bisect_left(rows.tops, block.bbox[1] - rows.max_height)
+        hi = bisect_right(rows.tops, block.bbox[3])
+        found: List[CleanBlock] = []
+        for other in rows.lines[lo:hi]:
+            if other is block or not (other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]):
+                continue
+            if self._shares_row(block, other):
+                found.append(other)
+                if len(found) == limit:
+                    break
+        return found
+
     def _in_table_row(
-        self, block: CleanBlock, page_blocks: Sequence[CleanBlock], page_width: float
+        self, block: CleanBlock, rows: Optional[_PageRows], narrow_is_cell: bool = False
     ) -> bool:
         """True when the line shares its row with table cells: two other lines beside
         it, or one in the same half of the page. One line in the other half is the
-        opposite column of a two-column page, so a heading there stays a heading."""
-        cells = [
-            o for o in page_blocks
-            if o is not block
-            and not o.off_axis
-            and (o.bbox[0] >= block.bbox[2] or o.bbox[2] <= block.bbox[0])
-            and self._shares_row(block, o)
-        ]
+        opposite column of a two-column page, so a heading there stays a heading;
+        with `narrow_is_cell`, only when that line is at least a column wide (a value
+        cell beside a numbered row label is not)."""
+        if rows is None:
+            return False
+        cells = self._row_neighbours(block, rows, limit=2)
         if len(cells) >= 2:
             return True
-        if len(cells) == 1 and page_width > 0:
-            mid = page_width / 2.0
+        if len(cells) == 1 and rows.width > 0:
             other = cells[0]
-            return (block.bbox[2] <= mid and other.bbox[2] <= mid) or (
+            mid = rows.width / 2.0
+            if (block.bbox[2] <= mid and other.bbox[2] <= mid) or (
                 block.bbox[0] >= mid and other.bbox[0] >= mid
-            )
+            ):
+                return True
+            return narrow_is_cell and (other.bbox[2] - other.bbox[0]) < rows.width * self.COLUMN_MIN_WIDTH_RATIO
         return False
 
     @staticmethod

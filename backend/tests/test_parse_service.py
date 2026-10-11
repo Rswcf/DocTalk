@@ -835,3 +835,78 @@ class TestHeadingDetection:
         )
 
         assert not any(e.element_type == "heading" for e in self.svc.extract_elements([page]))
+
+    def test_numbered_list_items_in_body_text_stay_content(self):
+        # Codex r1: chart cells at 9pt pull the median below the 10pt body, so a
+        # body list item passes 1.1x. A line inside a same-size run is not a heading.
+        cells = [
+            BlockInfo(page=1, text=f"{v}%", bbox=(72 + 60 * (i % 6), 400 + 12 * (i // 6), 100 + 60 * (i % 6),
+                                                   409 + 12 * (i // 6)), font_size=9)
+            for i, v in enumerate(range(40))
+        ]
+        page = self._page(
+            BlockInfo(page=1, text="The survey asked three questions.", bbox=(72, 100, 400, 111), font_size=10),
+            BlockInfo(page=1, text="1 First item of the list", bbox=(72, 113, 250, 124), font_size=10),
+            BlockInfo(page=1, text="2 Second item of the list", bbox=(72, 126, 250, 137), font_size=10),
+            BlockInfo(page=1, text="3 Third item of the list", bbox=(72, 139, 250, 150), font_size=10),
+            *cells,
+        )
+
+        chunks = self.svc.chunk_document([page])
+        text = " ".join(c.text for c in chunks)
+
+        assert not any(e.element_type == "heading" for e in self.svc.extract_elements([page]))
+        assert "1 First item of the list 2 Second item of the list 3 Third item" in text
+
+    def test_numbered_label_in_a_table_row_is_not_joined_into_a_heading(self):
+        # Codex r1: "1 | Revenue Outlook | $100m" at 12pt on a 10pt body. The value
+        # cell sits in the other half, but a narrow lone cell is not a column.
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="1", bbox=(72, 100, 78, 112), font_size=12),
+            BlockInfo(page=1, text="Revenue Outlook", bbox=(90, 100, 200, 112), font_size=12),
+            BlockInfo(page=1, text="$100m", bbox=(420, 100, 460, 112), font_size=12),
+            *(self._body(130 + 14 * i) for i in range(5)),
+        )
+
+        elements = self.svc.extract_elements([page])
+
+        assert not any(e.element_type == "heading" for e in elements)
+        # The two cells stay separate lines with their own highlight boxes.
+        assert [e.text for e in elements if e.text in {"1", "Revenue Outlook"}] == ["1", "Revenue Outlook"]
+
+    def test_numbered_heading_in_a_caseless_script(self):
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="1 はじめに", bbox=(72, 100, 160, 112), font_size=12),
+            self._body(130),
+            BlockInfo(page=1, text="2 引言", bbox=(72, 160, 130, 172), font_size=12),
+            self._body(190),
+        )
+
+        headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert headings == ["1 はじめに", "2 引言"]
+
+    def test_row_lookup_on_a_dense_table_page_is_not_quadratic(self):
+        # Codex r1: 10,000 caps cells on one page took ~21s with a full scan per
+        # candidate. The row index looks only at lines near the candidate's row.
+        cells = [
+            BlockInfo(page=1, text="ABCD", bbox=(72 + 90 * (i % 5), 10 + 0.35 * (i // 5) * 2,
+                                                 120 + 90 * (i % 5), 10.6 + 0.35 * (i // 5) * 2), font_size=0.6)
+            for i in range(10000)
+        ]
+        page = PageInfo(page_number=1, width_pt=612, height_pt=1600, rotation=0, blocks=cells)
+        cleaned = self.svc.clean_text_blocks(page.blocks, page.width_pt, page.height_pt)
+        counted = []
+        real_shares_row = ParseService._shares_row
+
+        def counting_shares_row(a, b):
+            counted.append(1)
+            return real_shares_row(a, b)
+
+        with patch.object(ParseService, "_shares_row", staticmethod(counting_shares_row)):
+            pairs = self.svc._classify_headings(cleaned, 0.6, {1: 612.0})
+
+        assert not any(is_heading for _block, is_heading in pairs)
+        assert len(counted) < 20 * len(cleaned)
