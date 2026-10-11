@@ -337,3 +337,19 @@ Overclaims, one row each. The proposed column shows the replaced sentence or cel
 - `featuresCitations.howStep3Title/Desc` feed the HowTo JSON-LD; `tests/marketing-jsonld.test.cjs:388-397` compares
   it with the visible steps, so parity follows automatically. `faq3Q` stays unchanged (the test pins it).
 - Blog posts edited: set frontmatter `updated` to the ship date you give.
+
+## Phase 2 applied (2026-10-11)
+
+Decisions as given by the coordinator: copy says "in PDF and plain-text (.txt) files" ("PDF and .txt files" in
+short contexts); a non-highlighting citation "jumps to the cited location" (no section promise); D17 drops the
+"difference" claim; landing "highlighted" → "cited"; `DATE_MODIFIED` = 2026-10-11; finance anchor → "clickable
+citations"; blog `updated` = 2026-10-11. The proposals above that say "PDF and text files" or "cited section" were
+applied with that wording.
+
+- Locale keys: the 26 keys from section A plus `featuresDemo.hero.subtitle` / `featuresDemo.metaDescription`
+  ("multi-format support" dropped: the 3 demo documents are PDFs) = 28 keys × 11 locales = 308 values.
+- Translations follow the new English value in full. Where a locale value was shorter than English or said
+  something else (fr on most keys; zh/ja/ko/es/fr/it/ar/hi `landing.faq.a1`; zh `featuresMultiFormat.formatUrlDesc`;
+  pt `useCasesLawyers.steps.verify.description`), the new value is a full translation, so those values grow.
+- Competitor cells: ChatPDF DOCX ✓ (`MultiFormatContent.tsx:106`); ChatPDF click-to-highlight =
+  `comparison.jumpsToSource` (`CitationsContent.tsx:73`). Other competitor cells unchanged (see the hand-off).
