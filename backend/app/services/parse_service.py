@@ -20,8 +20,10 @@ logger = logging.getLogger(__name__)
 # finder can tell which documents predate a fix (R2b). v2 = Unicode-aware quality OCR
 # trigger + OSD-narrowed OCR language set. v3 = off-axis text is never a heading, and
 # off-axis text or an arXiv stamp in the page margin is dropped from chunks (vertical
-# writing mode excepted).
-PARSE_PIPELINE_VERSION = 3
+# writing mode excepted). v4 = an all-caps heading needs four capital letters and must
+# not sit in a table row; a numbered line ("3 Model Architecture", its number set as a
+# separate line or not) at 1.1x the median font size is a heading.
+PARSE_PIPELINE_VERSION = 4
 
 # A line that starts with an arXiv identifier is a submission stamp or a wrapped
 # reference, never a section title; inside the page margin band it is the stamp and is
@@ -30,6 +32,15 @@ PARSE_PIPELINE_VERSION = 3
 _ARXIV_ID_LINE_RE = re.compile(
     r"^arXiv:\s*(?:\d{4}\.\d{4,5}|[A-Za-z][A-Za-z\-]*(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?\b"
 )
+
+# Section numbers: one or two digits per level ("3", "4.2", "4."), so a year ("2025
+# Revenue") or an amount never reads as one. LaTeX sets the number of a \section as a
+# separate line on the title's baseline (_SECTION_NUMBER_RE); other producers keep
+# number and title on one line (_NUMBERED_HEADING_RE, group 1 = the title). A report
+# date ("06 February 2026", "8. Januar 2026") has the same shape and is not a heading.
+_SECTION_NUMBER_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?$")
+_NUMBERED_HEADING_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?\s+(\S.*)$")
+_DATE_LINE_RE = re.compile(r"^\d{1,2}\.?\s+\S+\s+\d{4}$")
 
 # OCR language resolution (Phase 2 C4 + R2b). Scanned / non-Latin PDFs need the matching
 # Tesseract traineddata; eng+chi_sim alone produced garbage for Urdu/Arabic (U13/U40).
@@ -303,6 +314,12 @@ class ParseService:
     MARGIN_BAND_RATIO = 0.10
     OFF_AXIS_TOLERANCE_DEG = 15.0
 
+    HEADING_SIZE_RATIO = 1.25  # any short line this much above the median size
+    NUMBERED_HEADING_SIZE_RATIO = 1.1  # LaTeX \section: 12pt on a 10pt body
+    HEADING_MAX_WORDS = 12
+    # "V", "O(1)", "100K", "<EOS>" and "TTM" are formula and table tokens, not titles.
+    CAPS_HEADING_MIN_CAPITALS = 4
+
     TARGET_MIN_TOKENS = 150
     TARGET_MAX_TOKENS = 300
     OVERLAP_TOKENS = 50
@@ -499,7 +516,7 @@ class ParseService:
         Steps:
         1) Identify repeated header/footer texts across pages
         2) Clean blocks per page (remove header/footer, fix hyphenations)
-        3) Detect headings via font size threshold (size > median × 1.3)
+        3) Detect headings (see _classify_headings / _is_heading_block)
         4) Split into sentence-level units, then assemble chunks sized 300–500 tokens
            with 50-token overlap
         5) Normalize bbox coordinates to [0,1] using page dims (top-left origin)
@@ -511,8 +528,10 @@ class ParseService:
         # 2) Clean and collect blocks, also gather font sizes for median
         all_clean_blocks: List[CleanBlock] = []
         page_dims: dict[int, Tuple[float, float]] = {}
+        page_widths: dict[int, float] = {}
         for p in pages:
             page_dims[p.page_number] = (p.width_pt, p.height_pt)
+            page_widths[p.page_number] = self._band_dims(p.width_pt, p.height_pt, p.rotation)[0]
             cleaned = self.clean_text_blocks(
                 p.blocks,
                 p.width_pt,
@@ -535,8 +554,8 @@ class ParseService:
         # (text, page, bbox, section_title)
         sentences: List[tuple[str, int, Tuple[float, float, float, float], Optional[str]]] = []
 
-        for cb in all_clean_blocks:
-            if self._is_heading_block(cb, median_size):
+        for cb, is_heading in self._classify_headings(all_clean_blocks, median_size, page_widths):
+            if is_heading:
                 # Heading: update current section title; do not include in content
                 title = cb.text.strip()
                 # Avoid overly long titles
@@ -684,8 +703,10 @@ class ParseService:
 
         all_clean_blocks: List[CleanBlock] = []
         page_dims: dict[int, Tuple[float, float]] = {}
+        page_widths: dict[int, float] = {}
         for p in pages:
             page_dims[p.page_number] = (p.width_pt, p.height_pt)
+            page_widths[p.page_number] = self._band_dims(p.width_pt, p.height_pt, p.rotation)[0]
             cleaned = self.clean_text_blocks(
                 p.blocks,
                 p.width_pt,
@@ -707,7 +728,7 @@ class ParseService:
         current_section_title: Optional[str] = None
         current_heading_order: Optional[int] = None
         page_block_orders: dict[int, int] = {}
-        for block in all_clean_blocks:
+        for block, is_heading in self._classify_headings(all_clean_blocks, median_size, page_widths):
             text = block.text.strip().replace("\x00", "")
             if not text:
                 continue
@@ -716,7 +737,6 @@ class ParseService:
             reading_order = block.page * 10000 + page_block_order
             page_width, page_height = page_dims.get(block.page, (1.0, 1.0))
             bbox = self._normalize_bbox(block.page, block.bbox, page_width, page_height)
-            is_heading = self._is_heading_block(block, median_size)
             metadata: dict[str, Any] = {
                 "font_size": round(float(block.font_size or 0.0), 2),
             }
@@ -812,7 +832,76 @@ class ParseService:
         result.extend(order_column_band(trailing_band))
         return result
 
-    def _is_heading_block(self, block: CleanBlock, median_size: float) -> bool:
+    def _classify_headings(
+        self,
+        blocks: Sequence[CleanBlock],
+        median_size: float,
+        page_widths: dict[int, float],
+    ) -> List[Tuple[CleanBlock, bool]]:
+        """Pair each reading-order block with its heading decision.
+
+        A section number set as its own line is first joined to the title on its
+        baseline, so the pair is one heading ("3 Model Architecture") and neither
+        half is left in the chunk text.
+        """
+        joined = self._attach_section_numbers(blocks, median_size)
+        by_page: dict[int, List[CleanBlock]] = {}
+        for b in joined:
+            by_page.setdefault(b.page, []).append(b)
+        return [
+            (b, self._is_heading_block(b, median_size, by_page[b.page], page_widths.get(b.page, 0.0)))
+            for b in joined
+        ]
+
+    def _attach_section_numbers(
+        self, blocks: Sequence[CleanBlock], median_size: float
+    ) -> List[CleanBlock]:
+        """Join "3" + "Model Architecture" (adjacent in reading order, same baseline and
+        size, number on the left within two font sizes) when the result reads as a
+        numbered heading. Every other block passes through unchanged."""
+        out: List[CleanBlock] = []
+        i = 0
+        while i < len(blocks):
+            if i + 1 < len(blocks):
+                pair = sorted(blocks[i:i + 2], key=lambda cb: cb.bbox[0])
+                number, title = pair
+                gap = title.bbox[0] - number.bbox[2]
+                if (
+                    number.page == title.page
+                    and not number.off_axis
+                    and not title.off_axis
+                    and _SECTION_NUMBER_RE.match(number.text)
+                    and not _SECTION_NUMBER_RE.match(title.text)
+                    and abs(number.font_size - title.font_size) <= 0.5
+                    and -1.0 <= gap <= 2.0 * title.font_size
+                    and self._shares_row(number, title)
+                ):
+                    joined = CleanBlock(
+                        page=title.page,
+                        text=f"{number.text} {title.text}",
+                        bbox=(
+                            min(number.bbox[0], title.bbox[0]),
+                            min(number.bbox[1], title.bbox[1]),
+                            max(number.bbox[2], title.bbox[2]),
+                            max(number.bbox[3], title.bbox[3]),
+                        ),
+                        font_size=title.font_size,
+                    )
+                    if self._is_numbered_heading(joined, median_size):
+                        out.append(joined)
+                        i += 2
+                        continue
+            out.append(blocks[i])
+            i += 1
+        return out
+
+    def _is_heading_block(
+        self,
+        block: CleanBlock,
+        median_size: float,
+        page_blocks: Sequence[CleanBlock] = (),
+        page_width: float = 0.0,
+    ) -> bool:
         text = block.text.strip()
         if not text or len(text) > 220:
             return False
@@ -822,13 +911,64 @@ class ParseService:
             return False
         if not any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" for ch in text):
             return False
-        if block.font_size > (median_size * 1.25):
+        if block.font_size > (median_size * self.HEADING_SIZE_RATIO):
             return True
-        words = text.split()
-        if 1 <= len(words) <= 12 and len(text) <= 90 and text[-1:] not in self.SENTENCE_DELIMS:
-            alpha = "".join(ch for ch in text if ch.isalpha())
-            if alpha and alpha.isupper():
-                return True
+        if self._is_numbered_heading(block, median_size) or self._is_caps_heading(text):
+            return not self._in_table_row(block, page_blocks, page_width)
+        return False
+
+    def _is_numbered_heading(self, block: CleanBlock, median_size: float) -> bool:
+        text = block.text.strip()
+        m = _NUMBERED_HEADING_RE.match(text)
+        if not m or _DATE_LINE_RE.match(text):
+            return False
+        title = m.group(1)
+        return (
+            title[0].isupper()
+            # "20 US$" is a chart axis label.
+            and sum(1 for ch in title if ch.isalpha()) >= 3
+            and block.font_size >= median_size * self.NUMBERED_HEADING_SIZE_RATIO
+            and len(text.split()) <= self.HEADING_MAX_WORDS
+            and text[-1:] not in self.SENTENCE_DELIMS
+        )
+
+    def _is_caps_heading(self, text: str) -> bool:
+        if not (1 <= len(text.split()) <= self.HEADING_MAX_WORDS and len(text) <= 90):
+            return False
+        if text[-1:] in self.SENTENCE_DELIMS:
+            return False
+        alpha = "".join(ch for ch in text if ch.isalpha())
+        capitals = sum(1 for ch in alpha if ch.isupper())
+        return bool(alpha) and alpha.isupper() and capitals >= self.CAPS_HEADING_MIN_CAPITALS
+
+    @staticmethod
+    def _shares_row(a: CleanBlock, b: CleanBlock) -> bool:
+        """Vertical overlap of at least half the shorter line."""
+        overlap = min(a.bbox[3], b.bbox[3]) - max(a.bbox[1], b.bbox[1])
+        shorter = min(a.bbox[3] - a.bbox[1], b.bbox[3] - b.bbox[1])
+        return shorter > 0 and overlap >= 0.5 * shorter
+
+    def _in_table_row(
+        self, block: CleanBlock, page_blocks: Sequence[CleanBlock], page_width: float
+    ) -> bool:
+        """True when the line shares its row with table cells: two other lines beside
+        it, or one in the same half of the page. One line in the other half is the
+        opposite column of a two-column page, so a heading there stays a heading."""
+        cells = [
+            o for o in page_blocks
+            if o is not block
+            and not o.off_axis
+            and (o.bbox[0] >= block.bbox[2] or o.bbox[2] <= block.bbox[0])
+            and self._shares_row(block, o)
+        ]
+        if len(cells) >= 2:
+            return True
+        if len(cells) == 1 and page_width > 0:
+            mid = page_width / 2.0
+            other = cells[0]
+            return (block.bbox[2] <= mid and other.bbox[2] <= mid) or (
+                block.bbox[0] >= mid and other.bbox[0] >= mid
+            )
         return False
 
     @staticmethod

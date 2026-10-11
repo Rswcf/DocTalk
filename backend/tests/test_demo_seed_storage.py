@@ -22,6 +22,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.services import demo_seed  # noqa: E402
+from app.services.parse_service import PARSE_PIPELINE_VERSION  # noqa: E402
 
 
 def _seed_pdf_bytes(slug: str) -> bytes:
@@ -264,7 +265,7 @@ class TestRefreshStaleDemoParses:
         assert claim.startswith("UPDATE documents SET status='parsing', parse_requested_locale=NULL, updated_at=now()")
         assert f"documents.id = '{doc.id}'" in claim
         assert "documents.status = 'ready'" in claim
-        assert "documents.parse_version IS NULL OR documents.parse_version < 3" in claim
+        assert f"documents.parse_version IS NULL OR documents.parse_version < {PARSE_PIPELINE_VERSION}" in claim
 
     def test_select_targets_ready_seeded_demo_docs_below_current_version(self, monkeypatch):
         session, ensured, dispatched, _events = self._setup(monkeypatch, [])
@@ -275,7 +276,7 @@ class TestRefreshStaleDemoParses:
         for spec in demo_seed.DEMO_DOCS:
             assert f"'{spec['slug']}'" in select_sql
         assert "documents.status = 'ready'" in select_sql
-        assert "documents.parse_version IS NULL OR documents.parse_version < 3" in select_sql
+        assert f"documents.parse_version IS NULL OR documents.parse_version < {PARSE_PIPELINE_VERSION}" in select_sql
         assert ensured == [] and dispatched == []
 
     def test_lost_claim_is_not_dispatched(self, monkeypatch):
@@ -435,7 +436,6 @@ class TestRefreshStaleDemoParsesPostgres:
 
         from app.models.sync_database import SyncSessionLocal
         from app.models.tables import Document
-        from app.services.parse_service import PARSE_PIPELINE_VERSION
         from app.services.storage_service import storage_service
         from app.workers import parse_worker
 

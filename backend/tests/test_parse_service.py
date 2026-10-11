@@ -639,3 +639,199 @@ class TestMarginStampIsNotContent:
         chunks = self.svc.chunk_document([page])
 
         assert {c.section_title for c in chunks} == {"Introduction"}
+
+
+ALPHABET_SEED_PDF = BACKEND_DIR / "seed_data" / "alphabet-earnings.pdf"
+COURT_SEED_PDF = BACKEND_DIR / "seed_data" / "court-filing.pdf"
+
+
+def _heading_texts(svc: ParseService, pdf_path: Path) -> list[str]:
+    elements = svc.extract_elements(svc.extract_pages(pdf_path.read_bytes()))
+    return [e.text for e in elements if e.element_type == "heading"]
+
+
+class TestHeadingDetection:
+    """Before parse v4 the all-caps rule had no letter minimum and no table check,
+    so formula and table tokens (")V", "O(1)", "<EOS>", "EMEA") became section
+    titles and prefixed citation snippets, while LaTeX section headings (12pt on a
+    10pt body, below the 1.25x size rule) were never detected (2026-10-11)."""
+
+    TABLE_AND_FORMULA_TOKENS = {
+        ")V", "O(1)", "GNMT + RL [38]", "100K", "300K", "WSJ 23 F1", "<EOS>",
+        "BLEU", "EN-DE", "EN-FR", "PPL", "N", "(A)", "(B)", "(C)", "(D)", "(E)",
+    }
+
+    def setup_method(self):
+        self.svc = ParseService()
+
+    def test_seed_pdf_table_and_formula_tokens_are_not_section_titles(self):
+        pages = self.svc.extract_pages(ATTENTION_SEED_PDF.read_bytes())
+
+        titles = {c.section_title for c in self.svc.chunk_document(pages)}
+        headings = {e.text for e in self.svc.extract_elements(pages) if e.element_type == "heading"}
+
+        assert not titles & self.TABLE_AND_FORMULA_TOKENS
+        assert not headings & self.TABLE_AND_FORMULA_TOKENS
+
+    def test_seed_pdf_numbered_section_headings_are_detected(self):
+        pages = self.svc.extract_pages(ATTENTION_SEED_PDF.read_bytes())
+
+        headings = [e for e in self.svc.extract_elements(pages) if e.element_type == "heading"]
+        chunks = self.svc.chunk_document(pages)
+
+        assert [e.text for e in headings] == [
+            "Attention Is All You Need",
+            "1 Introduction",
+            "2 Background",
+            "3 Model Architecture",
+            "4 Why Self-Attention",
+            "5 Training",
+            "6 Results",
+            "7 Conclusion",
+        ]
+        # The section number is a separate line in the PDF; the heading element
+        # covers both ("3" at x=108pt, "Model Architecture" ends at x=226pt).
+        model = next(e for e in headings if e.text == "3 Model Architecture")
+        assert model.page_start == 2
+        assert model.bbox["x"] == 108 / 612
+        assert round(model.bbox["w"] * 612) == 118
+        assert any(c.section_title == "3 Model Architecture" and c.page_start == 3 for c in chunks)
+        # Neither half of a heading is left behind as chunk text.
+        assert not any("Model Architecture Most competitive" in c.text for c in chunks)
+        assert not any(" 3 Most competitive" in c.text for c in chunks)
+
+    def test_alphabet_seed_keeps_statement_titles_and_drops_table_headers(self):
+        headings = _heading_texts(self.svc, ALPHABET_SEED_PDF)
+
+        assert "CONSOLIDATED BALANCE SHEETS" in headings
+        assert "CONSOLIDATED STATEMENTS OF INCOME" in headings
+        assert "CONSOLIDATED STATEMENTS OF CASH FLOWS" in headings
+        assert not {"EMEA", "APAC", "TTM", "Q1 2025", "Q4 2025"} & set(headings)
+
+    def test_court_seed_keeps_its_caps_headings(self):
+        headings = _heading_texts(self.svc, COURT_SEED_PDF)
+
+        for heading in ("REPORT AND RECOMMENDATION", "I. BACKGROUND", "II. DISCUSSION",
+                        "III. CONCLUSION", "NOTICE TO THE PARTIES"):
+            assert heading in headings
+
+    @staticmethod
+    def _page(*blocks: BlockInfo) -> PageInfo:
+        return PageInfo(page_number=1, width_pt=612, height_pt=792, rotation=0, blocks=list(blocks))
+
+    @staticmethod
+    def _body(y: float, text: str = "Body text continues on this line of the page.") -> BlockInfo:
+        return BlockInfo(page=1, text=text, bbox=(72, y, 300, y + 10), font_size=10)
+
+    def test_caps_heading_beside_a_two_column_body_line_stays_a_heading(self):
+        # Two-column paper: the right column's body line shares the heading's row.
+        page = self._page(
+            BlockInfo(page=1, text="RELATED WORK", bbox=(72, 100, 160, 110), font_size=10),
+            BlockInfo(page=1, text="the right column carries on with its paragraph", bbox=(320, 100, 540, 110),
+                      font_size=10),
+            self._body(120),
+            self._body(132),
+        )
+
+        headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert headings == ["RELATED WORK"]
+
+    def test_caps_cells_in_a_table_row_are_content(self):
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="REVENUE", bbox=(72, 100, 140, 110), font_size=10),
+            BlockInfo(page=1, text="EBITDA", bbox=(200, 100, 250, 110), font_size=10),
+            BlockInfo(page=1, text="MARGIN", bbox=(320, 100, 370, 110), font_size=10),
+            self._body(120),
+        )
+
+        chunks = self.svc.chunk_document([page])
+        elements = self.svc.extract_elements([page])
+
+        assert {c.section_title for c in chunks} == {None}
+        assert not any(e.element_type == "heading" for e in elements)
+        assert "REVENUE EBITDA MARGIN" in chunks[0].text
+
+    def test_caps_header_cell_with_one_neighbour_in_the_same_half_is_content(self):
+        # Attention p8: "BLEU" shares its header row only with "Training Cost (FLOPs)".
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="BLEU", bbox=(311, 98, 337, 108), font_size=10),
+            BlockInfo(page=1, text="Training Cost (FLOPs)", bbox=(383, 98, 475, 108), font_size=10),
+            self._body(120),
+        )
+
+        assert not any(e.element_type == "heading" for e in self.svc.extract_elements([page]))
+
+    def test_caps_line_needs_four_capital_letters(self):
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="O(1)", bbox=(72, 80, 100, 90), font_size=10),
+            BlockInfo(page=1, text="<EOS>", bbox=(72, 100, 110, 110), font_size=10),
+            BlockInfo(page=1, text="TTM", bbox=(72, 120, 100, 130), font_size=10),
+            BlockInfo(page=1, text="ABSTRACT", bbox=(72, 140, 140, 150), font_size=10),
+            self._body(160),
+        )
+
+        headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert headings == ["ABSTRACT"]
+
+    def test_section_number_line_joins_the_title_on_its_baseline(self):
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="3", bbox=(108, 100, 114, 112), font_size=12),
+            BlockInfo(page=1, text="Model Architecture", bbox=(126, 100, 226, 112), font_size=12),
+            self._body(120, "Most competitive models have an encoder-decoder structure."),
+            self._body(132),
+        )
+
+        chunks = self.svc.chunk_document([page])
+        heading = [e for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert [e.text for e in heading] == ["3 Model Architecture"]
+        assert heading[0].bbox["x"] == 108 / 612
+        assert round(heading[0].bbox["w"] * 612) == 118
+        assert chunks[0].section_title is None
+        assert chunks[-1].section_title == "3 Model Architecture"
+        assert " 3 " not in " ".join(c.text for c in chunks)
+
+    def test_numbered_heading_on_one_line(self):
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="4.2 Training Data", bbox=(72, 100, 200, 112), font_size=11.5),
+            self._body(120),
+            self._body(132),
+        )
+
+        headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert headings == ["4.2 Training Data"]
+
+    def test_numbered_lines_that_are_not_headings(self):
+        long_line = "4. The possibility for the two parties to negotiate a comprehensive agreement in time"
+        page = self._page(
+            self._body(40),
+            # Body-size list item.
+            BlockInfo(page=1, text="1 First item of the list", bbox=(72, 60, 250, 70), font_size=10),
+            # A year is not a section number.
+            BlockInfo(page=1, text="2025 Revenue Outlook", bbox=(72, 80, 250, 92), font_size=12),
+            # A numbered body line is too long for a heading.
+            BlockInfo(page=1, text=long_line, bbox=(72, 100, 540, 112), font_size=12),
+            # A numbered sentence ends with a full stop.
+            BlockInfo(page=1, text="2 Revenue grew strongly.", bbox=(72, 120, 250, 132), font_size=12),
+            # Report dates (The Flow Show, Alibaba preview) and chart axis labels.
+            BlockInfo(page=1, text="06 February 2026", bbox=(72, 140, 250, 152), font_size=12),
+            BlockInfo(page=1, text="8. Januar 2026", bbox=(72, 160, 250, 172), font_size=12),
+            BlockInfo(page=1, text="20 US$", bbox=(72, 180, 120, 192), font_size=12),
+            self._body(200),
+            self._body(212),
+            self._body(224),
+            self._body(236),
+            self._body(248),
+            self._body(260),
+            self._body(272),
+        )
+
+        assert not any(e.element_type == "heading" for e in self.svc.extract_elements([page]))
