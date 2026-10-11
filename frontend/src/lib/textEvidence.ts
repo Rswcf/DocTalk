@@ -15,7 +15,8 @@ import type { Citation } from '../types';
  *   text (DOCX/MD/XLSX/URL) or is repeated (PPTX).
  * - A page that ends without a sentence delimiter (a table) is glued onto the
  *   first sentence of the next page.
- * Both are split at a page start, and only a unique match confirms the split.
+ * Both are split at a page start. A unique match confirms the split, and a
+ * glued title is dropped only when it matches the page's known title.
  *
  * The rule is the PDF rule: never highlight the wrong passage. Every located
  * piece is unique in the whole document and on a page the chunk may sit on;
@@ -24,7 +25,9 @@ import type { Citation } from '../types';
  */
 
 export type TextEvidenceKind = 'exact' | 'region' | 'page';
-export interface TextEvidencePage { page_number: number; text: string }
+/** `section_title` as GET /text-content serves it (null when the page's
+ * title block was glued into the chunk text instead of read as a heading). */
+export interface TextEvidencePage { page_number: number; text: string; section_title?: string | null }
 /** Offsets index the page's raw text (`TextEvidencePage.text`). */
 export interface TextEvidenceRange { page: number; start: number; end: number; emphasis: boolean }
 export interface TextEvidence {
@@ -43,32 +46,105 @@ const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script
 const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const REGION_MIN_PIECES = 2;
 const REGION_MIN_CHARS = 40;
-// The extractors cut section titles at 200 characters, so a longer head left
-// over by a page-start split is content, not a title.
-const TITLE_MAX = 200;
 // Share of the chunk's canonical text that must be located in its page range.
 // On generated DOCX/PPTX/XLSX/MD/URL fixture corpora (not production
 // citations) every chunk located >= 0.65; the same chunks cited on pages that
 // do not hold them located <= 0.07.
 const MIN_CHUNK_COVERAGE = 0.3;
 
-interface PageIndex { number: number; raw: string; canon: string; offsets: Array<{ start: number; end: number }> }
+interface PageIndex {
+  number: number; raw: string; title: string | null | undefined;
+  canon: string; offsets: Array<{ start: number; end: number }>;
+  /** Canonical texts this page's glued title may have (see pageTitles). */
+  titles: string[];
+}
 /** Canonical offsets within one page. */
 interface Hit { page: number; start: number; end: number }
-/** `all`: every page of the document, for uniqueness. `scope`: the pages the
- * chunk may sit on, for page-start/page-end structure and chunk coverage. */
-interface Search { all: PageIndex[]; scope: PageIndex[]; inScope: Set<number> }
+/** `all`: every page of the document, for uniqueness (`pages` holds them by
+ * number). `scope`: the pages the chunk may sit on, for page-start/page-end
+ * structure and chunk coverage. */
+interface Search { all: PageIndex[]; scope: PageIndex[]; inScope: Set<number>; pages: Map<number, PageIndex> }
 
 // Canonical page text, kept per page object: the reader passes the same page
 // objects on every citation click, and every click searches all pages.
 const pageIndexCache = new WeakMap<TextEvidencePage, PageIndex>();
 function indexPage(page: TextEvidencePage): PageIndex {
   const cached = pageIndexCache.get(page);
-  if (cached && cached.raw === page.text && cached.number === page.page_number) return cached;
+  if (cached && cached.raw === page.text && cached.number === page.page_number && cached.title === page.section_title) return cached;
   const canon = canonicalize(page.text);
-  const index = { number: page.page_number, raw: page.text, canon: canon.text, offsets: canon.offsets };
+  const index = {
+    number: page.page_number, raw: page.text, title: page.section_title,
+    canon: canon.text, offsets: canon.offsets, titles: pageTitles(page),
+  };
   pageIndexCache.set(page, index);
   return index;
+}
+
+/**
+ * The texts a page's title block can have, from trusted sources only. The
+ * parse worker emits each extractor page as an 18pt title block plus a body
+ * block; when the title is not read as a heading it is glued, as its own
+ * sentence, in front of the page's first sentence in the chunk text.
+ * - `section_title`, when the API serves one for the page.
+ * - The page's first line without Markdown heading marks: a PPTX slide title
+ *   stays in the slide text, and a URL page starts with its `# heading` block.
+ * DOCX headings, Markdown headings and XLSX sheet names are not in the page
+ * text, and /text-content serves no title for them when they were glued, so
+ * their glued titles cannot be verified and the split that would drop them is
+ * refused. Unverified text in front of a page start may be real content that
+ * changes what the page sentence means ("The court rejected" + the page's
+ * claim), so it is never dropped as a title.
+ */
+function pageTitles(page: TextEvidencePage): string[] {
+  const titles = new Set<string>();
+  const first = page.text.split('\n').find(line => line.trim());
+  for (const title of [page.section_title, first?.replace(/^\s*#{1,6}\s+/, '')]) {
+    if (!title?.trim()) continue;
+    // The chunker splits the title block into sentences and rejoins them
+    // (no space beside CJK: "1. 系统总览" becomes "1.系统总览"). A title with a
+    // kept sentence break ("2. Results") is two pieces here; only its last
+    // sentences sit in front of the page start.
+    const canon = canonicalize(joinUnits(splitSentences(title))).text;
+    titles.add(canon);
+    for (let i = 0; i < canon.length - 1; i++) {
+      if (!DELIMS.includes(canon[i]) || ('.?!'.includes(canon[i]) && !/\s/.test(canon[i + 1]))) continue;
+      const rest = canon.slice(i + 1).trim();
+      if (rest) titles.add(rest);
+    }
+  }
+  return [...titles];
+}
+
+// parse_service._is_cjk_context and _join_text_units: how chunk sentences are rejoined.
+const CJK_CONTEXT = /[\u4e00-\u9fff\u3040-\u30ff\u3000-\u303f\uff00-\uffef]/;
+function joinUnits(units: string[]): string {
+  let text = '';
+  for (const unit of units) {
+    const part = unit.trim();
+    if (!part) continue;
+    const previous = text.at(-1);
+    const space = previous !== undefined && !' \n([{'.includes(previous) && !' \n,.;:!?)]}。！？；，、'.includes(part[0])
+      && !CJK_CONTEXT.test(previous) && !CJK_CONTEXT.test(part[0]);
+    text += (space ? ' ' : '') + part;
+  }
+  return text;
+}
+
+/** True when `text` (canonical) can stand in front of the start of `opens`
+ * in a chunk without being located itself: the glued title of `opens`
+ * (verified, see pageTitles), the literal end of the page before it (too
+ * short or too common to be located on its own), or that end followed by the
+ * title. Nothing else is dropped. */
+function explainsGap(text: string, opens: PageIndex, search: Search): boolean {
+  if (!text) return true;
+  const previous = search.pages.get(opens.number - 1);
+  const endsPrevious = (end: string) => !end || Boolean(previous && previous.canon.endsWith(end)
+    && boundaryOk(previous.canon, previous.canon.length - end.length, end));
+  if (endsPrevious(text)) return true;
+  return opens.titles.some(title => {
+    const cut = text.length - title.length;
+    return text === title || (cut > 0 && text.endsWith(title) && cutsAt(text, cut) && endsPrevious(text.slice(0, cut).trimEnd()));
+  });
 }
 
 /** Port of parse_service._split_into_sentences: ASCII .?! end a sentence only
@@ -132,13 +208,18 @@ function cutsAt(text: string, index: number): boolean {
   return text[index - 1] === ' ' || UNSPACED.test(charBefore(text, index)) || UNSPACED.test(charAt(text, index));
 }
 
-/** `text` ends with the end of `page`, possibly followed by the next page's
- * glued title (at most TITLE_MAX characters, dropped). Returns the page hit
- * and where the match starts in `text`; the match must be unique. */
-function matchPageEnd(text: string, page: PageIndex, search: Search): { hit: Hit; start: number } | null {
+/** `text` ends with the end of `page`, possibly followed by the glued title
+ * of `next` (the page after it), which is dropped only when verified (see
+ * pageTitles). Returns the page hit and where the match starts in `text`; the
+ * match must be unique. */
+function matchPageEnd(text: string, page: PageIndex, next: PageIndex, search: Search): { hit: Hit; start: number } | null {
   const canon = page.canon.trimEnd();
-  for (let j = text.length; j > 0 && text.length - j <= TITLE_MAX + 1; j--) {
-    if (j < text.length && !cutsAt(text, j)) continue;
+  const cuts = [text.length];
+  for (const title of next.titles) {
+    const cut = text.length - title.length;
+    if (cut > 0 && text.endsWith(title) && cutsAt(text, cut)) cuts.push(cut);
+  }
+  for (const j of cuts) {
     const body = text.slice(0, j).trimEnd();
     let length = 0;
     while (length < body.length && length < canon.length
@@ -163,7 +244,7 @@ function peelPageEnds(text: string, search: Search, last: number, number: number
   const hits: Hit[] = [];
   let rest = text;
   for (let q = last; q >= 0 && pages[q].number === number - (last - q) && rest; q--) {
-    const match = matchPageEnd(rest, pages[q], search);
+    const match = matchPageEnd(rest, pages[q], pages[q + 1], search);
     if (!match) break;
     hits.unshift(match.hit);
     rest = rest.slice(0, match.start).trimEnd();
@@ -174,11 +255,12 @@ function peelPageEnds(text: string, search: Search, last: number, number: number
 /** A piece that is not in the page text as a whole: the tail of it may open a
  * page (title glued on, or the previous page's undelimited end glued on). The
  * tail must start that page and be unique. The head is matched against the
- * ends of the pages before (a glued title may sit between them); what is left
- * is dropped as the title (`dropped` is its length in the piece). A page
- * before the tail's page is in scope only when the chunk runs through its end
- * (chunks are contiguous), so a unique match there is the chunk's own text. */
-function splitAtPageStart(piece: string, search: Search): { hits: Hit[]; dropped: number } | null {
+ * ends of the pages before (a verified glued title may sit between them);
+ * what is left must be a verified title of the page it precedes, else the
+ * split is refused. A page before the tail's page is in scope only when the
+ * chunk runs through its end (chunks are contiguous), so a unique match there
+ * is the chunk's own text. */
+function splitAtPageStart(piece: string, search: Search): Hit[] | null {
   const pages = search.scope;
   const rest = minRemainder(piece);
   for (let p = 0; p < pages.length; p++) {
@@ -189,19 +271,21 @@ function splitAtPageStart(piece: string, search: Search): { hits: Hit[]; dropped
       const tail = piece.slice(k);
       if (!page.canon.startsWith(tail) || !boundaryOk(page.canon, 0, tail)) continue;
       if (findAll(search.all, tail).length !== 1) return null;
-      const head = p > 0 ? peelPageEnds(piece.slice(0, k).trimEnd(), search, p - 1, page.number - 1) : null;
-      return {
-        hits: [...(head?.hits ?? []), { page: page.number, start: 0, end: tail.length }],
-        dropped: head ? head.rest.length : k,
-      };
+      const before = piece.slice(0, k).trimEnd();
+      const head = p > 0 ? peelPageEnds(before, search, p - 1, page.number - 1) : { hits: [], rest: before };
+      // The leftover precedes the earliest located text, which must then open
+      // its page; see explainsGap for what the leftover may be.
+      const first = head.hits[0];
+      const opens = first ? (first.start === 0 ? search.pages.get(first.page) : undefined) : page;
+      if (head.rest && !(opens && explainsGap(head.rest, opens, search))) return null;
+      return [...head.hits, { page: page.number, start: 0, end: tail.length }];
     }
   }
   return null;
 }
 
 /** Unique hits for one sentence: whole, else split at a page start, else (for
- * multi-line sentences such as table rows) line by line. A split head too long
- * to be a title is located line by line as well. */
+ * multi-line sentences such as table rows) line by line. */
 function locatePiece(raw: string, search: Search, byLine = true): Hit[] {
   const canon = canonicalize(raw);
   const piece = canon.text;
@@ -211,13 +295,7 @@ function locatePiece(raw: string, search: Search, byLine = true): Hit[] {
   if (hits.length === 1) return search.inScope.has(hits[0].page) ? hits : [];
   if (hits.length > 1) return [];
   const split = splitAtPageStart(piece, search);
-  if (split) {
-    if (!byLine || split.dropped <= TITLE_MAX) return split.hits;
-    // A PPTX title repeated at the end of the head is the tail's own first line.
-    const head = locateLines(raw.slice(0, canon.offsets[split.dropped].start), search)
-      .filter(hit => !split.hits.some(tail => tail.page === hit.page && hit.start < tail.end && tail.start < hit.end));
-    return [...head, ...split.hits];
-  }
+  if (split) return split;
   return byLine ? locateLines(raw, search) : [];
 }
 
@@ -305,7 +383,7 @@ export function locateTextEvidence(
     .map(indexPage);
   const scope = all.filter(page => page.number >= scopeStart && page.number <= scopeEnd);
   if (!scope.length) return NO_EVIDENCE;
-  const search: Search = { all, scope, inScope: new Set(scope.map(page => page.number)) };
+  const search: Search = { all, scope, inScope: new Set(scope.map(page => page.number)), pages: new Map(all.map(page => [page.number, page])) };
   const byNumber = new Map(scope.map(page => [page.number, page]));
   const marked = (hit: Hit) => hit.page >= markStart && hit.page <= markEnd;
 
@@ -329,7 +407,7 @@ export function locateTextEvidence(
       const direct = findAll(scope, quote, Infinity).filter(hit => inside(hit, region));
       if (direct.length === 1) emphasis = direct;
       else if (!direct.length) {
-        const split = splitAtPageStart(quote, search)?.hits;
+        const split = splitAtPageStart(quote, search);
         if (split && split.every(hit => inside(hit, region))) emphasis = split;
       }
     } else {

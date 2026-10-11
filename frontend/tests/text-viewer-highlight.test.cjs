@@ -189,14 +189,17 @@ test('a custom mark component receives the evidence attributes', () => {
 test('end to end: a DOCX chunk with a glued title highlights its table cells', () => {
   const page = 'The committee reviewed the budget in March.\n\n| Item | Amount |\n| --- | --- |\n| Research | 4.2 million |\n\nThe chair asked for a revised forecast.';
   const chunk = 'Budget Review The committee reviewed the budget in March. | Item | Amount |\n| --- | --- |\n| Research | 4.2 million |\n\nThe chair asked for a revised forecast.';
-  const evidence = locateTextEvidence([{ page_number: 1, text: page }], { page: 1, pageEnd: 1 }, chunk, 'The chair asked for a revised forecast.');
-  assert.equal(evidence.kind, 'exact');
-  const ranges = evidence.ranges.map(r => ({ start: r.start, end: r.end, kind: r.emphasis ? 'exact' : 'region', anchor: r.start === evidence.anchor.start }));
-  const html = render(page, ranges);
-  assert.deepEqual(marks(html).map(m => `${m.kind}:${m.text}`), [
-    'region:The committee reviewed the budget in March.', 'region:Item', 'region:Amount', 'region:Research', 'region:4.2 million',
-    'exact:The chair asked for a revised forecast.',
-  ]);
+  const run = (pages) => {
+    const evidence = locateTextEvidence(pages, { page: 1, pageEnd: 1 }, chunk, 'The chair asked for a revised forecast.');
+    assert.equal(evidence.kind, 'exact');
+    const ranges = evidence.ranges.map(r => ({ start: r.start, end: r.end, kind: r.emphasis ? 'exact' : 'region', anchor: r.start === evidence.anchor.start }));
+    return marks(render(page, ranges)).map(m => `${m.kind}:${m.text}`);
+  };
+  const table = ['region:Item', 'region:Amount', 'region:Research', 'region:4.2 million', 'exact:The chair asked for a revised forecast.'];
+  // The served title verifies the glued head, so the first sentence is marked too.
+  assert.deepEqual(run([{ page_number: 1, text: page, section_title: 'Budget Review' }]), ['region:The committee reviewed the budget in March.', ...table]);
+  // Without it the sentence glued to the title stays unmarked.
+  assert.deepEqual(run([{ page_number: 1, text: page }]), table);
 });
 
 // ---- TextViewer: status line, caption fallback, scroll, rendering cost ----

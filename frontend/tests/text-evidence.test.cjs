@@ -85,8 +85,9 @@ test('sentence split mirrors parse_service (ASCII only before whitespace, CJK al
   assert.deepEqual(splitSentences('Version 3.5 is out. See e.g. the notes! 第一句。第二句'), ['Version 3.5 is out.', 'See e.g.', 'the notes!', '第一句。', '第二句']);
 });
 
-test('a glued title is dropped and the whole page body, tables included, is the region', () => {
-  const pages = [{ page_number: 1, text: DOCX_PAGE }];
+test('a verified glued title is dropped and the whole page body, tables included, is the region', () => {
+  // /text-content serves section_title when the title was read as a heading.
+  const pages = [{ page_number: 1, text: DOCX_PAGE, section_title: 'Budget Review' }];
   const chunk = chunkOf(['Budget Review', ...bodyUnits(DOCX_PAGE)]);
   assert.ok(chunk.startsWith('Budget Review The committee met'), 'title glued onto the first sentence');
   const result = locateTextEvidence(pages, cite(1), chunk, null);
@@ -96,6 +97,52 @@ test('a glued title is dropped and the whole page body, tables included, is the 
   assert.match(text, /\| Research \| 4\.2 million \|/);
   assert.match(text, /revised forecast by June\.$/);
   assert.ok(!text.includes('Budget Review'));
+});
+
+test('an unverified glued title leaves its sentence unmarked; the rest of the page is the region', () => {
+  // A DOCX heading is neither in the page text nor served when it was glued.
+  const pages = [{ page_number: 1, text: DOCX_PAGE }];
+  const result = locateTextEvidence(pages, cite(1), chunkOf(['Budget Review', ...bodyUnits(DOCX_PAGE)]), null);
+  assert.equal(result.kind, 'region');
+  const text = marked(pages, result).map(r => r.text).join('|');
+  assert.match(text, /^Spending on research rose/);
+  assert.match(text, /revised forecast by June\.$/);
+  assert.ok(!text.includes('The committee met'), 'the sentence glued to the title is not marked');
+});
+
+test('Codex r1 #2: content in front of a page start is never dropped as a title', () => {
+  const text = 'Acme Corp reported revenue growth after the merger and announced a new audit plan for Europe.';
+  const pages = [{ page_number: 1, text }];
+  const chunk = `The court rejected ${text}`;
+  const result = locateTextEvidence(pages, cite(1), chunk, null);
+  assert.equal(result.kind, 'page');
+  assert.deepEqual(result.ranges, []);
+  // As the focus alone it is not marked either.
+  assert.equal(locateTextEvidence(pages, cite(1), null, chunk).kind, 'page');
+  // The same shape with the page's served title is the glued-title case.
+  const titled = [{ page_number: 1, text, section_title: 'The court rejected' }];
+  assert.equal(locateTextEvidence(titled, cite(1), chunk, null).kind, 'region');
+});
+
+test('verified titles: a PPTX/URL first line, a CJK title rejoined, a title split at its own sentence break', () => {
+  // URL pages keep their "# heading" block as the first line.
+  const url = '## Market Dynamics\n\nEnterprise buyers increasingly demand team workspaces and SSO.';
+  const urlChunk = chunkOf(['Market Dynamics', ...bodyUnits(url)]);
+  assert.equal(locateTextEvidence([{ page_number: 1, text: url }], cite(1), urlChunk, null).kind, 'region');
+  // "1. 系统总览" is rejoined by the chunker without the space beside CJK.
+  const zh = '本系统由前端、后端和存储三部分组成，各部分独立部署。';
+  const zhChunk = chunkOf(['1.', '系统总览', ...bodyUnits(zh)]);
+  assert.ok(zhChunk.startsWith('1.系统总览本系统'));
+  const zhResult = locateTextEvidence([{ page_number: 1, text: zh, section_title: '1. 系统总览' }], cite(1), zhChunk, zh);
+  assert.equal(zhResult.kind, 'exact');
+  // "2. Results" keeps its space, so only "Results" is glued to the page start.
+  const en = 'The primary outcome improved in every arm of the trial.';
+  const enChunk = chunkOf(['Earlier page ends here.', '2.', 'Results', ...bodyUnits(en)]);
+  assert.ok(enChunk.includes('2. Results The primary'));
+  const pages = [{ page_number: 1, text: 'Earlier page ends here.' }, { page_number: 2, text: en, section_title: '2. Results' }];
+  const enResult = locateTextEvidence(pages, { page: 2, pageEnd: 2, contextText: `[page 1–2] ${enChunk}` }, enChunk, en);
+  assert.equal(enResult.kind, 'exact');
+  assert.equal(marked(pages, enResult).find(r => r.emphasis).text, en);
 });
 
 test('the focus sentence is the exact emphasis inside the region', () => {
@@ -176,36 +223,58 @@ test('PPTX: a repeated title and speaker notes stay inside one slide region', ()
   assert.match(marked(pages, result).at(-1).text, /new contract in Spain\.$/);
 });
 
-test('XLSX: the sheet name glued onto the table is dropped', () => {
+test('XLSX: a verified sheet name glued onto the table is dropped', () => {
   const text = '| Region | Q1 | Q2 |\n| --- | --- | --- |\n| North | 120 | 140 |\n| South | 95 | 101 |';
-  const pages = [{ page_number: 1, text }, { page_number: 2, text: '| Region | Q1 |\n| --- | --- |\n| West | 7 |' }];
+  const pages = [{ page_number: 1, text, section_title: 'Sales 2026' }, { page_number: 2, text: '| Region | Q1 |\n| --- | --- |\n| West | 7 |' }];
   const chunk = chunkOf(['Sales 2026', ...bodyUnits(text)]);
   const result = locateTextEvidence(pages, cite(1), chunk, null);
   assert.equal(result.kind, 'region');
   assert.deepEqual(marked(pages, result).map(r => r.text), [text]);
 });
 
+test('XLSX: an unverified sheet name leaves the header row unmarked; the other rows are the region', () => {
+  // Sheet names are not in the page text, and /text-content serves none for them.
+  const text = '| Region | Q1 | Q2 |\n| --- | --- | --- |\n| North | 120 | 140 |\n| South | 95 | 101 |';
+  const pages = [{ page_number: 1, text }, { page_number: 2, text: '| Region | Q1 |\n| --- | --- |\n| West | 7 |' }];
+  const result = locateTextEvidence(pages, cite(1), chunkOf(['Sales 2026', ...bodyUnits(text)]), null);
+  assert.equal(result.kind, 'region');
+  assert.deepEqual(marked(pages, result).map(r => r.text), [text.slice(text.indexOf('| --- |'))]);
+});
+
 test('XLSX: a chunk across two sheets marks both tables, never the sheet names', () => {
   const s1 = '| Item | Q1 | Q2 |\n| --- | --- | --- |\n| Travel | 1200 | 950 |\n| Software | 4300 | 4300 |';
   const s2 = '| Team | People |\n| --- | --- |\n| Research | 12 |\n| Support | 7 |';
-  const pages = [{ page_number: 1, text: s1 }, { page_number: 2, text: s2 }];
   // parse_service output for this workbook (backend/tests/test_extractors_office.py).
   const chunk = chunkOf(['Budget', ...bodyUnits(s1), 'Headcount', ...bodyUnits(s2)]);
   assert.ok(chunk.includes('| 4300 | 4300 | Headcount | Team |'), 'sheet name glued between the tables');
-  const result = locateTextEvidence(pages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
-  assert.equal(result.kind, 'region');
-  assert.deepEqual(marked(pages, result).map(r => `${r.page}:${r.text}`), [`1:${s1}`, `2:${s2}`]);
+  const citation = { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` };
+  const titled = [{ page_number: 1, text: s1, section_title: 'Budget' }, { page_number: 2, text: s2, section_title: 'Headcount' }];
+  const verified = locateTextEvidence(titled, citation, chunk, null);
+  assert.equal(verified.kind, 'region');
+  assert.deepEqual(marked(titled, verified).map(r => `${r.page}:${r.text}`), [`1:${s1}`, `2:${s2}`]);
+  // Without served titles only rows that are whole lines of the chunk are marked.
+  const pages = [{ page_number: 1, text: s1 }, { page_number: 2, text: s2 }];
+  const unverified = locateTextEvidence(pages, citation, chunk, null);
+  assert.deepEqual(marked(pages, unverified).map(r => `${r.page}:${r.text}`), [
+    '1:| --- | --- | --- |\n| Travel | 1200 | 950 |', '2:| Research | 12 |\n| Support | 7 |',
+  ]);
 });
 
-test('a page end glued to the next title is located when the chunk runs through it', () => {
+test('a page end glued to the next verified title is located when the chunk runs through it', () => {
   const p1 = 'Opening sentence of the slide body.\nRevenue by region\nNorth up four points';
   const p2 = 'Costs fell for the third quarter running.';
-  const pages = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2 }];
+  const pages = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2, section_title: 'Operating Costs' }];
   const chunk = chunkOf([...bodyUnits(p1), 'Operating Costs', ...bodyUnits(p2)]);
   assert.ok(chunk.includes('North up four points Operating Costs Costs fell'));
-  const result = locateTextEvidence(pages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
+  const citation = { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` };
+  const result = locateTextEvidence(pages, citation, chunk, null);
   assert.deepEqual(marked(pages, result).map(r => `${r.page}:${r.text}`), [`1:${p1}`, `2:${p2}`]);
   assert.ok(!marked(pages, result).some(r => r.text.includes('Operating Costs')));
+  // An unverified title between the two pages refuses the split: the glued
+  // piece is located line by line, and page 2's start is not marked.
+  const untitled = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2 }];
+  const unverified = locateTextEvidence(untitled, citation, chunk, null);
+  assert.deepEqual(marked(untitled, unverified).map(r => `${r.page}:${r.text}`), ['1:Opening sentence of the slide body.\nRevenue by region']);
 });
 
 test('a glued title that matches the end of a page outside the chunk is not marked', () => {
@@ -229,7 +298,7 @@ test('a page end that repeats elsewhere in the chunk range is not marked', () =>
   assert.ok(!result.ranges.some(r => r.page !== 3), 'the ambiguous table row stays unmarked');
 });
 
-test('a split head longer than any title is located line by line', () => {
+test('a head that is neither a page end nor a verified title refuses the split; lines are located one by one', () => {
   const lines = [
     'Pricing implementation status for every plan tier',
     'Credit rescaling deployed across all existing ledgers',
@@ -244,8 +313,9 @@ test('a split head longer than any title is located line by line', () => {
   const chunk = chunkOf([lines.join('\n'), 'Current pricing structure', ...bodyUnits(p2)]);
   const result = locateTextEvidence(pages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${chunk}` }, chunk, null);
   const text = marked(pages, result).map(r => `${r.page}:${r.text}`);
-  // The last line carries the glued title, so it cannot be told apart from it.
-  assert.deepEqual(text, [`1:${lines.slice(0, 4).join('\n')}`, `2:${p2}`]);
+  // The last line carries the glued title and is not page 1's end, so the
+  // text in front of page 2's start is unverified: its first line is not marked.
+  assert.deepEqual(text, [`1:${lines.slice(0, 4).join('\n')}`, `2:${p2.slice(p2.indexOf('| Tier'))}`]);
 });
 
 test('a chunk spanning two pages marks both; a narrowed citation marks only its page', () => {
