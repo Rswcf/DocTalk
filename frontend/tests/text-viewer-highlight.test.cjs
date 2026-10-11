@@ -121,6 +121,27 @@ test('escapes, entities and indented continuation lines map onto rendered text',
   assert.deepEqual(marks(partial).map(m => m.text), ['fees *apply*']);
 });
 
+const LONG_REF = '&CounterClockwiseContourIntegral;'; // 33 source characters, renders as one
+
+test('Codex r1 #3: a long character reference never widens a mark to its whole text node', () => {
+  const source = `Before ${LONG_REF} after.`;
+  const entity = render(source, [span(source, LONG_REF, 'exact', true)]);
+  assert.deepEqual(marks(entity), [{ kind: 'exact', anchor: true, text: '∳' }]);
+  assert.deepEqual(marks(render(source, [span(source, 'after.', 'exact')])).map(m => m.text), ['after.']);
+  assert.deepEqual(marks(render(source, [{ start: 0, end: source.length, kind: 'region' }])).map(m => m.text), ['Before ∳ after.']);
+});
+
+test('an unalignable range that is ambiguous, or cut inside a reference, renders no mark', () => {
+  const repeated = `aaa bbb ${LONG_REF} aaa bbb`;
+  const second = repeated.lastIndexOf('aaa bbb');
+  assert.deepEqual(marks(render(repeated, [{ start: second, end: second + 7, kind: 'exact', anchor: true }])), []);
+  // "ContourIntegral;" first occurs inside the reference; its rendered twin
+  // later in the node is a different passage.
+  const cut = `Sign ${LONG_REF} then ContourIntegral; again.`;
+  assert.deepEqual(marks(render(cut, [span(cut, 'ContourIntegral;', 'exact')])), []);
+  assert.deepEqual(marks(render(cut, [span(cut, 'then ContourIntegral;', 'exact')])).map(m => m.text), ['then ContourIntegral;']);
+});
+
 test('inline code keeps its backticks out of the mark; fenced code maps after its fence line', () => {
   const source = 'Run `npm test` before you push.\n\n```\nnpm run build\n```';
   const html = render(source, [{ start: 0, end: source.length, kind: 'region' }]);

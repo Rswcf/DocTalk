@@ -1,4 +1,5 @@
 import { SKIP, visit } from 'unist-util-visit';
+import { decodeString } from 'micromark-util-decode-string';
 import type { Element, ElementContent, Parents, Root, Text } from 'hast';
 import { canonicalize } from './pdfEvidence';
 
@@ -11,12 +12,14 @@ import { canonicalize } from './pdfEvidence';
  *
  * A node whose value is not its source slice (escapes, entities, stripped
  * indentation, inline-code backticks) is aligned character by character;
- * failing that, the range text is searched in the value; failing that, the
- * whole node is marked as a region. Syntax characters are never marked.
- * Code-block text has no position of its own: it maps through its `code`
- * element after the opening fence line, and is left unmarked (never marked
- * whole) when it cannot be aligned. When the anchor range itself renders no
- * mark, the first mark of the tree carries the anchor.
+ * failing that, the range text, decoded the way micromark decoded the node
+ * (backslash escapes and character references; code text is not decoded), is
+ * searched in the value and must occur there once; failing that, the range
+ * renders no mark in that node. A node is never marked wider than its range:
+ * a mark is a claim that its text is the cited passage. Syntax characters are
+ * never marked. Code-block text has no position of its own: it maps through
+ * its `code` element after the opening fence line. When the anchor range
+ * itself renders no mark, the first mark of the tree carries the anchor.
  */
 
 export type MarkKind = 'exact' | 'region';
@@ -50,6 +53,19 @@ function searchCanonical(value: string, needle: string): [number, number] | null
   const index = haystack.text.indexOf(query);
   if (index < 0 || haystack.text.indexOf(query, index + 1) >= 0) return null;
   return [haystack.offsets[index].start, haystack.offsets[index + query.length - 1].end];
+}
+
+/** Character references and backslash escapes, as micromark decodes them. */
+const REFERENCE = /&(?:#[xX][0-9a-fA-F]{1,6}|#[0-9]{1,7}|[a-zA-Z][a-zA-Z0-9]{0,31});|\\[!-/:-@[-`{-~]/g;
+
+/** True when `at` falls strictly inside a reference or escape of `slice`:
+ *  a range cut there has no rendered counterpart. */
+function cutsReference(slice: string, at: number): boolean {
+  for (const match of slice.matchAll(REFERENCE)) {
+    if (match.index >= at) return false;
+    if (at < match.index + match[0].length) return true;
+  }
+  return false;
 }
 
 interface Span { start: number; end: number; code: boolean }
@@ -89,12 +105,12 @@ function piecesFor(value: string, span: Span, ranges: readonly MarkRange[], sour
       to = map.findLastIndex(index => index < end) + 1;
       if (from < 0 || to <= from) continue;
     } else {
-      const found = searchCanonical(value, slice.slice(start, end));
-      if (!found) {
-        // A code block can be long; marking all of it would overstate the passage.
-        if (span.code) continue;
-        return [{ from: 0, to: value.length, kind: 'region', anchor: ranges.some(r => r.anchor) }];
-      }
+      // A long reference (&CounterClockwiseContourIntegral; renders as one
+      // character) defeats the alignment; search the rendered form instead.
+      if (!span.code && (cutsReference(slice, start) || cutsReference(slice, end))) continue;
+      const source = slice.slice(start, end);
+      const found = searchCanonical(value, span.code ? source : decodeString(source));
+      if (!found) continue;
       [from, to] = found;
     }
     const last = pieces.at(-1);
