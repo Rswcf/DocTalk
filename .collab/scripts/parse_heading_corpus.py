@@ -13,6 +13,7 @@ writes a per-document comparison:
   - the headings added / removed, for manual review, each removed heading with
     the reason the new parser gives (needs its v5 helpers):
       run        in a run of 4+ same-size lines (a paragraph)
+      run-short  the same, but the whole run is display-short (<= 160 characters)
       run-large  the same, but at 1.5x its page's body size or more
       body       not over 1.25x its own page's body size (the expected reason)
       body-short the same, but that body size comes only from runs of 2-3 lines
@@ -20,8 +21,8 @@ writes a per-document comparison:
                  because it has too little running text of its own
       floor      not over 1.25x the document's median line (the v1-v4 reference)
       guard      cleared every size test but failed a shape guard (digits, address)
-    run-large, body-short, inherited and guard removals are where a real title can
-    be lost: read them.
+    run-short, run-large, body-short, inherited and guard removals are where a real
+    title can be lost: read them.
 
 Paragraph characters must rise or hold, except where a real heading is newly
 detected. A drop in paragraph characters means body text became a heading. A rise
@@ -71,8 +72,8 @@ def source_at_ref(ref: str) -> Path:
     return tmp
 
 
-REASONS = ("run", "run-large", "body", "body-short", "inherited", "floor", "guard")
-TO_READ = ("run-large", "body-short", "inherited", "guard")
+REASONS = ("run", "run-short", "run-large", "body", "body-short", "inherited", "floor", "guard")
+TO_READ = ("run-short", "run-large", "body-short", "inherited", "guard")
 
 
 def removal_reasons(module, pages, removed: list) -> dict:
@@ -104,7 +105,9 @@ def removal_reasons(module, pages, removed: list) -> dict:
         if line is None:
             continue
         size = svc._rule_size(line)
-        if line.run_len > svc.HEADING_MAX_WRAP_LINES and size > references[page] * factor:
+        if line.run_len > svc.HEADING_MAX_WRAP_LINES and line.run_chars <= svc.HEADING_DISPLAY_MAX_CHARS:
+            reasons[(page, text)] = "run-short"
+        elif line.run_len > svc.HEADING_MAX_WRAP_LINES and size > references[page] * factor:
             reasons[(page, text)] = "run-large" if size >= 1.5 * references[page] else "run"
         elif line.run_len > svc.HEADING_MAX_WRAP_LINES:
             reasons[(page, text)] = "run"

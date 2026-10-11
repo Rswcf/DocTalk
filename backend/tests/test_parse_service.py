@@ -1239,11 +1239,13 @@ class TestHeadingSizeUsesPageBodySize:
     # ---- review r3 (2026-10-11, .collab/reviews/2026-10-11-parse-heading-body-size-review-r3.md) ----
 
     def test_second_look_skips_a_title_over_the_pages_text(self):
-        # R3-1: a note whose cover standfirst is 14pt makes 14pt a body size; on the
-        # exhibit pages the 2-line 14pt exhibit title is still a title over a 9pt comment.
+        # R3-1: a note whose cover standfirst and key-points page are 14pt makes 14pt a
+        # body size; on the exhibit pages the 2-line 14pt exhibit title is still a title
+        # over a 9pt comment.
         cover = [BlockInfo(page=1, text="AI rate of change", bbox=(40, 40, 500, 70), font_size=26)]
         cover += _body_lines(1, 40, 100, 4, size=14, width=520, text="Standfirst set in fourteen point type across the cover")
-        pages = [_page(1, cover)] + [_page(pn, _body_lines(pn, 40, 60, 40, size=9, width=520)) for pn in (2, 3, 4)]
+        pages = [_page(1, cover), _page(2, _body_lines(2, 40, 60, 6, size=14, width=520, text="Key point in fourteen point type"))]
+        pages += [_page(pn, _body_lines(pn, 40, 60, 40, size=9, width=520)) for pn in (3, 4)]
         for pn in range(5, 11):
             blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: Enterprise AI adoption rose in every region we survey,",
                                 bbox=(40, 40, 560, 57), font_size=14),
@@ -1262,20 +1264,21 @@ class TestHeadingSizeUsesPageBodySize:
         # the document body size that chart pages inherit.
         pages = [_page(pn, [BlockInfo(page=pn, text=f"Section {pn}", bbox=(40, 40, 400, 60), font_size=16)]
                        + _body_lines(pn, 40, 80, 40, width=500)) for pn in (1, 2, 3, 4)]
-        pages.append(_page(5, _body_lines(5, 40, 80, 5, size=12, width=520, text="A twelve point standfirst page of the report")))
-        for pn in range(6, 12):
+        pages += [_page(pn, _body_lines(pn, 40, 80, 5, size=12, width=520, text="A twelve point summary page of the report"))
+                  for pn in (5, 6)]
+        for pn in range(7, 13):
             blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: memory prices", bbox=(40, 40, 400, 60), font_size=16)]
             blocks += _cells(pn, 100, 25)
             blocks += _body_lines(pn, 40, 420, 3, size=12, width=520,
                                   text=f"Twelve point comment on exhibit {pn}, long enough to give the page a body size")
             pages.append(_page(pn, blocks))
-        for pn in (12, 13):
+        for pn in (13, 14):
             pages.append(_page(pn, [BlockInfo(page=pn, text=f"Chart title {pn}", bbox=(40, 40, 400, 57), font_size=14)]
                                + _cells(pn, 100, 25)))
 
         headings = self._headings(pages)
 
-        assert (12, "Chart title 12") in headings and (13, "Chart title 13") in headings
+        assert (13, "Chart title 13") in headings and (14, "Chart title 14") in headings
 
     def test_second_look_is_only_for_pages_without_a_body_size(self):
         # A page with its own 10pt body keeps it; its lone 3-line 12pt standfirst (12pt
@@ -1284,7 +1287,7 @@ class TestHeadingSizeUsesPageBodySize:
         page1 += _body_lines(1, 40, 80, 3, size=12, width=520, text="Standfirst in twelve point type that runs across the page")
         page1 += _body_lines(1, 40, 160, 6, width=520)
         page1 += _cells(1, 300, 12)
-        pages = [_page(1, page1), _page(2, _body_lines(2, 40, 80, 8, size=12, width=520) + _cells(2, 300, 12))]
+        pages = [_page(1, page1)] + [_page(pn, _body_lines(pn, 40, 80, 8, size=12, width=520) + _cells(pn, 300, 12)) for pn in (2, 3)]
 
         assert (1, "Fourteen point heading") in self._headings(pages)
 
@@ -1322,3 +1325,64 @@ class TestHeadingSizeUsesPageBodySize:
         chunk_text = " ".join(c.text for c in self.svc.chunk_document(pages))
 
         assert "as hyperscalers 5" in chunk_text and "pre-bought capacity." in chunk_text
+
+    # ---- review r4 (2026-10-11, .collab/reviews/2026-10-11-parse-heading-body-size-review-r4.md) ----
+
+    def test_four_line_slide_title_is_not_the_page_body(self):
+        # R4-1: a 4-line 28pt title (152 characters) over four stacked one-line points
+        # and three 9pt notes; alone, the title run is display text, not body.
+        pages = []
+        for pn in range(1, 6):
+            title = [BlockInfo(page=pn, text=f"Title line {k} of slide {pn} in large type", bbox=(60, 40 + k * 32, 900, 70 + k * 32),
+                               font_size=28) for k in range(4)]
+            points = [BlockInfo(page=pn, text=f"• Point {b} states one result in a single line", bbox=(60, 200 + b * 22, 900, 219 + b * 22),
+                                font_size=18) for b in range(4)]
+            notes = [BlockInfo(page=pn, text=f"Note {k} on slide {pn}: source data", bbox=(60, 400 + k * 12, 300, 410 + k * 12),
+                               font_size=9) for k in range(3)]
+            pages.append(_page(pn, title + points + notes, width=960, height=540))
+
+        headings = self._headings(pages)
+
+        assert all((pn, f"Title line {k} of slide {pn} in large type") in headings for pn in range(1, 6) for k in range(4))
+
+    def test_one_page_standfirst_size_is_not_a_body_size_for_the_second_look(self):
+        # R4-3: a 14pt cover standfirst; exhibit pages whose only run is a 3-line 14pt
+        # exhibit title of over 200 characters. One page's body size does not make it
+        # body text on every page.
+        cover = [BlockInfo(page=1, text="AI rate of change", bbox=(40, 40, 500, 70), font_size=26)]
+        cover += _body_lines(1, 40, 100, 4, size=14, width=520, text="Standfirst set in fourteen point type across the cover")
+        pages = [_page(1, cover)] + [_page(pn, _body_lines(pn, 40, 60, 40, size=9, width=520)) for pn in (2, 3, 4)]
+        title = ["Exhibit {pn}: Enterprise AI adoption rose in every region we survey, led by",
+                 "financials and software, while industrials and the public sector still lag",
+                 "behind, and the gap between leaders and laggards widened again this year"]
+        for pn in range(5, 11):
+            blocks = [BlockInfo(page=pn, text=line.format(pn=pn), bbox=(40, 40 + k * 19, 570, 57 + k * 19), font_size=14)
+                      for k, line in enumerate(title)]
+            blocks += _cells(pn, 120, 25)
+            blocks.append(BlockInfo(page=pn, text="One-line comment on the exhibit.", bbox=(40, 420, 300, 430), font_size=9))
+            pages.append(_page(pn, blocks))
+
+        headings = self._headings(pages)
+
+        assert all((pn, title[0].format(pn=pn)) in headings for pn in range(5, 11))
+
+    def test_display_cap_counts_cjk_twice(self):
+        # R4-4: a 4-line 11pt CJK paragraph of about 150 characters over a 7pt
+        # disclaimer is a paragraph, not display text.
+        pages = [_page(pn, _body_lines(pn, 40, 60, 30, size=10.5, width=520, text="原油价格在供给冲击下大幅上涨全球经济增速放缓")) for pn in (1, 2, 3)]
+        pages += [_page(pn, _cells(pn, 80, 30)) for pn in (5, 6, 7, 8)]  # chart pages: the median line is 6.5pt
+        last = [BlockInfo(page=4, text=f"本报告所载的资料意见及推测仅反映本公司于发布本报告当日的判断在不同时期{k}",
+                          bbox=(40, 60 + k * 14, 560, 72 + k * 14), font_size=11) for k in range(4)]
+        last += _body_lines(4, 40, 140, 60, size=7, width=520, text="免责声明正文以七号字排印于报告的最后一页")
+        pages.append(_page(4, last))
+
+        assert not any(pn == 4 for pn, _t in self._headings(pages))
+
+    def test_display_cap_counts_the_whole_run(self):
+        # R4-5: four 50-character lines at 1.6x the body are a 200-character paragraph,
+        # however short each line is.
+        blocks = [BlockInfo(page=1, text=f"Sixteen point paragraph line {k} of fifty chars.", bbox=(40, 60 + k * 19, 560, 77 + k * 19),
+                            font_size=16) for k in range(4)]
+        blocks += _body_lines(1, 40, 160, 30, width=520)
+
+        assert self._headings([_page(1, blocks)]) == set()

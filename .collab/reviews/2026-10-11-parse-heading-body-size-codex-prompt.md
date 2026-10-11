@@ -10,16 +10,20 @@ cat .collab/reviews/2026-10-11-parse-heading-body-size-codex-prompt.md | \
 ---
 
 You are an adversarial reviewer for the DocTalk repo. Do not modify any source file. Write your review to
-`.collab/reviews/2026-10-11-parse-heading-body-size-codex-r1.md` (later rounds: r2, r3 …). Be concrete: every finding
+`.collab/reviews/2026-10-11-parse-heading-body-size-codex-r1.md` (later Codex rounds: codex-r2, codex-r3 …). Be concrete: every finding
 needs a file:line, a realistic input that triggers it, and the wrong output it produces. Severity: BLOCKER (wrong
 data shipped to users or a crash/timeout in the parse worker), MAJOR (a realistic document class regresses), MINOR
 (edge case or maintainability). End with a verdict: SHIP, SHIP-WITH-FIXES, or BLOCK.
 
 ## What changed
 
-Branch `claude/sharp-feynman-4vqkq2`, commit `780c2131` on top of `main` (`d46fc222`). Read:
+Branch `claude/sharp-feynman-4vqkq2` (its head) on top of `main` (`d46fc222`): the first implementation `780c2131` plus
+four rounds of fixes from fresh-context Claude reviews standing in for Codex
+(`.collab/reviews/2026-10-11-parse-heading-body-size-review-r{1,2,3,4}.md` and their `-response.md` files). Read those
+first so you do not re-report closed findings; attack the current head. Read:
 
-- `.collab/plans/2026-10-11-parse-heading-body-size.md` — the design (Fable) and §11 implementation notes.
+- `.collab/plans/2026-10-11-parse-heading-body-size.md` — the design (Fable), §11–§14 changes per round, **§15 the
+  final spec**.
 - `backend/app/services/parse_service.py` — `BlockInfo.dominant_size`, `CleanBlock.rule_size/run_len/is_heading`,
   `_prepare_blocks`, `_same_size`, `_rule_size`, `_annotate_runs`, `_cluster_sizes`, `_running_text_chars`,
   `_page_reference`, `_weighted_median`, `_reference_sizes`, `_is_heading_by_size`, `_is_heading_block`,
@@ -68,6 +72,6 @@ notes in the owner's corpus.
    mutation list)? Missing cases?
 
 You may run `cd backend && <python3.12 venv with requirements-dev.txt> -m pytest tests/test_parse_service.py -q` (the
-shell's `python3` is 3.14 without pytest) and build synthetic `PageInfo` pages or
+shell's `python3` is 3.14 without pytest), `.collab/scripts/parse_heading_mutations.py`, and build synthetic `PageInfo` pages or
 PDFs with PyMuPDF (`fitz`) to prove a finding. `.collab/scripts/parse_heading_synth.py` generates the synthetic corpus;
 `.collab/scripts/parse_heading_corpus.py --old-ref main` compares old and new on any folder of PDFs.

@@ -41,7 +41,7 @@ M = {
     "no floor gate": ("            block.font_size <= font_floor * self.HEADING_SIZE_FACTOR\n            and rule_size", "            False\n            and rule_size"),
     "same-row check removed": ("                    if lo < jlo + 0.5 * jh:", "                    if False:"),
     "off-axis join runs": ("on_axis = [i for i, b in enumerate(blocks) if not b.off_axis]", "on_axis = list(range(len(blocks)))"),
-    "single short run counts": ("            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not (", "            if False and not ("),
+    "single short run counts": ('            if short and not (', '            if False and not ('),
     "extent 0": ("REF_MIN_LINE_EXTENT = 0.20", "REF_MIN_LINE_EXTENT = 0.0"),
     "page share 0.0": ("REF_SUBSTANTIAL_SHARE = 0.30", "REF_SUBSTANTIAL_SHARE = 0.0"),
     "page share 0.99": ("REF_SUBSTANTIAL_SHARE = 0.30", "REF_SUBSTANTIAL_SHARE = 0.99"),
@@ -64,16 +64,34 @@ M = {
     "B: display base = page body": ("        base = max(reference_size, font_floor, rule_floor)", "        base = reference_size"),
     # review r3
     "F1: second look admits titles": ("                    and size <= self.HEADING_SIZE_FACTOR * smallest\n", ""),
-    "F2: second look may lower": ("if second is not None and second >= doc_ref else", "if second is not None else"),
+    "F2: second look may lower": ('if second is not None and (second >= doc_ref or self._same_size(second, doc_ref)):', 'if second is not None:'),
     "second look on every page": ("            if ref is None and body_sizes:", "            if body_sizes:"),
     "C: rule floor only": ("and rule_size <= max(rule_floor, font_floor) * self.HEADING_SIZE_FACTOR", "and rule_size <= rule_floor * self.HEADING_SIZE_FACTOR"),
     "E: no second look": ("                    any(self._same_size(size, s) for s in body_sizes)\n", "                    False\n"),
-    "lone 3-line run counts": ("            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not (", "            if lines[0].run_len < 3 and not ("),
+    "lone 3-line run counts": ('lines[0].run_len <= self.HEADING_MAX_WRAP_LINES or lines[0].run_chars', 'lines[0].run_len < 3 or lines[0].run_chars'),
     "chain anchored at first size": ("            if groups and self._same_size(size_of[groups[-1][-1]], size_of[k]):", "            if groups and self._same_size(size_of[groups[-1][0]], size_of[k]):"),
     "overlap vs wider line": ("overlap < min_overlap * (width if width < jwidth else jwidth)", "overlap < min_overlap * (width if width > jwidth else jwidth)"),
     "kana weight 1": ('            or "\\u3040" <= ch <= "\\u30ff"  # hiragana + katakana\n', ""),
     "ext-A weight 1": ('            or "\\u3400" <= ch <= "\\u4dbf"  # extension A\n', ""),
     "compat ideographs weight 1": ('            or "\\uf900" <= ch <= "\\ufaff"  # compatibility ideographs\n', ""),
+    # review r4
+    "H: short-text run needs no partner": (" or lines[0].run_chars <= self.HEADING_DISPLAY_MAX_CHARS\n", "\n"),
+    "J: one page makes a body size": ("for size, n in self._cluster_sizes(pages_per_size) if n >= 2)", "for size, n in self._cluster_sizes(pages_per_size) if n >= 1)"),
+    "K: CJK counted once in run_chars": ("chars[roots[i]] += len(text) + sum(1 for ch in text if self._letter_weight(ch) == 2)", "chars[roots[i]] += len(text)"),
+    "run_chars = longest line": ("chars[roots[i]] += len(text) + sum(1 for ch in text if self._letter_weight(ch) == 2)", "chars[roots[i]] = max(chars[roots[i]], len(text))"),
+    "document body counts second-look sizes": (
+        "        doc_ref = max(common) if common else 0.0\n\n        body_sizes = ",
+        "        doc_ref = max(common) if common else 0.0\n"
+        "        for p, vertical, blocks in per_page:\n"
+        "            if page_refs[p.page_number] is None:\n"
+        "                band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)\n"
+        "                sizes = sorted(size for size, n in self._cluster_sizes(pages_per_size) if n >= 2)\n"
+        "                second = self._page_reference(self._running_text_chars(blocks, vertical, band_w, band_h, sizes)) if sizes else None\n"
+        "                if second is not None:\n"
+        "                    pages_per_size[second] = pages_per_size.get(second, 0.0) + 1.0\n"
+        "        common = [s for s, n in self._cluster_sizes(pages_per_size) if n >= self.REF_DOC_PAGE_SHARE * len(per_page)]\n"
+        "        doc_ref = max(common) if common else 0.0\n\n        body_sizes = ",
+    ),
 }
 
 

@@ -288,7 +288,7 @@ class CleanBlock:
     run_len: int = 1
     # Which run on its page the line belongs to (-1 = none: off-axis).
     run_id: int = -1
-    # Characters of the whole run (a display title is short, a paragraph is not).
+    # Characters of the whole run, CJK counted twice (a display title is short, a paragraph is not).
     run_chars: int = 0
     # Set once by _prepare_blocks, so chunk_document and extract_elements agree.
     is_heading: bool = False
@@ -950,7 +950,9 @@ class ParseService:
         sizes = Counter(roots.values())
         chars: Counter = Counter()
         for i in on_axis:
-            chars[roots[i]] += len(blocks[i].text.strip())
+            text = blocks[i].text.strip()
+            # A CJK ideograph, kana or hangul syllable counts twice, as in the shape guard.
+            chars[roots[i]] += len(text) + sum(1 for ch in text if self._letter_weight(ch) == 2)
         for i in on_axis:
             blocks[i].run_len = sizes[roots[i]]
             blocks[i].run_id = roots[i]
@@ -985,10 +987,11 @@ class ParseService:
         least two lines that span REF_MIN_LINE_EXTENT of the page along the line (one
         wide line over a short axis tick is a chart subtitle, not a paragraph).
 
-        A run of at most HEADING_MAX_WRAP_LINES lines counts only when the page has
-        another such run of its size. Alone it is shaped like a wrapped heading (a
-        two-line slide or cover title), and as the page's largest substantial size it
-        would become the reference it has to exceed. With `body_sizes` (other pages'
+        A run of at most HEADING_MAX_WRAP_LINES lines, or of at most
+        HEADING_DISPLAY_MAX_CHARS characters, counts only when the page has another
+        such run of its size. Alone it is shaped like a wrapped heading (a two-line
+        slide title, a four-line cover title), and as the page's largest substantial
+        size it would become the reference it has to exceed. With `body_sizes` (other pages'
         body sizes) a lone run also counts at one of those sizes, unless it is over
         HEADING_SIZE_FACTOR x the page's smallest run: then it is a title over that
         text, whatever page uses its size for body (a key-message slide, a cover
@@ -1011,7 +1014,10 @@ class ParseService:
         chars: dict[float, float] = {}
         for rid, lines in runs.items():
             size = run_size[rid]
-            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not (
+            short = (
+                lines[0].run_len <= self.HEADING_MAX_WRAP_LINES or lines[0].run_chars <= self.HEADING_DISPLAY_MAX_CHARS
+            )
+            if short and not (
                 any(other != rid and self._same_size(size, s) for other, s in run_size.items())
                 or (
                     any(self._same_size(size, s) for s in body_sizes)
@@ -1047,10 +1053,11 @@ class ParseService:
         everywhere) and by dominant span (rule_size). A page without enough running
         text of its own takes the document's body size: the largest page body size
         held by REF_DOC_PAGE_SHARE of ALL pages, so one text page cannot set it for a
-        deck of chart pages; with none, the page has only the floors (v4 behaviour).
-        A page with no body size of its own gets a second look in which a lone 2-3-line
-        run counts if its size is another page's body size (the one comment paragraph
-        of a broker's exhibit page). The document body size is taken from first-look
+        deck of chart pages; with none, the page has only the floors (v1-v4 behaviour).
+        A page with no body size of its own gets a second look in which a lone short
+        run counts if its size is the body size of at least two other pages (the one
+        comment paragraph of a broker's exhibit page; one cover standfirst is not
+        enough to make its size body text everywhere). The document body size is taken from first-look
         sizes only, and a second-look size below it is ignored: a 3-line 7pt source
         note under an exhibit is not the page body because a disclosure appendix is 7pt.
         `sources`, when given, receives where each page's size came from: "own",
@@ -1071,14 +1078,15 @@ class ParseService:
         common = [s for s, n in self._cluster_sizes(pages_per_size) if n >= self.REF_DOC_PAGE_SHARE * len(per_page)]
         doc_ref = max(common) if common else 0.0
 
-        body_sizes = sorted(pages_per_size)
+        body_sizes = sorted(size for size, n in self._cluster_sizes(pages_per_size) if n >= 2)
         references: dict[int, float] = {}
         for p, vertical, blocks in per_page:
             ref, source = page_refs[p.page_number], "own"
             if ref is None and body_sizes:
                 band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
                 second = self._page_reference(self._running_text_chars(blocks, vertical, band_w, band_h, body_sizes))
-                ref, source = (second, "second") if second is not None and second >= doc_ref else (None, "")
+                if second is not None and (second >= doc_ref or self._same_size(second, doc_ref)):
+                    ref, source = second, "second"
             if ref is None:
                 ref, source = doc_ref, ("document" if doc_ref else "floor")
             references[p.page_number] = ref
