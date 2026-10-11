@@ -2,7 +2,7 @@
 title: "How to Chat with Any Webpage Using AI"
 description: "Learn how to analyze any webpage or URL with AI. No file download needed — just paste a link and start asking questions with cited answers."
 date: "2026-03-18"
-updated: "2026-03-18"
+updated: "2026-10-11"
 author: "DocTalk Team"
 category: "guides"
 tags: ["url", "webpage", "ai chat", "tutorial", "multi-format", "web research"]
@@ -13,7 +13,7 @@ keywords: ["chat with webpage ai", "chat with url ai", "ai webpage analysis", "a
 
 You are reading a long technical article, a government policy page, or a product documentation site. You need to find one specific detail buried somewhere in 5,000 words of text. You could use Ctrl+F if you know the exact phrase. You could read the whole thing. Or you could paste the URL into an AI tool and ask your question directly.
 
-URL ingestion is one of DocTalk's most underused features. No file download. No format conversion. No copy-pasting text into a chat window. You give it a web address, it fetches and indexes the content, and you chat with it exactly like you would with a PDF or Word document — complete with [citation highlighting](/features/citations) that points back to the source passages.
+URL ingestion is one of DocTalk's most underused features. No file download. No format conversion. No copy-pasting text into a chat window. You give it a web address, it fetches and indexes the content, and you chat with it exactly like you would with a PDF or Word document — complete with [citations](/features/citations) that point back to the source passages.
 
 This guide covers how it works, what it is good for, and the practical limitations you should know about.
 
@@ -90,7 +90,7 @@ Once processing completes, chat as you normally would:
 
 ### 4. Verify with Citations
 
-Click any numbered citation to see the source passage highlighted in the document viewer. The viewer shows the extracted text content of the webpage, organized by section.
+Click any numbered citation to jump to the source passage in the document viewer. The viewer shows the extracted text content of the webpage, organized by section.
 
 ### 5. Follow Up
 
@@ -205,7 +205,7 @@ Each URL creates a separate document session. To analyze multiple pages, create 
 
 ### Is this the same as pasting text into ChatGPT?
 
-No. When you paste text into ChatGPT, you lose source structure, there are no citations, and you are limited by the context window. DocTalk indexes the full page content, generates cited answers with highlighted source passages, and supports follow-up questions with maintained context.
+No. When you paste text into ChatGPT, you lose source structure, there are no citations, and you are limited by the context window. DocTalk indexes the full page content, generates cited answers linked to their source passages, and supports follow-up questions with maintained context.
 
 ### Will DocTalk access my private browsing data?
 

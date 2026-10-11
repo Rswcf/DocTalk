@@ -103,7 +103,7 @@ export default async function MultiFormatContent({ locale }: { locale: string })
 
   const comparisonRows = [
     { format: t('featuresMultiFormat.compPdf'), doctalk: true, chatpdf: true, askyourpdf: true, notebooklm: true },
-    { format: t('featuresMultiFormat.compDocx'), doctalk: true, chatpdf: false, askyourpdf: false, notebooklm: false },
+    { format: t('featuresMultiFormat.compDocx'), doctalk: true, chatpdf: true, askyourpdf: false, notebooklm: false },
     { format: t('featuresMultiFormat.compPptx'), doctalk: true, chatpdf: false, askyourpdf: false, notebooklm: false },
     { format: t('featuresMultiFormat.compXlsx'), doctalk: true, chatpdf: false, askyourpdf: false, notebooklm: false },
     { format: t('featuresMultiFormat.compTxtMd'), doctalk: true, chatpdf: false, askyourpdf: false, notebooklm: true },

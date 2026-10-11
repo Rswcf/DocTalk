@@ -2,7 +2,7 @@
 title: "What Is RAG? How AI Document Chat Actually Works Under the Hood"
 description: "A plain-language explanation of Retrieval-Augmented Generation (RAG) — the technology behind AI document chat. Learn how parsing, chunking, embeddings, and retrieval work together to give you cited answers from your own files."
 date: "2026-03-18"
-updated: "2026-03-18"
+updated: "2026-10-11"
 author: "DocTalk Team"
 category: "ai-insights"
 tags: ["rag", "ai explained", "embeddings", "vector database", "retrieval augmented generation", "llm"]
@@ -108,7 +108,7 @@ The LLM reads the passages, synthesizes an answer, and attaches citation numbers
 
 The final step connects the citation numbers back to their source locations in the original document. When you click [1], the application navigates to the page and paragraph that chunk came from and highlights it.
 
-This step is what separates serious RAG tools from toys. Without [citation highlighting](/features/citations), you have no way to verify whether the AI's answer is accurate. With it, verification takes seconds. DocTalk highlights the exact passage in the original document viewer, so you can read the source in full context.
+This step is what separates serious RAG tools from toys. Without [citation highlighting](/features/citations), you have no way to verify whether the AI's answer is accurate. With it, verification takes seconds. In PDF and plain-text (.txt) files, DocTalk highlights the exact passage in the original document viewer, so you can read the source in full context.
 
 ## Why Not Just Paste Text into ChatGPT?
 

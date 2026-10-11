@@ -70,7 +70,7 @@ export default async function CitationsContent({ locale }: { locale: string }) {
 
   const comparisonRows = [
     { feature: t('featuresCitations.compNumberedCitations'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
-    { feature: t('featuresCitations.compClickHighlight'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
+    { feature: t('featuresCitations.compClickHighlight'), doctalk: true, chatpdf: t('comparison.jumpsToSource'), askyourpdf: false, humata: false },
     { feature: t('featuresCitations.compPageAttribution'), doctalk: true, chatpdf: true, askyourpdf: 'partial' as const, humata: 'partial' as const },
     { feature: t('featuresCitations.compBboxHighlight'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
     { feature: t('featuresCitations.compTextSnippet'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
