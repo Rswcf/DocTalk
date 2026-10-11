@@ -966,8 +966,8 @@ PDF citation evidence uses one overlay: a complete unique quote, restricted to t
 locates the cited chunk in the page's stored Markdown (`lib/textEvidence.ts`) and
 marks it inline through a rehype plugin (`lib/rehypeMarkRanges.ts`), with the same
 `evidence.*` status line as the PDF viewer. Every marked sentence must be unique in
-the chunk's own page range and the located text must cover at least 30% of the
-chunk; otherwise the status is "Page location only". The DOCX/PPTX slide view shows
+the whole document and the located text must cover at least 30% of the chunk;
+otherwise the status is "Page location only". The DOCX/PPTX slide view shows
 the LibreOffice PDF, whose page N is not a DOCX extractor page N (a heading section
 or a 3,000-character split): there a text-layer candidate is kept only when it
 occurs once in the whole converted document, on the cited page.

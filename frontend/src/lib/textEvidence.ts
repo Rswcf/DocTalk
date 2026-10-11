@@ -18,8 +18,9 @@ import type { Citation } from '../types';
  * Both are split at a page start, and only a unique match confirms the split.
  *
  * The rule is the PDF rule: never highlight the wrong passage. Every located
- * piece is unique in the chunk's own page range; ambiguous or short pieces are
- * dropped, never bridged; with too little located, the result is `page`.
+ * piece is unique in the whole document and on a page the chunk may sit on;
+ * ambiguous or short pieces are dropped, never bridged; with too little
+ * located, the result is `page`.
  */
 
 export type TextEvidenceKind = 'exact' | 'region' | 'page';
@@ -54,6 +55,21 @@ const MIN_CHUNK_COVERAGE = 0.3;
 interface PageIndex { number: number; raw: string; canon: string; offsets: Array<{ start: number; end: number }> }
 /** Canonical offsets within one page. */
 interface Hit { page: number; start: number; end: number }
+/** `all`: every page of the document, for uniqueness. `scope`: the pages the
+ * chunk may sit on, for page-start/page-end structure and chunk coverage. */
+interface Search { all: PageIndex[]; scope: PageIndex[]; inScope: Set<number> }
+
+// Canonical page text, kept per page object: the reader passes the same page
+// objects on every citation click, and every click searches all pages.
+const pageIndexCache = new WeakMap<TextEvidencePage, PageIndex>();
+function indexPage(page: TextEvidencePage): PageIndex {
+  const cached = pageIndexCache.get(page);
+  if (cached && cached.raw === page.text && cached.number === page.page_number) return cached;
+  const canon = canonicalize(page.text);
+  const index = { number: page.page_number, raw: page.text, canon: canon.text, offsets: canon.offsets };
+  pageIndexCache.set(page, index);
+  return index;
+}
 
 /** Port of parse_service._split_into_sentences: ASCII .?! end a sentence only
  * before whitespace or the end; CJK 。！？； always do. Pieces are trimmed. */
@@ -119,7 +135,7 @@ function cutsAt(text: string, index: number): boolean {
 /** `text` ends with the end of `page`, possibly followed by the next page's
  * glued title (at most TITLE_MAX characters, dropped). Returns the page hit
  * and where the match starts in `text`; the match must be unique. */
-function matchPageEnd(text: string, page: PageIndex, pages: PageIndex[]): { hit: Hit; start: number } | null {
+function matchPageEnd(text: string, page: PageIndex, search: Search): { hit: Hit; start: number } | null {
   const canon = page.canon.trimEnd();
   for (let j = text.length; j > 0 && text.length - j <= TITLE_MAX + 1; j--) {
     if (j < text.length && !cutsAt(text, j)) continue;
@@ -132,7 +148,7 @@ function matchPageEnd(text: string, page: PageIndex, pages: PageIndex[]): { hit:
       if (body[from] === ' ' || (from > 0 && !cutsAt(body, from))) continue;
       const match = body.slice(from);
       if (!boundaryOk(canon, canon.length - length, match)) continue;
-      if (findAll(pages, match).length !== 1) return null;
+      if (findAll(search.all, match).length !== 1) return null;
       return { hit: { page: page.number, start: canon.length - length, end: canon.length }, start: from };
     }
   }
@@ -142,11 +158,12 @@ function matchPageEnd(text: string, page: PageIndex, pages: PageIndex[]): { hit:
 /** Peels consecutive page ends off the end of `text`, starting at page index
  * `last` (which must be page number `number`) and walking back. `rest` is the
  * unmatched beginning of `text`. */
-function peelPageEnds(text: string, pages: PageIndex[], last: number, number: number) {
+function peelPageEnds(text: string, search: Search, last: number, number: number) {
+  const pages = search.scope;
   const hits: Hit[] = [];
   let rest = text;
   for (let q = last; q >= 0 && pages[q].number === number - (last - q) && rest; q--) {
-    const match = matchPageEnd(rest, pages[q], pages);
+    const match = matchPageEnd(rest, pages[q], search);
     if (!match) break;
     hits.unshift(match.hit);
     rest = rest.slice(0, match.start).trimEnd();
@@ -161,7 +178,8 @@ function peelPageEnds(text: string, pages: PageIndex[], last: number, number: nu
  * is dropped as the title (`dropped` is its length in the piece). A page
  * before the tail's page is in scope only when the chunk runs through its end
  * (chunks are contiguous), so a unique match there is the chunk's own text. */
-function splitAtPageStart(piece: string, pages: PageIndex[]): { hits: Hit[]; dropped: number } | null {
+function splitAtPageStart(piece: string, search: Search): { hits: Hit[]; dropped: number } | null {
+  const pages = search.scope;
   const rest = minRemainder(piece);
   for (let p = 0; p < pages.length; p++) {
     const page = pages[p];
@@ -170,8 +188,8 @@ function splitAtPageStart(piece: string, pages: PageIndex[]): { hits: Hit[]; dro
       if (piece[k] !== page.canon[0] || !cutsAt(piece, k)) continue;
       const tail = piece.slice(k);
       if (!page.canon.startsWith(tail) || !boundaryOk(page.canon, 0, tail)) continue;
-      if (findAll(pages, tail).length !== 1) return null;
-      const head = p > 0 ? peelPageEnds(piece.slice(0, k).trimEnd(), pages, p - 1, page.number - 1) : null;
+      if (findAll(search.all, tail).length !== 1) return null;
+      const head = p > 0 ? peelPageEnds(piece.slice(0, k).trimEnd(), search, p - 1, page.number - 1) : null;
       return {
         hits: [...(head?.hits ?? []), { page: page.number, start: 0, end: tail.length }],
         dropped: head ? head.rest.length : k,
@@ -184,27 +202,28 @@ function splitAtPageStart(piece: string, pages: PageIndex[]): { hits: Hit[]; dro
 /** Unique hits for one sentence: whole, else split at a page start, else (for
  * multi-line sentences such as table rows) line by line. A split head too long
  * to be a title is located line by line as well. */
-function locatePiece(raw: string, pages: PageIndex[], byLine = true): Hit[] {
+function locatePiece(raw: string, search: Search, byLine = true): Hit[] {
   const canon = canonicalize(raw);
   const piece = canon.text;
   if (piece.length < minPiece(piece)) return [];
-  const hits = findAll(pages, piece);
-  if (hits.length === 1) return hits;
+  const hits = findAll(search.all, piece);
+  // Unique in the document, and on a page the chunk may sit on.
+  if (hits.length === 1) return search.inScope.has(hits[0].page) ? hits : [];
   if (hits.length > 1) return [];
-  const split = splitAtPageStart(piece, pages);
+  const split = splitAtPageStart(piece, search);
   if (split) {
     if (!byLine || split.dropped <= TITLE_MAX) return split.hits;
     // A PPTX title repeated at the end of the head is the tail's own first line.
-    const head = locateLines(raw.slice(0, canon.offsets[split.dropped].start), pages)
+    const head = locateLines(raw.slice(0, canon.offsets[split.dropped].start), search)
       .filter(hit => !split.hits.some(tail => tail.page === hit.page && hit.start < tail.end && tail.start < hit.end));
     return [...head, ...split.hits];
   }
-  return byLine ? locateLines(raw, pages) : [];
+  return byLine ? locateLines(raw, search) : [];
 }
 
-function locateLines(raw: string, pages: PageIndex[]): Hit[] {
+function locateLines(raw: string, search: Search): Hit[] {
   const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
-  return lines.length > 1 ? lines.flatMap(line => locatePiece(line, pages, false)) : [];
+  return lines.length > 1 ? lines.flatMap(line => locatePiece(line, search, false)) : [];
 }
 
 function before(a: Hit, b: Hit): boolean {
@@ -250,13 +269,24 @@ function toRaw(page: PageIndex, start: number, end: number, emphasis: boolean): 
 }
 
 /**
- * @param pages      the document's pages, raw text as rendered
+ * @param pages      every page of the document, raw text as rendered
  * @param citation   page/pageEnd bound the marks; context_text's own page
- *                   range (if any) widens the uniqueness check
+ *                   range (if any) is where the chunk may sit
  * @param chunkText  the cited chunk's full text, or null when unknown
  * @param focus      verbatim supporting sentence; emphasised only when it is
  *                   unique inside the located chunk (or, with no chunk, unique
- *                   in the page range)
+ *                   in the document and on the cited pages)
+ *
+ * Uniqueness is checked over the whole document, never over the cited pages
+ * alone. The cited range is not proof of where the text is: citation_location
+ * narrows a chunk to one page, and Quote Finder cards, saved quotes and
+ * `?highlight=` links carry no context_text at all. A sentence that the
+ * document holds twice is not marked, even when only one copy is on the cited
+ * page; the rest of the chunk still is (pieces are never bridged), and a
+ * one-sentence chunk falls back to `page`. Page-start/page-end structure and
+ * chunk coverage stay within the pages the chunk may sit on (its own range
+ * from the context_text prefix, plus the cited pages); marks stay within the
+ * cited pages. convertedEvidence.ts applies the same document-wide rule.
  */
 export function locateTextEvidence(
   pages: TextEvidencePage[],
@@ -269,20 +299,19 @@ export function locateTextEvidence(
   const chunkRange = citationChunkText(citation);
   const scopeStart = Math.min(markStart, chunkRange?.pageStart ?? markStart);
   const scopeEnd = Math.max(markEnd, chunkRange?.pageEnd ?? markEnd);
-  const scope: PageIndex[] = pages
-    .filter(page => page.page_number >= scopeStart && page.page_number <= scopeEnd && page.text)
+  const all: PageIndex[] = pages
+    .filter(page => page.text)
     .sort((a, b) => a.page_number - b.page_number)
-    .map(page => {
-      const canon = canonicalize(page.text);
-      return { number: page.page_number, raw: page.text, canon: canon.text, offsets: canon.offsets };
-    });
+    .map(indexPage);
+  const scope = all.filter(page => page.number >= scopeStart && page.number <= scopeEnd);
   if (!scope.length) return NO_EVIDENCE;
+  const search: Search = { all, scope, inScope: new Set(scope.map(page => page.number)) };
   const byNumber = new Map(scope.map(page => [page.number, page]));
   const marked = (hit: Hit) => hit.page >= markStart && hit.page <= markEnd;
 
   let region: Hit[] = [];
   if (chunkText) {
-    const found = inOrder(splitSentences(chunkText).flatMap(sentence => locatePiece(sentence, scope)));
+    const found = inOrder(splitSentences(chunkText).flatMap(sentence => locatePiece(sentence, search)));
     // A cited chunk sits in its own page range almost whole. A few unique
     // lines that cover little of it are coincidences (repeated boilerplate, a
     // range that does not hold the chunk), so nothing is marked, focus included.
@@ -300,11 +329,11 @@ export function locateTextEvidence(
       const direct = findAll(scope, quote, Infinity).filter(hit => inside(hit, region));
       if (direct.length === 1) emphasis = direct;
       else if (!direct.length) {
-        const split = splitAtPageStart(quote, scope)?.hits;
+        const split = splitAtPageStart(quote, search)?.hits;
         if (split && split.every(hit => inside(hit, region))) emphasis = split;
       }
     } else {
-      const hits = locatePiece(focus!, scope, false);
+      const hits = locatePiece(focus!, search, false);
       if (hits.length && hits.every(marked)) emphasis = hits;
     }
   }

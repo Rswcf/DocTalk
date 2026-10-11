@@ -265,8 +265,32 @@ test('uniqueness is checked over the chunk range, not only the narrowed page', (
   const pages = [{ page_number: 1, text: sentence }, { page_number: 2, text: `${sentence} Another line follows it here.` }];
   const result = locateTextEvidence(pages, { page: 2, pageEnd: 2, contextText: '[page 1–2] x' }, null, sentence);
   assert.equal(result.kind, 'page');
-  // Without the chunk's own range, page 2 alone would make it look unique.
-  assert.equal(locateTextEvidence(pages, { page: 2, pageEnd: 2 }, null, sentence).kind, 'exact');
+  // Without the chunk's own range (Quote Finder, saved quotes, deep links) the
+  // whole document is the uniqueness scope: page 2 alone must not make it unique.
+  assert.equal(locateTextEvidence(pages, { page: 2, pageEnd: 2 }, null, sentence).kind, 'page');
+});
+
+test('Codex r1 #1: a chunk sentence repeated on another page is not marked on the cited page', () => {
+  const sentence = 'This exact warning appears in both sections of the policy.';
+  const pages = [
+    { page_number: 1, text: `Section one opens here.\n${sentence}` },
+    { page_number: 2, text: `Section two opens here.\n${sentence}` },
+  ];
+  const result = locateTextEvidence(pages, { page: 2, pageEnd: 2 }, sentence, sentence);
+  assert.equal(result.kind, 'page');
+  assert.deepEqual(result.ranges, []);
+});
+
+test('a repeated sentence inside a located chunk is left unmarked; the rest of the chunk still marks', () => {
+  const repeated = 'All analyses followed the intention-to-treat principle.';
+  const p2 = `The primary outcome was the change in blood pressure. ${repeated} Secondary outcomes included adherence and adverse events.`;
+  const pages = [{ page_number: 1, text: `The trial enrolled 412 adults. ${repeated}` }, { page_number: 2, text: p2 }];
+  const result = locateTextEvidence(pages, { page: 2, pageEnd: 2 }, p2, repeated);
+  assert.equal(result.kind, 'region', 'the repeated focus is not emphasised');
+  assert.deepEqual(marked(pages, result).map(r => r.text), [
+    'The primary outcome was the change in blood pressure.',
+    'Secondary outcomes included adherence and adverse events.',
+  ]);
 });
 
 test('an out-of-order coincidence is dropped, keeping the chunk order', () => {
