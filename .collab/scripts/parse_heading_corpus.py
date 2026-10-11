@@ -78,30 +78,23 @@ TO_READ = ("run-large", "body-short", "inherited", "guard")
 def removal_reasons(module, pages, removed: list) -> dict:
     """Why each removed heading is not one in `module` (the new parser)."""
     svc = module.ParseService()
-    if not all(hasattr(svc, n) for n in ("_prepare_blocks", "_running_text_chars", "_reference_sizes")):
+    if not all(hasattr(svc, n) for n in ("_prepare_blocks", "_reference_sizes", "_rule_size")):
         return {}
     lines: dict[int, list] = {}
     for b in svc._prepare_blocks(pages):
         lines.setdefault(b.page, []).append(b)
     document_angle = svc._document_line_angle(pages)
-    per_page, own_ref = [], {}
+    per_page = []
     for p in pages:
         if p.page_number in lines:
             band_w, band_h = svc._band_dims(p.width_pt, p.height_pt, p.rotation)
             vertical = int(svc._dominant_line_angle(p.blocks, band_w, band_h, document_angle)) % 180 == 90
-            per_page.append((p, vertical, lines[p.page_number], band_w, band_h))
-            own_ref[p.page_number] = svc._page_reference(svc._running_text_chars(lines[p.page_number], vertical, band_w, band_h))
-    # The parser's second look: a lone short run at another page's body size.
-    body_sizes = sorted({r for r in own_ref.values() if r is not None})
-    for p, vertical, page_lines, band_w, band_h in per_page:
-        if own_ref[p.page_number] is None and body_sizes:
-            chars = svc._running_text_chars(page_lines, vertical, band_w, band_h, body_sizes)
-            own_ref[p.page_number] = svc._page_reference(chars)
-    references, (font_floor, rule_floor) = svc._reference_sizes([t[:3] for t in per_page])
+            per_page.append((p, vertical, lines[p.page_number]))
+    sources: dict = {}
+    references, (font_floor, rule_floor) = svc._reference_sizes(per_page, sources)
 
     def body_from_short_runs(page: int) -> bool:
-        ref = own_ref.get(page)
-        same = [b for b in lines[page] if b.run_len >= 2 and svc._same_size(svc._rule_size(b), ref)]
+        same = [b for b in lines[page] if b.run_len >= 2 and svc._same_size(svc._rule_size(b), references[page])]
         return bool(same) and all(b.run_len <= svc.HEADING_MAX_WRAP_LINES for b in same)
 
     factor = svc.HEADING_SIZE_FACTOR
@@ -111,12 +104,12 @@ def removal_reasons(module, pages, removed: list) -> dict:
         if line is None:
             continue
         size = svc._rule_size(line)
-        if line.run_len > svc.HEADING_MAX_WRAP_LINES and size <= references[page] * factor:
-            reasons[(page, text)] = "run"
-        elif line.run_len > svc.HEADING_MAX_WRAP_LINES:
+        if line.run_len > svc.HEADING_MAX_WRAP_LINES and size > references[page] * factor:
             reasons[(page, text)] = "run-large" if size >= 1.5 * references[page] else "run"
+        elif line.run_len > svc.HEADING_MAX_WRAP_LINES:
+            reasons[(page, text)] = "run"
         elif size <= references[page] * factor:
-            if own_ref.get(page) is None:
+            if sources.get(page) in ("document", "floor"):
                 reasons[(page, text)] = "inherited"
             else:
                 reasons[(page, text)] = "body-short" if body_from_short_runs(page) else "body"

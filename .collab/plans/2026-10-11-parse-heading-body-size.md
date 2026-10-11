@@ -242,7 +242,7 @@ Classes: 1 sell-side/bank research, 2 CN broker (券商研报), 3 econ/policy wo
 4. **A page whose running text is dominated (≥ 30 %) by text larger than the body** (a long 12 pt box on a 10 pt page) raises that page's reference, so its 14 pt headings need > 15 pt. Appears on no corpus page; would only lose headings, never body.
 5. **Pages inheriting the document reference** when 25 %+ of referenced pages have a larger body (long 12 pt executive summary in a 10 pt report): sparse pages' 14 pt headings missed. Loses headings only.
 6. **OCR noise > 8 %**: no runs → v3 classification on that document (no guard, line-median reference).
-7. **Headings wrapping to ≥ 4 lines** are body unless they are ≥ 2× the page body and both medians. Not rare: the BIS working-paper cover wraps its 22pt title to 4 lines (review r2 R2-2, fixed by the 2× exemption); a 1.75× stack of a page header and a note heading in the MS 10-Q (p52) is still guarded.
+7. **Headings wrapping to ≥ 4 lines** are body unless the whole run is ≤ 160 characters and ≥ 1.5× max(page body, both medians). Not rare: the BIS working-paper cover wraps its 22pt title to 4 lines (review r2 R2-2, r3 R3-2); agenda slides and the MS 10-Q p52 header stack are exempt the same way (as in v3). A 4-line display text over 160 characters is body.
 8. The floor means v5 **cannot** detect a heading on a page whose body is smaller than the document's median line unless the heading also clears 1.25 × that median: appendix headings in documents whose line median already sits on the main body. Loses low-value headings only; the alternative (no floor) adds chart legends as headings (S8 7.4 → 37.4 %, JPM −775 chars).
 9. `chunk_document` still sets `section_title` from the *last* line of a wrapped heading (`the HBM transition`); unchanged behaviour, see §10.
 
@@ -325,3 +325,22 @@ Fresh-context review (`.collab/reviews/2026-10-11-parse-heading-body-size-review
 - **Not done (R2-7)**: computing `_prepare_blocks` once for both worker calls. Dense table pages cost ~2.5× v3
   (137–184 ms against 57–68 ms per 3,300-line page); embedding such documents dominates either way.
 - Corpus: 47 PDFs, paragraph characters fell in 0; chicagofed 66.8% → 6.3%.
+
+## 14. Review round 3 (2026-10-11)
+
+Fresh-context review (`.collab/reviews/2026-10-11-parse-heading-body-size-review-r3.md`), response in
+`…-review-r3-response.md`. Changes to the spec:
+
+- **Second look (R3-1, R3-3)**: a lone short run admitted only because its size is another page's body size must not be
+  over 1.25× the page's smallest run (a wrapped exhibit or slide title over the page's text stays a title, whatever page
+  uses its size as body); the document body size comes from first-look sizes only; a second-look size below the
+  document body size is ignored (a 7pt source note under an exhibit).
+- **Display exemption (R3-2, R3-5)**: replaces round 2's 2× rule. A run of ≥ 4 lines is exempt from the continuity
+  guard when the whole run is ≤ 160 characters and ≥ 1.5× max(page body, both medians). Independent of where the median
+  line falls between 1.5× and 2× (BIS WP 1367 transplant), and a long paragraph at 2× a tiny page body stays body.
+- `_reference_sizes(per_page, sources)` reports where each page's size came from (own / second / document / floor);
+  the harness's `inherited` label reads it.
+- Residuals recorded (equal to v3 or by design): R3-4 (fix A can raise a page's body size above a 1.4× heading;
+  labelled `body`), agenda bullets on a chart-deck slide are headings (as in v3).
+- Corpus: 47 PDFs, paragraph characters fell in 0; the round's changes over a9e8245d restore 21 v3 headings (agenda
+  rows, the 10-Q p52 stack, a vertical cover label) and drop one (`fed_feds_ai_coder` p57 `All Industries`).

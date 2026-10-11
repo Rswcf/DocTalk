@@ -288,6 +288,8 @@ class CleanBlock:
     run_len: int = 1
     # Which run on its page the line belongs to (-1 = none: off-axis).
     run_id: int = -1
+    # Characters of the whole run (a display title is short, a paragraph is not).
+    run_chars: int = 0
     # Set once by _prepare_blocks, so chunk_document and extract_elements agree.
     is_heading: bool = False
     extractor_title: bool = False  # see BlockInfo.extractor_title
@@ -337,7 +339,10 @@ class ParseService:
     # labels, axis ticks and table cells never set it.
     HEADING_SIZE_FACTOR = 1.25
     HEADING_MAX_WRAP_LINES = 3  # a run longer than this is a paragraph, not a wrapped heading
-    HEADING_DISPLAY_FACTOR = 2.0  # ...unless it is this much larger than the page body (a cover title)
+    # ...unless the whole run is this short and this much larger than the page body and both
+    # medians: a cover title wrapped to 4 lines, an agenda. A paragraph is longer.
+    HEADING_DISPLAY_FACTOR = 1.5
+    HEADING_DISPLAY_MAX_CHARS = 160
     RUN_GAP_LINE_HEIGHTS = 1.0  # the next line of a run starts within one line height
     RUN_MIN_OVERLAP = 0.30  # of the narrower line's extent across the column
     RUN_ACTIVE_CAP = 400  # earlier lines a sweep step compares against, at most
@@ -943,9 +948,13 @@ class ParseService:
 
         roots = {i: find(i) for i in on_axis}
         sizes = Counter(roots.values())
+        chars: Counter = Counter()
+        for i in on_axis:
+            chars[roots[i]] += len(blocks[i].text.strip())
         for i in on_axis:
             blocks[i].run_len = sizes[roots[i]]
             blocks[i].run_id = roots[i]
+            blocks[i].run_chars = chars[roots[i]]
 
     def _cluster_sizes(self, weights: dict[float, float]) -> List[Tuple[float, float]]:
         """Group sizes into same-size classes: [(weighted mean size, weight)], ascending."""
@@ -977,10 +986,13 @@ class ParseService:
         wide line over a short axis tick is a chart subtitle, not a paragraph).
 
         A run of at most HEADING_MAX_WRAP_LINES lines counts only when the page has
-        another such run of its size, or its size is one of `body_sizes` (other
-        pages' body sizes). Alone it is shaped like a wrapped heading (a two-line
-        slide or cover title), and as the page's largest substantial size it would
-        become the reference it has to exceed.
+        another such run of its size. Alone it is shaped like a wrapped heading (a
+        two-line slide or cover title), and as the page's largest substantial size it
+        would become the reference it has to exceed. With `body_sizes` (other pages'
+        body sizes) a lone run also counts at one of those sizes, unless it is over
+        HEADING_SIZE_FACTOR x the page's smallest run: then it is a title over that
+        text, whatever page uses its size for body (a key-message slide, a cover
+        standfirst).
         """
         page_extent = band_h if vertical else band_w
         runs: dict[int, List[CleanBlock]] = {}
@@ -995,11 +1007,16 @@ class ParseService:
         runs = {rid: lines for rid, lines in runs.items() if len(lines) >= 2}
 
         run_size = {rid: self._rule_size(lines[0]) for rid, lines in runs.items()}
+        smallest = min(run_size.values(), default=0.0)
         chars: dict[float, float] = {}
         for rid, lines in runs.items():
+            size = run_size[rid]
             if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not (
-                any(other != rid and self._same_size(run_size[rid], size) for other, size in run_size.items())
-                or any(self._same_size(run_size[rid], size) for size in body_sizes)
+                any(other != rid and self._same_size(size, s) for other, s in run_size.items())
+                or (
+                    any(self._same_size(size, s) for s in body_sizes)
+                    and size <= self.HEADING_SIZE_FACTOR * smallest
+                )
             ):
                 continue
             for b in lines:
@@ -1019,7 +1036,9 @@ class ParseService:
         return max(substantial) if substantial else max(clusters, key=lambda c: c[1])[0]
 
     def _reference_sizes(
-        self, per_page: Sequence[Tuple[PageInfo, bool, List[CleanBlock]]]
+        self,
+        per_page: Sequence[Tuple[PageInfo, bool, List[CleanBlock]]],
+        sources: Optional[dict[int, str]] = None,
     ) -> Tuple[dict[int, float], Tuple[float, float]]:
         """Reference sizes of the heading size rule.
 
@@ -1029,10 +1048,13 @@ class ParseService:
         text of its own takes the document's body size: the largest page body size
         held by REF_DOC_PAGE_SHARE of ALL pages, so one text page cannot set it for a
         deck of chart pages; with none, the page has only the floors (v4 behaviour).
-        Before that, a page with no body size gets a second look in which a lone
-        2-3-line run counts if its size is another page's body size: the one comment
-        paragraph of a broker's exhibit page, not a wrapped title (titles are larger
-        than any page's body).
+        A page with no body size of its own gets a second look in which a lone 2-3-line
+        run counts if its size is another page's body size (the one comment paragraph
+        of a broker's exhibit page). The document body size is taken from first-look
+        sizes only, and a second-look size below it is ignored: a 3-line 7pt source
+        note under an exhibit is not the page body because a disclosure appendix is 7pt.
+        `sources`, when given, receives where each page's size came from: "own",
+        "second" (look), "document" or "floor" (0.0: the floors decide alone).
         """
         font_sizes = [cb.font_size for _p, _v, blocks in per_page for cb in blocks if cb.font_size > 0]
         rule_sizes = [self._rule_size(cb) for _p, _v, blocks in per_page for cb in blocks if self._rule_size(cb) > 0]
@@ -1042,21 +1064,27 @@ class ParseService:
         for p, vertical, blocks in per_page:
             band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
             page_refs[p.page_number] = self._page_reference(self._running_text_chars(blocks, vertical, band_w, band_h))
-        body_sizes = sorted({r for r in page_refs.values() if r is not None})
-        if body_sizes:
-            for p, vertical, blocks in per_page:
-                if page_refs[p.page_number] is None:
-                    band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
-                    chars = self._running_text_chars(blocks, vertical, band_w, band_h, body_sizes)
-                    page_refs[p.page_number] = self._page_reference(chars)
-
         pages_per_size: dict[float, float] = {}
         for r in page_refs.values():
             if r is not None:
                 pages_per_size[r] = pages_per_size.get(r, 0.0) + 1.0
         common = [s for s, n in self._cluster_sizes(pages_per_size) if n >= self.REF_DOC_PAGE_SHARE * len(per_page)]
         doc_ref = max(common) if common else 0.0
-        return {pn: r if r is not None else doc_ref for pn, r in page_refs.items()}, floors
+
+        body_sizes = sorted(pages_per_size)
+        references: dict[int, float] = {}
+        for p, vertical, blocks in per_page:
+            ref, source = page_refs[p.page_number], "own"
+            if ref is None and body_sizes:
+                band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
+                second = self._page_reference(self._running_text_chars(blocks, vertical, band_w, band_h, body_sizes))
+                ref, source = (second, "second") if second is not None and second >= doc_ref else (None, "")
+            if ref is None:
+                ref, source = doc_ref, ("document" if doc_ref else "floor")
+            references[p.page_number] = ref
+            if sources is not None:
+                sources[p.page_number] = source
+        return references, floors
 
     @staticmethod
     def _letter_weight(ch: str) -> int:
@@ -1087,9 +1115,9 @@ class ParseService:
         """
         rule_size = self._rule_size(block)
         font_floor, rule_floor = floors
-        if (
-            block.run_len > self.HEADING_MAX_WRAP_LINES
-            and rule_size < self.HEADING_DISPLAY_FACTOR * max(reference_size, font_floor, rule_floor)
+        base = max(reference_size, font_floor, rule_floor)
+        if block.run_len > self.HEADING_MAX_WRAP_LINES and not (
+            block.run_chars <= self.HEADING_DISPLAY_MAX_CHARS and rule_size >= self.HEADING_DISPLAY_FACTOR * base
         ):
             return False
         if rule_size <= reference_size * self.HEADING_SIZE_FACTOR:

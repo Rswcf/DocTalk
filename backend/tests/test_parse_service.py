@@ -1235,3 +1235,90 @@ class TestHeadingSizeUsesPageBodySize:
 
         for text in ("トヨタ 2026", "㐂㐆㐇 2026", "\uf900\uf901\uf902 2026"):  # U+F900.. compatibility ideographs
             assert by_size(text), text
+
+    # ---- review r3 (2026-10-11, .collab/reviews/2026-10-11-parse-heading-body-size-review-r3.md) ----
+
+    def test_second_look_skips_a_title_over_the_pages_text(self):
+        # R3-1: a note whose cover standfirst is 14pt makes 14pt a body size; on the
+        # exhibit pages the 2-line 14pt exhibit title is still a title over a 9pt comment.
+        cover = [BlockInfo(page=1, text="AI rate of change", bbox=(40, 40, 500, 70), font_size=26)]
+        cover += _body_lines(1, 40, 100, 4, size=14, width=520, text="Standfirst set in fourteen point type across the cover")
+        pages = [_page(1, cover)] + [_page(pn, _body_lines(pn, 40, 60, 40, size=9, width=520)) for pn in (2, 3, 4)]
+        for pn in range(5, 11):
+            blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: Enterprise AI adoption rose in every region we survey,",
+                                bbox=(40, 40, 560, 57), font_size=14),
+                      BlockInfo(page=pn, text="led by financials and software, while industrials still lag behind",
+                                bbox=(40, 59, 560, 76), font_size=14)]
+            blocks += _cells(pn, 100, 25)
+            blocks += _body_lines(pn, 40, 420, 3, size=9, width=520, text=f"Comment on exhibit {pn} explaining what the chart shows")
+            pages.append(_page(pn, blocks))
+
+        headings = self._headings(pages)
+
+        assert all((pn, f"Exhibit {pn}: Enterprise AI adoption rose in every region we survey,") in headings for pn in range(5, 11))
+
+    def test_document_body_size_comes_from_first_look_sizes(self):
+        # R3-1: second-look sizes (12pt comments on six exhibit pages) must not raise
+        # the document body size that chart pages inherit.
+        pages = [_page(pn, [BlockInfo(page=pn, text=f"Section {pn}", bbox=(40, 40, 400, 60), font_size=16)]
+                       + _body_lines(pn, 40, 80, 40, width=500)) for pn in (1, 2, 3, 4)]
+        pages.append(_page(5, _body_lines(5, 40, 80, 5, size=12, width=520, text="A twelve point standfirst page of the report")))
+        for pn in range(6, 12):
+            blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: memory prices", bbox=(40, 40, 400, 60), font_size=16)]
+            blocks += _cells(pn, 100, 25)
+            blocks += _body_lines(pn, 40, 420, 3, size=12, width=520,
+                                  text=f"Twelve point comment on exhibit {pn}, long enough to give the page a body size")
+            pages.append(_page(pn, blocks))
+        for pn in (12, 13):
+            pages.append(_page(pn, [BlockInfo(page=pn, text=f"Chart title {pn}", bbox=(40, 40, 400, 57), font_size=14)]
+                               + _cells(pn, 100, 25)))
+
+        headings = self._headings(pages)
+
+        assert (12, "Chart title 12") in headings and (13, "Chart title 13") in headings
+
+    def test_second_look_is_only_for_pages_without_a_body_size(self):
+        # A page with its own 10pt body keeps it; its lone 3-line 12pt standfirst (12pt
+        # is another page's body) does not get to raise the page body over its heading.
+        page1 = [BlockInfo(page=1, text="Fourteen point heading", bbox=(40, 40, 400, 58), font_size=14)]
+        page1 += _body_lines(1, 40, 80, 3, size=12, width=520, text="Standfirst in twelve point type that runs across the page")
+        page1 += _body_lines(1, 40, 160, 6, width=520)
+        page1 += _cells(1, 300, 12)
+        pages = [_page(1, page1), _page(2, _body_lines(2, 40, 80, 8, size=12, width=520) + _cells(2, 300, 12))]
+
+        assert (1, "Fourteen point heading") in self._headings(pages)
+
+    def test_display_exemption_thresholds(self):
+        def run_line(size: float, run_chars: int, reference: float, floors: tuple[float, float]) -> bool:
+            block = CleanBlock(page=1, text="Display title line", bbox=(40, 60, 300, 80), font_size=size, rule_size=size,
+                               run_len=4, run_chars=run_chars)
+            return self.svc._is_heading_by_size(block, reference, floors)
+
+        assert run_line(15.0, 80, 10.0, (8.0, 8.0))  # 1.5x the page body, short: a 4-line title
+        assert not run_line(14.9, 80, 10.0, (8.0, 8.0))
+        assert not run_line(15.0, 161, 10.0, (8.0, 8.0))  # a paragraph is longer
+        assert run_line(15.0, 160, 10.0, (8.0, 8.0))
+        assert not run_line(16.0, 80, 10.0, (11.0, 11.0))  # 1.6x the page body but under 1.5x the median line
+
+    def test_second_look_does_not_lower_a_page_below_the_document_body(self):
+        # R3-3: exhibit pages carry a 3-line 7pt source note; 7pt is the disclosure
+        # appendix's body size, but the exhibit page keeps the document's 10pt body,
+        # so its 10pt comment (one wide line and a short one) stays body text.
+        pages = [_page(pn, [BlockInfo(page=pn, text=f"Section {pn}", bbox=(40, 40, 400, 60), font_size=16)]
+                       + _body_lines(pn, 40, 80, 40, width=500)) for pn in (1, 2, 3, 4)]
+        for pn in range(5, 10):
+            blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: DRAM contract prices", bbox=(40, 40, 400, 54), font_size=12)]
+            blocks += _cells(pn, 80, 25)
+            blocks += [
+                BlockInfo(page=pn, text=f"DRAM contract prices rose for a fourth straight quarter as hyperscalers {pn}",
+                          bbox=(40, 400, 520, 411.5), font_size=10),
+                BlockInfo(page=pn, text="pre-bought capacity.", bbox=(40, 412.5, 130, 424), font_size=10),
+            ]
+            blocks += _body_lines(pn, 40, 600, 3, size=7, width=520,
+                                  text="Source: Company data, TrendForce, our estimates; note: contract prices are quarterly averages")
+            pages.append(_page(pn, blocks))
+        pages += [_page(pn, _body_lines(pn, 40, 60, 80, size=7, width=520, text="Disclosure text")) for pn in (10, 11, 12)]
+
+        chunk_text = " ".join(c.text for c in self.svc.chunk_document(pages))
+
+        assert "as hyperscalers 5" in chunk_text and "pre-bought capacity." in chunk_text
