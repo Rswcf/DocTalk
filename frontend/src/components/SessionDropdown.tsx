@@ -24,7 +24,7 @@ export default function SessionDropdown() {
   const sessions = useDocTalkStore((s) => s.sessions);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
 
-  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch } = useDocTalkStore();
+  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, setStreaming, flushPendingText } = useDocTalkStore();
   const { t, tOr } = useLocale();
   const router = useRouter();
   const { status } = useSession();
@@ -115,6 +115,11 @@ export default function SessionDropdown() {
         created_at: s.created_at,
         last_activity_at: s.created_at,
       });
+      // Same rule as openSession: a send on the conversation still on screen
+      // supersedes this New Chat. Publishing now would orphan that stream.
+      // The new conversation exists on the server (and counts toward the
+      // session cap), so it stays listed, but it is not opened.
+      if (useDocTalkStore.getState().isStreaming) return;
       setSessionId(s.session_id);
       if (s.demo_messages_used != null) {
         // Fresh session, empty transcript — same contract as useChatSession's
@@ -221,6 +226,16 @@ export default function SessionDropdown() {
       // replacement loads, so nothing can be sent into it meanwhile. The
       // reader shows its "initializing chat" placeholder until then; if the
       // replacement cannot load, this menu stays open to pick another one.
+      // A send on it during the delete request streams into a conversation
+      // the server no longer has. Unpublishing drops the rest of that stream
+      // (useChatStream's session check), its `done` included, so nothing
+      // would clear isStreaming and the replacement would refuse to load.
+      // End it here first. Nothing aborts its request: it runs to completion
+      // in the background and every callback is dropped.
+      if (live.isStreaming) {
+        flushPendingText();
+        setStreaming(false);
+      }
       setSessionId(null);
       setMessages([]);
       if (remaining.length > 0) {

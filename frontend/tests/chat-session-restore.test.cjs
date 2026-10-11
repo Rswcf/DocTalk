@@ -584,3 +584,90 @@ test('a menu action stalled on one document does not lock the menu on the next',
   assert.deepEqual(created, ['doc-2']);
   assert.equal(h.store.getState().sessionId, 'd2-fresh');
 });
+
+// Codex r3 (P), pre-existing on main: New Chat and delete-current checked for
+// a running stream only when they started. The local writes of
+// useChatStream.sendMessage, and its stream's later callbacks: every one is
+// dropped once the store's session id or demo accounting epoch is no longer
+// the one the send started on (`active()`), its `done` included, so a session
+// change under a running stream leaves isStreaming set.
+function startStreamLikeSendMessage(store) {
+  const state = store.getState();
+  const sessionId = state.sessionId;
+  const epoch = state.demoAccountingEpoch;
+  const active = () => store.getState().sessionId === sessionId && store.getState().demoAccountingEpoch === epoch;
+  state.addMessage({ id: 'send-u', role: 'user', text: QUESTION, createdAt: 20 });
+  state.addMessage({ id: 'send-a', role: 'assistant', text: '', citations: [], createdAt: 20 });
+  state.setStreaming(true);
+  if (active()) store.getState().updateLastMessage(ANSWER);
+  return {
+    // handleStreamDone: flush the buffered text, then clear the flag.
+    done() {
+      if (!active()) return;
+      store.getState().flushPendingText();
+      store.getState().setStreaming(false);
+    },
+  };
+}
+
+// The store buffers streamed text and appends it to the LAST message 50 ms
+// later, whatever transcript is on screen by then.
+const afterTextFlush = () => new Promise((resolve) => setTimeout(resolve, 80));
+
+test('a send during a pending New Chat keeps its conversation and its stream', async () => {
+  const created = deferred();
+  const h = dropdownHarness({
+    isDemo: true,
+    getMessages: async () => { throw new Error('not under test'); },
+    createSession: () => created.promise,
+  });
+  const creating = h.click('session.newChat');
+  await settle();
+  const stream = startStreamLikeSendMessage(h.store);
+  created.resolve({ session_id: 'fresh', created_at: '2026-10-11', demo_messages_used: 2 });
+  await creating;
+  stream.done();
+  await afterTextFlush();
+
+  const state = h.store.getState();
+  assert.equal(state.sessionId, 'current');
+  assert.deepEqual(state.messages.map((m) => [m.id, m.text]), [
+    ...earlier.map((m) => [m.id, m.text]),
+    ['send-u', QUESTION],
+    ['send-a', ANSWER],
+  ]);
+  assert.equal(state.isStreaming, false, 'the stream ended but isStreaming is still set');
+  assert.deepEqual(h.calls.pointers, [], 'the demo pointer moved to a conversation that was never opened');
+  assert.deepEqual(h.calls.accounting, [], 'demo accounting installed for a conversation that was never opened');
+  assert.deepEqual(state.sessions.map((s) => s.session_id), ['fresh', 'current', 'older', 'oldest'],
+    'the created conversation exists on the server, so the menu lists it');
+});
+
+// Deleting the open conversation: the server row is already gone when the
+// request returns, so a stream started on it meanwhile has nowhere to land.
+// The delete goes ahead and ends that stream locally.
+test('a send during the delete of the open conversation never leaves the reader streaming', async () => {
+  for (const branch of ['replacement', 'none left']) {
+    const deleted = deferred();
+    const h = dropdownHarness({
+      getMessages: async (id) => { assert.equal(id, 'older', branch); return { messages: olderTranscript }; },
+      createSession: async () => ({ session_id: 'fresh', created_at: '2026-10-11' }),
+      deleteSession: () => deleted.promise,
+    });
+    if (branch === 'none left') h.store.getState().setSessions([row('current', 2)]);
+    h.click('session.deleteChat');
+    const deleting = h.click('common.yes');
+    await settle();
+    const stream = startStreamLikeSendMessage(h.store);
+    deleted.resolve();
+    await deleting;
+    stream.done();
+    await afterTextFlush();
+
+    const state = h.store.getState();
+    assert.equal(state.isStreaming, false, `${branch}: isStreaming is still set`);
+    assert.equal(state.sessionId, branch === 'replacement' ? 'older' : 'fresh', branch);
+    assert.deepEqual(state.messages, branch === 'replacement' ? olderTranscript : [],
+      `${branch}: the deleted conversation's stream wrote into the replacement`);
+  }
+});
