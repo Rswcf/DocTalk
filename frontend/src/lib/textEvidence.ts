@@ -51,6 +51,8 @@ const REGION_MIN_CHARS = 40;
 // citations) every chunk located >= 0.65; the same chunks cited on pages that
 // do not hold them located <= 0.07.
 const MIN_CHUNK_COVERAGE = 0.3;
+// Longest glued title dropped without verification (canonical characters).
+const GLUED_TITLE_MAX = 120;
 
 interface PageIndex {
   number: number; raw: string; title: string | null | undefined;
@@ -90,10 +92,13 @@ function indexPage(page: TextEvidencePage): PageIndex {
  *   stays in the slide text, and a URL page starts with its `# heading` block.
  * DOCX headings, Markdown headings and XLSX sheet names are not in the page
  * text, and /text-content serves no title for them when they were glued, so
- * their glued titles cannot be verified and the split that would drop them is
- * refused. Unverified text in front of a page start may be real content that
- * changes what the page sentence means ("The court rejected" + the page's
- * claim), so it is never dropped as a title.
+ * their glued titles cannot be verified here. Such a title is dropped only
+ * where page text brackets it: right after the located literal end of the
+ * page before and right before the located start of its page, and at most
+ * GLUED_TITLE_MAX characters (see matchPageEnd, splitAtPageStart). Other
+ * unverified text in front of a page start may be real content that changes
+ * what the page sentence means ("The court rejected" + the page's claim at
+ * the chunk start), so it is never dropped.
  */
 function pageTitles(page: TextEvidencePage): string[] {
   const titles = new Set<string>();
@@ -209,15 +214,27 @@ function cutsAt(text: string, index: number): boolean {
 }
 
 /** `text` ends with the end of `page`, possibly followed by the glued title
- * of `next` (the page after it), which is dropped only when verified (see
- * pageTitles). Returns the page hit and where the match starts in `text`; the
- * match must be unique. */
-function matchPageEnd(text: string, page: PageIndex, next: PageIndex, search: Search): { hit: Hit; start: number } | null {
+ * of `next` (the page after it). A verified title (see pageTitles) is always
+ * dropped. With `bracketed` (what follows `text` in the chunk is located and
+ * opens `next` at its first character), any glued title is dropped: a short
+ * run of text between the literal end of `page` and the start of `next` is, by how
+ * the chunker joins page blocks, the title block of `next`, never page text
+ * (DOCX/MD headings and XLSX sheet names are in no page text at all).
+ * Returns the page hit and where the match starts in `text`; the match must
+ * be unique. */
+function matchPageEnd(text: string, page: PageIndex, next: PageIndex, search: Search, bracketed: boolean): { hit: Hit; start: number } | null {
   const canon = page.canon.trimEnd();
   const cuts = [text.length];
   for (const title of next.titles) {
     const cut = text.length - title.length;
     if (cut > 0 && text.endsWith(title) && cutsAt(text, cut)) cuts.push(cut);
+  }
+  if (bracketed) {
+    const last = canon.at(-1);
+    for (let cut = text.length - 1; cut > 0 && text.length - cut <= GLUED_TITLE_MAX; cut--) {
+      if (text[cut] === ' ' || !cutsAt(text, cut) || cuts.includes(cut)) continue;
+      if (text.slice(0, cut).trimEnd().at(-1) === last) cuts.push(cut);
+    }
   }
   for (const j of cuts) {
     const body = text.slice(0, j).trimEnd();
@@ -238,13 +255,16 @@ function matchPageEnd(text: string, page: PageIndex, next: PageIndex, search: Se
 
 /** Peels consecutive page ends off the end of `text`, starting at page index
  * `last` (which must be page number `number`) and walking back. `rest` is the
- * unmatched beginning of `text`. */
-function peelPageEnds(text: string, search: Search, last: number, number: number) {
+ * unmatched beginning of `text`. `glued`: an unverified glued title may be
+ * dropped where it is bracketed (see matchPageEnd); the text after `text`
+ * opens page `number + 1`. */
+function peelPageEnds(text: string, search: Search, last: number, number: number, glued: boolean) {
   const pages = search.scope;
   const hits: Hit[] = [];
   let rest = text;
   for (let q = last; q >= 0 && pages[q].number === number - (last - q) && rest; q--) {
-    const match = matchPageEnd(rest, pages[q], pages[q + 1], search);
+    const opensNext = !hits.length || hits[0].start === 0;
+    const match = matchPageEnd(rest, pages[q], pages[q + 1], search, glued && opensNext);
     if (!match) break;
     hits.unshift(match.hit);
     rest = rest.slice(0, match.start).trimEnd();
@@ -252,56 +272,94 @@ function peelPageEnds(text: string, search: Search, last: number, number: number
   return { hits, rest };
 }
 
+/** How a piece is located. `glued`: an unverified glued title may be dropped
+ * where page text brackets it (chunk pieces only, never a focus: an exact
+ * claim needs verified structure). `afterEnd`: the number of the page whose
+ * literal end the previous piece of the chunk was located through, if any. */
+interface PieceOptions { byLine: boolean; glued: boolean; afterEnd: number | null }
+const FOCUS_PIECE: PieceOptions = { byLine: false, glued: false, afterEnd: null };
+
+/** As short as a title block (canonical text has no line breaks to test). */
+function gluedTitle(text: string): boolean {
+  return text.length <= GLUED_TITLE_MAX;
+}
+
 /** A piece that is not in the page text as a whole: the tail of it may open a
  * page (title glued on, or the previous page's undelimited end glued on). The
  * tail must start that page and be unique. The head is matched against the
- * ends of the pages before (a verified glued title may sit between them);
- * what is left must be a verified title of the page it precedes, else the
- * split is refused. A page before the tail's page is in scope only when the
- * chunk runs through its end (chunks are contiguous), so a unique match there
- * is the chunk's own text. */
-function splitAtPageStart(piece: string, search: Search): Hit[] | null {
+ * ends of the pages before (a glued title may sit between them; see
+ * matchPageEnd); what is left must be explained (see explainsGap), or, for a
+ * chunk piece, be title-short and right after the previous piece's located
+ * end of the page before (`afterEnd`), else the split is refused. Unverified
+ * text with no located page end in front of it (the chunk's first piece, "The
+ * court rejected" + a page's claim) is never dropped. A tail shorter than
+ * minRemainder needs a page end peeled in front of it. A page before the
+ * tail's page is in scope only when the chunk runs through its end (chunks
+ * are contiguous), so a unique match there is the chunk's own text. */
+function splitAtPageStart(piece: string, search: Search, options: PieceOptions = FOCUS_PIECE): Hit[] | null {
   const pages = search.scope;
-  const rest = minRemainder(piece);
   for (let p = 0; p < pages.length; p++) {
     const page = pages[p];
     if (!page.canon) continue;
-    for (let k = 1; k <= piece.length - rest; k++) {
+    for (let k = 1; k <= piece.length - minPiece(piece); k++) {
       if (piece[k] !== page.canon[0] || !cutsAt(piece, k)) continue;
       const tail = piece.slice(k);
       if (!page.canon.startsWith(tail) || !boundaryOk(page.canon, 0, tail)) continue;
       if (findAll(search.all, tail).length !== 1) return null;
       const before = piece.slice(0, k).trimEnd();
-      const head = p > 0 ? peelPageEnds(before, search, p - 1, page.number - 1) : { hits: [], rest: before };
+      const head = p > 0 ? peelPageEnds(before, search, p - 1, page.number - 1, options.glued) : { hits: [], rest: before };
+      if (tail.length < minRemainder(piece) && !head.hits.length) continue;
       // The leftover precedes the earliest located text, which must then open
       // its page; see explainsGap for what the leftover may be.
       const first = head.hits[0];
       const opens = first ? (first.start === 0 ? search.pages.get(first.page) : undefined) : page;
-      if (head.rest && !(opens && explainsGap(head.rest, opens, search))) return null;
+      const afterPrevious = options.glued && opens !== undefined && options.afterEnd === opens.number - 1 && gluedTitle(head.rest);
+      if (head.rest && !(opens && (explainsGap(head.rest, opens, search) || afterPrevious))) return null;
       return [...head.hits, { page: page.number, start: 0, end: tail.length }];
     }
   }
   return null;
 }
 
-/** Unique hits for one sentence: whole, else split at a page start, else (for
- * multi-line sentences such as table rows) line by line. */
-function locatePiece(raw: string, search: Search, byLine = true): Hit[] {
-  const canon = canonicalize(raw);
-  const piece = canon.text;
-  if (piece.length < minPiece(piece)) return [];
-  const hits = findAll(search.all, piece);
-  // Unique in the document, and on a page the chunk may sit on.
-  if (hits.length === 1) return search.inScope.has(hits[0].page) ? hits : [];
-  if (hits.length > 1) return [];
-  const split = splitAtPageStart(piece, search);
-  if (split) return split;
-  return byLine ? locateLines(raw, search) : [];
+/** Hits of a located piece, and the page whose literal end the piece was
+ *  located through (its last hit covers its last character and ends that
+ *  page), for the next piece's glued title. */
+interface Located { hits: Hit[]; endsAt: number | null }
+
+function endsPage(hit: Hit | undefined, search: Search): number | null {
+  if (!hit) return null;
+  return hit.end === search.pages.get(hit.page)!.canon.trimEnd().length ? hit.page : null;
 }
 
-function locateLines(raw: string, search: Search): Hit[] {
+/** Unique hits for one sentence: whole, else split at a page start, else (for
+ * multi-line sentences such as table rows) line by line. */
+function locatePiece(raw: string, search: Search, options: PieceOptions = FOCUS_PIECE): Located {
+  const canon = canonicalize(raw);
+  const piece = canon.text;
+  if (piece.length < minPiece(piece)) return { hits: [], endsAt: null };
+  const hits = findAll(search.all, piece);
+  // Unique in the document, and on a page the chunk may sit on.
+  if (hits.length === 1) {
+    return search.inScope.has(hits[0].page) ? { hits, endsAt: endsPage(hits[0], search) } : { hits: [], endsAt: null };
+  }
+  if (hits.length > 1) return { hits: [], endsAt: null };
+  const split = splitAtPageStart(piece, search, options);
+  if (split) return { hits: split, endsAt: endsPage(split.at(-1), search) };
+  return options.byLine ? locateLines(raw, search, options) : { hits: [], endsAt: null };
+}
+
+function locateLines(raw: string, search: Search, options: PieceOptions): Located {
   const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
-  return lines.length > 1 ? lines.flatMap(line => locatePiece(line, search, false)) : [];
+  if (lines.length < 2) return { hits: [], endsAt: null };
+  const hits: Hit[] = [];
+  let afterEnd = options.afterEnd;
+  for (const line of lines) {
+    const located = locatePiece(line, search, { ...options, byLine: false, afterEnd });
+    hits.push(...located.hits);
+    afterEnd = located.endsAt;
+  }
+  // The last line's own end: null when it was not located.
+  return { hits, endsAt: afterEnd };
 }
 
 function before(a: Hit, b: Hit): boolean {
@@ -408,7 +466,14 @@ export function locateTextEvidence(
 
   let region: Hit[] = [];
   if (chunkText) {
-    const found = inOrder(splitSentences(chunkText).flatMap(sentence => locatePiece(sentence, search)));
+    const pieces: Hit[] = [];
+    let afterEnd: number | null = null;
+    for (const sentence of splitSentences(chunkText)) {
+      const located = locatePiece(sentence, search, { byLine: true, glued: true, afterEnd });
+      pieces.push(...located.hits);
+      afterEnd = located.endsAt;
+    }
+    const found = inOrder(pieces);
     // A cited chunk sits in its own page range almost whole. A few unique
     // lines that cover little of it are coincidences (repeated boilerplate, a
     // range that does not hold the chunk), so nothing is marked, focus included.
@@ -430,7 +495,7 @@ export function locateTextEvidence(
         if (split && split.every(hit => inside(hit, region))) emphasis = split;
       }
     } else {
-      const hits = locatePiece(focus!, search, false);
+      const { hits } = locatePiece(focus!, search);
       if (hits.length && hits.every(marked) && standsAlone(hits, search.pages)) emphasis = hits;
     }
   }

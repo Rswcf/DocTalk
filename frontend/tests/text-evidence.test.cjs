@@ -252,12 +252,16 @@ test('XLSX: a chunk across two sheets marks both tables, never the sheet names',
   const verified = locateTextEvidence(titled, citation, chunk, null);
   assert.equal(verified.kind, 'region');
   assert.deepEqual(marked(titled, verified).map(r => `${r.page}:${r.text}`), [`1:${s1}`, `2:${s2}`]);
-  // Without served titles only rows that are whole lines of the chunk are marked.
+  // Without served titles: "Headcount" sits between the end of sheet 1 and
+  // the start of sheet 2, so it is dropped and both rows around it are marked;
+  // "Budget" opens the chunk with no page end in front of it, so its header
+  // row stays unmarked. "| --- | --- |" also occurs inside sheet 1's rule.
   const pages = [{ page_number: 1, text: s1 }, { page_number: 2, text: s2 }];
   const unverified = locateTextEvidence(pages, citation, chunk, null);
   assert.deepEqual(marked(pages, unverified).map(r => `${r.page}:${r.text}`), [
-    '1:| --- | --- | --- |\n| Travel | 1200 | 950 |', '2:| Research | 12 |\n| Support | 7 |',
+    '1:| --- | --- | --- |\n| Travel | 1200 | 950 |\n| Software | 4300 | 4300 |', '2:| Team | People |', '2:| Research | 12 |\n| Support | 7 |',
   ]);
+  assert.ok(!marked(pages, unverified).some(r => /Budget|Headcount|\| Item \|/.test(r.text)));
 });
 
 test('a page end glued to the next verified title is located when the chunk runs through it', () => {
@@ -270,11 +274,84 @@ test('a page end glued to the next verified title is located when the chunk runs
   const result = locateTextEvidence(pages, citation, chunk, null);
   assert.deepEqual(marked(pages, result).map(r => `${r.page}:${r.text}`), [`1:${p1}`, `2:${p2}`]);
   assert.ok(!marked(pages, result).some(r => r.text.includes('Operating Costs')));
-  // An unverified title between the two pages refuses the split: the glued
-  // piece is located line by line, and page 2's start is not marked.
+  // An unverified title between the end of page 1 and the start of page 2 is
+  // bracketed by page text on both sides: dropped, never marked.
   const untitled = [{ page_number: 1, text: p1 }, { page_number: 2, text: p2 }];
   const unverified = locateTextEvidence(untitled, citation, chunk, null);
-  assert.deepEqual(marked(untitled, unverified).map(r => `${r.page}:${r.text}`), ['1:Opening sentence of the slide body.\nRevenue by region']);
+  assert.deepEqual(marked(untitled, unverified).map(r => `${r.page}:${r.text}`), [`1:${p1}`, `2:${p2}`]);
+  assert.ok(!marked(untitled, unverified).some(r => r.text.includes('Operating Costs')));
+});
+
+// Browser acceptance 2026-10-11, P2-1: page texts and chunk shapes from the
+// golden documents (depot-manual.docx, coastal-handbook.md, highlight-fixture.md).
+const DEPOT = [
+  'This manual describes how the Harbor Street depot receives, stores and dispatches medical supplies.\nIt applies to all forty-two staff members who work the morning, evening and night shifts.\n\n| Shift | Start | End | Staff |\n| --- | --- | --- | --- |\n| Morning | 06:00 | 14:00 | 18 |\n| Evening | 14:00 | 22:00 | 15 |\n| Night | 22:00 | 06:00 | 9 |\n',
+  'Every inbound pallet is scanned at bay three before it leaves the loading dock.\nCold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.\nDamaged cartons are photographed and the images are attached to the receiving record the same day.',
+  'Shelving in aisle seven is reserved for controlled substances and needs two badge scans to open.\nHeavy items above twenty kilograms are stored below waist height on the lowest two shelves.',
+];
+const depotPages = () => DEPOT.map((text, i) => ({ page_number: i + 1, text }));
+const depotChunk = chunkOf(['Purpose and scope', ...bodyUnits(DEPOT[0]), 'Receiving goods', ...bodyUnits(DEPOT[1]), 'Storage rules', ...bodyUnits(DEPOT[2])]);
+
+test('Browser P2-1: a heading between a table and the next page is dropped; the last row and the first sentence are marked', () => {
+  assert.ok(depotChunk.includes('| Night | 22:00 | 06:00 | 9 | Receiving goods Every inbound pallet'), 'one piece: last row, heading, first sentence');
+  const pages = depotPages();
+  const result = locateTextEvidence(pages, { page: 1, pageEnd: 3, contextText: `[page 1–3] ${depotChunk}` }, depotChunk, null);
+  const text = marked(pages, result).map(r => r.text).join('|');
+  assert.match(text, /\| Night \| 22:00 \| 06:00 \| 9 \|/);
+  assert.match(text, /Every inbound pallet is scanned at bay three/);
+  for (const heading of ['Purpose and scope', 'Receiving goods', 'Storage rules']) assert.ok(!text.includes(heading), heading);
+  // The chunk opens with its first heading: nothing in front of it is located,
+  // so its sentence stays unmarked (Codex r1 #2).
+  assert.ok(!text.includes('This manual describes'));
+});
+
+test('Browser P2-1: a heading after a piece that ends the previous page is dropped; that page\'s first sentence is marked', () => {
+  const pages = depotPages();
+  assert.ok(depotChunk.includes('the same day. Storage rules Shelving in aisle seven'), 'heading glued onto the next piece');
+  const result = locateTextEvidence(pages, { page: 3, pageEnd: 3, contextText: `[page 1–3] ${depotChunk}` }, depotChunk, null);
+  assert.deepEqual(marked(pages, result).map(r => `${r.page}:${r.text}`), [`3:${DEPOT[2]}`]);
+});
+
+test('Browser P2-1: a heading after a code block, a CJK heading and an Arabic heading are dropped between pages', () => {
+  const code = ['Cloud cover is estimated in eighths of the visible sky.\n\n```\nlog format: HH:MM  speed_kn\n```\n',
+    'Seal counts happen at low water, when the animals haul out on the Shingle Bank.\nBirds are counted with the block method.'];
+  const codePages = code.map((text, i) => ({ page_number: i + 1, text }));
+  const codeChunk = chunkOf([...bodyUnits(code[0]), 'Wildlife counts', ...bodyUnits(code[1])]);
+  assert.ok(codeChunk.includes('``` Wildlife counts Seal counts happen'));
+  const seals = locateTextEvidence(codePages, { page: 1, pageEnd: 2, contextText: `[page 1–2] ${codeChunk}` }, codeChunk, null);
+  assert.ok(marked(codePages, seals).some(r => r.page === 2 && r.text.startsWith('Seal counts happen at low water')));
+  assert.ok(!marked(codePages, seals).some(r => r.text.includes('Wildlife counts')));
+
+  const md = ['Use `--strict` mode \\*only\\* when the probe is calibrated &amp; dry.\n',
+    '本研究共调查了三十八处湿地。水样均在清晨采集，以减少昼夜温差的影响。\n',
+    'شملت الدراسة ثمانية وثلاثين موقعا من الأراضي الرطبة. جمعت العينات عند الفجر.\n'];
+  const mdPages = md.map((text, i) => ({ page_number: i + 1, text }));
+  const mdChunk = chunkOf([...bodyUnits(md[0]), '中文摘要', ...bodyUnits(md[1]), 'ملخص', ...bodyUnits(md[2])]);
+  assert.ok(mdChunk.includes('dry.中文摘要本研究') && mdChunk.includes('的影响。ملخص شملت'));
+  const result = locateTextEvidence(mdPages, { page: 1, pageEnd: 3, contextText: `[page 1–3] ${mdChunk}` }, mdChunk, null);
+  const text = marked(mdPages, result).map(r => `${r.page}:${r.text}`);
+  assert.ok(text.some(r => r.startsWith('1:Use `--strict` mode')), 'the line glued to the CJK heading');
+  assert.ok(text.some(r => r.startsWith('2:本研究共调查了')));
+  assert.ok(text.some(r => r.startsWith('3:شملت الدراسة')), 'the first Arabic sentence');
+  assert.ok(!text.some(r => r.includes('中文摘要') || r.includes('ملخص')));
+});
+
+test('Browser P2-1: unbracketed text in front of a page start is still never dropped', () => {
+  const pages = [
+    { page_number: 1, text: 'Alpha sentence one opens the first page. Beta sentence two closes the first page.' },
+    { page_number: 2, text: 'Gamma sentence starts the second page with enough words.' },
+  ];
+  const cite = { page: 1, pageEnd: 2 };
+  // The piece before the glued text ends mid-page, not at the end of page 1.
+  const midPage = 'Alpha sentence one opens the first page. Title words Gamma sentence starts the second page with enough words.';
+  const mid = locateTextEvidence(pages, { ...cite, contextText: `[page 1–2] ${midPage}` }, midPage, null);
+  assert.ok(!marked(pages, mid).some(r => r.page === 2));
+  // Glued text longer than a title is not a glued title.
+  for (const glued of ['A long run of words '.repeat(8).trim()]) {
+    const chunk = `Beta sentence two closes the first page. ${glued} Gamma sentence starts the second page with enough words.`;
+    const result = locateTextEvidence(pages, { ...cite, contextText: `[page 1–2] ${chunk}` }, chunk, null);
+    assert.ok(!marked(pages, result).some(r => r.page === 2), JSON.stringify(glued.slice(0, 20)));
+  }
 });
 
 test('a glued title that matches the end of a page outside the chunk is not marked', () => {
