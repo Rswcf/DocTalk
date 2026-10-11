@@ -431,6 +431,36 @@ function inside(hit: Hit, spans: Hit[]): boolean {
   return spans.some(span => span.page === hit.page && span.start <= hit.start && hit.end <= span.end);
 }
 
+/** Whether a focus hit outside the region is the chunk's own occurrence of
+ * `quote`. A unique match on the page is not enough: the chunk may hold the
+ * words only as a glued heading that a phrase elsewhere on the page repeats
+ * (Codex r4 #1). So the hit must touch no region span, the quote must occur
+ * once in the chunk, and the page and the chunk must both put it right next to
+ * the same located piece: on the page with only whitespace between, in the
+ * chunk with nothing between. */
+function besideRegion(hit: Hit, quote: string, chunk: string, pieces: Hit[], region: Hit[], pages: Map<number, PageIndex>): boolean {
+  if (region.some(span => span.page === hit.page && hit.start < span.end && span.start < hit.end)) return false;
+  const text = canonicalize(chunk).text;
+  const at: number[] = [];
+  for (let from = 0; ;) {
+    const index = text.indexOf(quote, from);
+    if (index < 0) break;
+    from = index + 1;
+    if (boundaryOk(text, index, quote)) at.push(index);
+  }
+  if (at.length !== 1) return false;
+  const after = text.slice(at[0] + quote.length).replace(/^ /, '');
+  const before = text.slice(0, at[0]).replace(/ $/, '');
+  const canon = pages.get(hit.page)!.canon;
+  return pieces.some(piece => {
+    if (piece.page !== hit.page) return false;
+    const own = canon.slice(piece.start, piece.end);
+    if (piece.start >= hit.end && !canon.slice(hit.end, piece.start).trim()) return after.startsWith(own);
+    if (piece.end <= hit.start && !canon.slice(piece.end, hit.start).trim()) return before.endsWith(own);
+    return false;
+  });
+}
+
 function toRaw(page: PageIndex, start: number, end: number, emphasis: boolean): TextEvidenceRange {
   return { page: page.number, start: page.offsets[start].start, end: page.offsets[end - 1].end, emphasis };
 }
@@ -441,8 +471,9 @@ function toRaw(page: PageIndex, start: number, end: number, emphasis: boolean): 
  *                   range (if any) is where the chunk may sit
  * @param chunkText  the cited chunk's full text, or null when unknown
  * @param focus      verbatim supporting sentence; emphasised only when it is
- *                   unique inside the located chunk (or, with no chunk, unique
- *                   in the document and on the cited pages)
+ *                   unique inside the located chunk, or right beside it (see
+ *                   besideRegion), or, with no chunk, unique in the document
+ *                   and on the cited pages
  *
  * Uniqueness is checked over the whole document, never over the cited pages
  * alone. The cited range is not proof of where the text is: citation_location
@@ -487,6 +518,8 @@ export function locateTextEvidence(
   const marked = (hit: Hit) => hit.page >= markStart && hit.page <= markEnd;
 
   let region: Hit[] = [];
+  // The region's located pieces before merging, in chunk order.
+  let regionPieces: Hit[] = [];
   if (chunkText) {
     const pieces: Hit[] = [];
     let afterEnd: number | null = null;
@@ -503,7 +536,10 @@ export function locateTextEvidence(
     if (covered < MIN_CHUNK_COVERAGE * canonicalize(chunkText).text.length) return NO_EVIDENCE;
     const located = found.filter(marked);
     const chars = located.reduce((sum, hit) => sum + hit.end - hit.start, 0);
-    if (located.length >= REGION_MIN_PIECES || chars >= REGION_MIN_CHARS) region = mergeAdjacent(located, byNumber);
+    if (located.length >= REGION_MIN_PIECES || chars >= REGION_MIN_CHARS) {
+      regionPieces = located;
+      region = mergeAdjacent(located, byNumber);
+    }
   }
 
   let emphasis: Hit[] = [];
@@ -523,11 +559,11 @@ export function locateTextEvidence(
         if (split && split.every(hit => inside(hit, region))) emphasis = split;
         // A focus the region does not hold, because its sentence was not
         // located (a Quote Finder quote glued to the chunk's first heading),
-        // follows the rule without a region; it must also be the chunk's own
-        // text and touch no region span.
-        else if (canonicalize(chunkText!).text.includes(quote)) {
+        // follows the rule without a region, in one piece, and must be the
+        // chunk's own occurrence (see besideRegion).
+        else {
           const hits = alone();
-          if (!hits.some(hit => region.some(span => span.page === hit.page && hit.start < span.end && span.start < hit.end))) emphasis = hits;
+          if (hits.length === 1 && besideRegion(hits[0], quote, chunkText!, regionPieces, region, search.pages)) emphasis = hits;
         }
       }
     } else emphasis = alone();

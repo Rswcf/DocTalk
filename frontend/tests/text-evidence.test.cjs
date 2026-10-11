@@ -520,6 +520,33 @@ test('Browser P2-2: a focus outside the region is not emphasised when it overlap
   assert.ok(repeated.ranges.every(r => !r.emphasis));
 });
 
+test('Codex r4 #1: a focus outside the region is exact only where page and chunk put it beside a located piece', () => {
+  const quote = 'Market Dynamics';
+  const chunk = 'Market Dynamics The committee reviewed the annual budget in March. The chair asked for a revised forecast by June.';
+  // The chunk opens with a heading that a glossary phrase elsewhere on the
+  // page repeats: unique on the page and in the chunk, but not the cited text.
+  const glossary = [{ page_number: 1, text: 'Market Dynamics is a glossary phrase outside the selected chunk. The committee reviewed the annual budget in March. The chair asked for a revised forecast by June.' }];
+  for (const citation of [{ page: 1, pageEnd: 1, contextText: `[page 1] ${chunk}` }, { page: 1, pageEnd: 1 }]) {
+    const result = locateTextEvidence(glossary, citation, chunk, quote);
+    assert.equal(result.kind, 'region', JSON.stringify(citation));
+    assert.ok(result.ranges.every(r => !r.emphasis));
+    assert.ok(!marked(glossary, result).some(r => r.text.includes(quote)));
+  }
+  // Beside the region on the page, but the chunk puts other text after it.
+  const beside = [{ page_number: 1, text: 'Market Dynamics\nThe chair asked for a revised forecast by June. The committee approved the plan in July.' }];
+  const besideChunk = 'Market Dynamics The committee reviewed the annual budget in March. The chair asked for a revised forecast by June. The committee approved the plan in July.';
+  const near = locateTextEvidence(beside, { page: 1, pageEnd: 1 }, besideChunk, quote);
+  assert.equal(near.kind, 'region');
+  assert.ok(near.ranges.every(r => !r.emphasis));
+  // Twice in the chunk: not provably the occurrence on the page, even where
+  // one copy sits right before the region (the DEPOT card above is exact).
+  const pages = depotPages();
+  const manual = 'This manual describes how the Harbor Street depot receives, stores and dispatches medical supplies.';
+  const twice = locateTextEvidence(pages, { page: 1, pageEnd: 1, focusSnippet: manual }, `${depotChunk} ${manual}`);
+  assert.equal(twice.kind, 'region');
+  assert.ok(twice.ranges.every(r => !r.emphasis));
+});
+
 test('Codex r1 #1: a chunk sentence repeated on another page is not marked on the cited page', () => {
   const sentence = 'This exact warning appears in both sections of the policy.';
   const pages = [
