@@ -27,6 +27,7 @@ import type { ChatArtifact, Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
 import { layoutTranslationTargetLabel, proxiedArtifactUrl } from '../../../lib/layoutTranslation';
 import { useDocumentBrief } from '../../../lib/useDocumentBrief';
+import { citationPassage } from '../../../lib/citationText';
 
 function useDesktopReaderLayout() {
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -69,6 +70,11 @@ export default function DocumentReaderPageClient() {
     citationSession.current = { documentId, sessionId };
   }, [documentId, sessionId]);
   const addMessage = useDocTalkStore((s) => s.addMessage);
+  const activeCitation = citationTarget?.citation ?? null;
+  // The chunk passage, for the converted-PDF text-layer matcher. The store's
+  // highlightSnippet stays the backend's text_snippet: the native PDF and
+  // plain-text paths keep reading it unchanged.
+  const activeCitationPassage = activeCitation ? citationPassage(activeCitation) : null;
 
   const documentName = useDocTalkStore((s) => s.documentName);
   const suggestedQuestions = useDocTalkStore((s) => s.suggestedQuestions);
@@ -402,7 +408,7 @@ export default function DocumentReaderPageClient() {
             {translatedPreviewBar}
             <MissingFileNotice variant={missingFile} />
             <div className="flex-1 min-h-0">
-              <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+              <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} citation={activeCitation} onReturnToAnswer={canReturn ? returnToAnswer : undefined} />
             </div>
           </div>
         ) : fileType === 'pdf' ? (
@@ -433,9 +439,9 @@ export default function DocumentReaderPageClient() {
             <div className="h-full w-full flex items-center justify-center text-zinc-500">{t('doc.loading')}</div>
           )
         ) : useConvertedPdf ? (
-          <PdfViewer citation={citationTarget?.citation} onReturnToAnswer={canReturn ? returnToAnswer : undefined} pdfUrl={convertedPdfUrl} onRefreshUrl={refreshConvertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} />
+          <PdfViewer citation={citationTarget?.citation} onReturnToAnswer={canReturn ? returnToAnswer : undefined} pdfUrl={convertedPdfUrl} onRefreshUrl={refreshConvertedPdfUrl} currentPage={currentPage} highlights={highlights} scale={scale} scrollNonce={scrollNonce} highlightSnippet={activeCitationPassage} highlightFocus={highlightFocus} syntheticBoxes={fileType !== 'pdf'} />
         ) : (
-          <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} />
+          <TextViewer documentId={documentId} fileType={fileType} targetPage={currentPage} scrollNonce={scrollNonce} highlightSnippet={highlightSnippet} highlightFocus={highlightFocus} citation={activeCitation} onReturnToAnswer={canReturn ? returnToAnswer : undefined} />
         )}
       </div>
     </div>

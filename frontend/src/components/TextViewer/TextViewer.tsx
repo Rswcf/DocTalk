@@ -6,6 +6,7 @@ import { Search, ChevronLeft, ChevronRight, X, ExternalLink, Globe2, ListTree } 
 import { PROXY_BASE } from '../../lib/api';
 import { useLocale } from '../../i18n';
 import { Spinner } from '../spell';
+import type { Citation } from '../../types';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 
@@ -28,6 +29,11 @@ interface Props {
   targetPage?: number;
   scrollNonce?: number;
   highlightSnippet?: string | null;
+  /** Verbatim supporting sentence (chat focus or Quote Finder quote). */
+  highlightFocus?: string | null;
+  /** The active citation; its chunk text drives the Markdown highlight. */
+  citation?: Citation | null;
+  onReturnToAnswer?: () => void;
 }
 
 /** Whether to use markdown rendering for this file type */

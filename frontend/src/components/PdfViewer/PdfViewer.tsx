@@ -75,12 +75,18 @@ export interface PdfViewerProps {
   layoutTranslateBusy?: boolean;
   layoutTranslateDisabled?: boolean;
   onRefreshUrl?: () => Promise<string | undefined>;
+  /** Converted DOCX/PPTX: chunk boxes are synthetic placeholders, not text
+   * geometry, so draw no region and match the passage in the text layer. */
+  syntheticBoxes?: boolean;
 }
+
+const NO_BOXES: NormalizedBBox[] = [];
 
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights: boxHighlights, scale, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl, syntheticBoxes }: PdfViewerProps) {
+  const highlights = syntheticBoxes ? NO_BOXES : boxHighlights;
   const { refreshing, revision, retry, error: recoveryError } = usePdfRecovery(pdfUrl, onRefreshUrl);
   const [hiddenEvidence, setHiddenEvidence] = useState(false);
   const [evidenceVersion, setEvidenceVersion] = useState(0);
@@ -576,7 +582,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                     highlightSnippet={citation && pageNumber >= citation.page && pageNumber <= (citation.pageEnd || citation.page) ? highlightSnippet : null}
                     highlightFocus={citation && pageNumber >= citation.page && pageNumber <= (citation.pageEnd || citation.page) ? highlightFocus : null}
                     citationIndex={pageHighlights.length || (citation?.page === pageNumber) ? citation?.refIndex : undefined}
-                    navigationId={scrollNonce} hidden={hiddenEvidence} onEvidenceReady={onEvidenceReady} />
+                    navigationId={scrollNonce} hidden={hiddenEvidence} onEvidenceReady={onEvidenceReady} syntheticBoxes={syntheticBoxes} />
                 </div>
               );
             })}

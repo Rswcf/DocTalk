@@ -118,6 +118,55 @@ export function uniqueCitationIndexes(citations: Citation[]): Citation[] {
   });
 }
 
+// chat_service._citation_payload sends `context_text = "[page N] " + chunk.text`
+// (or "[page N–M] "), cut at 900 Python code points. `text_snippet` is
+// "{section_title}: " + chunk.text cut at 100, so it rarely matches page text.
+const CONTEXT_PAGE_PREFIX = /^\[page (\d+)(?:–(\d+))?\] /;
+const CONTEXT_TEXT_LIMIT = 900;
+
+export interface CitationChunkText {
+  text: string;
+  /** The backend cut the context at its limit: the tail may be a fragment. */
+  truncated: boolean;
+  /** The chunk's own page range (before any narrowing to one cited page). */
+  pageStart?: number;
+  pageEnd?: number;
+}
+
+/** The cited chunk's text as sent with a chat citation, or null when the
+ * citation has no context text (Quote Finder cards, saved quotes and
+ * `?highlight=` links carry a quote or the full chunk in `textSnippet`). */
+export function citationChunkText(citation: Pick<Citation, 'contextText'>): CitationChunkText | null {
+  const context = citation.contextText;
+  if (typeof context !== 'string' || !context.trim()) return null;
+  const prefix = CONTEXT_PAGE_PREFIX.exec(context);
+  const truncated = Array.from(context).length >= CONTEXT_TEXT_LIMIT;
+  const text = prefix ? context.slice(prefix[0].length) : context;
+  if (!prefix) return { text, truncated };
+  const pageStart = Number(prefix[1]);
+  return { text, truncated, pageStart, pageEnd: prefix[2] ? Number(prefix[2]) : pageStart };
+}
+
+/** Text up to the last complete sentence or line, so a cut tail never reaches
+ * an exact matcher that requires whole-word boundaries. */
+export function dropTrailingFragment(text: string): string {
+  for (let i = text.length - 1; i >= 0; i--) {
+    const char = text[i];
+    if (char === '\n' || '。！？；'.includes(char) || ('.!?'.includes(char) && /\s/.test(text[i + 1] ?? ''))) {
+      return text.slice(0, i + 1).trimEnd();
+    }
+  }
+  return '';
+}
+
+/** Whole-sentence passage for the converted-PDF text-layer matcher: the chunk
+ * text without the page prefix or a cut tail; else the snippet as given. */
+export function citationPassage(citation: Pick<Citation, 'contextText' | 'textSnippet'>): string | null {
+  const chunk = citationChunkText(citation);
+  if (chunk) return (chunk.truncated ? dropTrailingFragment(chunk.text) : chunk.text) || null;
+  return citation.textSnippet || null;
+}
+
 /** Physical page range; never imply a precise page when attribution is broad. */
 export function citationPageRange(citation: Pick<Citation, 'page' | 'pageEnd'>): string {
   const start = Number.isInteger(citation.page) && citation.page > 0 ? citation.page : 1;
