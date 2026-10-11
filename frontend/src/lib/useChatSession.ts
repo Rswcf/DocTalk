@@ -78,6 +78,9 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
         try {
           const msgsData = await getMessages(storedDemoSession);
           if (cancelled) return;
+          // A New Chat from the session menu may have published a session
+          // while this loaded; keep it (it installed its own accounting).
+          if (useDocTalkStore.getState().sessionId) return;
           setSessionId(storedDemoSession);
           // Populate the sessions list (not []) so SessionDropdown shows the
           // adopted session instead of an empty "New Chat"-only placeholder.
@@ -152,6 +155,9 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           // user bubble), or the previous answer.
           const msgsData = await getMessages(latest.session_id);
           if (cancelled) return;
+          // The session menu lists the rows published above, so the user
+          // may already have opened one while this loaded; keep it.
+          if (useDocTalkStore.getState().sessionId) return;
           setSessionId(latest.session_id);
           setMessages(msgsData.messages);
           sessionReady = true;

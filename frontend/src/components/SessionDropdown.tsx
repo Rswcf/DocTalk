@@ -38,7 +38,9 @@ export default function SessionDropdown() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
-  const switchRequestRef = useRef(0);
+  // Bumped by every session action (switch, New Chat, delete); a pending
+  // switch publishes only while it is still the latest one.
+  const sessionActionRef = useRef(0);
 
   useEffect(() => {
     setSessionErrorCopy(null);
@@ -77,6 +79,7 @@ export default function SessionDropdown() {
   const onNewChat = async () => {
     const live = useDocTalkStore.getState();
     if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming) return;
+    sessionActionRef.current += 1;
     setSessionErrorCopy(null);
     try {
       const s = await createSession(documentId);
@@ -134,14 +137,14 @@ export default function SessionDropdown() {
     // answer is then appended to whatever message is last (2026-10-10).
     // Until the fetch resolves, the previous conversation stays on screen
     // under its own id.
-    const switchRequest = ++switchRequestRef.current;
+    const action = ++sessionActionRef.current;
     const msgs = await getMessages(id);
     const live = useDocTalkStore.getState();
-    // A later click, a document change, or a send on the conversation still
-    // on screen supersedes this switch. Publishing over a running stream
-    // would orphan it: its writes stop at the session-id check and nothing
-    // clears isStreaming.
-    if (switchRequest !== switchRequestRef.current || live.documentId !== documentId || live.isStreaming) return;
+    // A later session action (switch, New Chat, delete), a document change,
+    // or a send on the conversation still on screen supersedes this switch.
+    // Publishing over a running stream would orphan it: its writes stop at
+    // the session-id check and nothing clears isStreaming.
+    if (action !== sessionActionRef.current || live.documentId !== documentId || live.isStreaming) return;
     setSessionId(id);
     setMessages(msgs.messages);
     // Same restore contract as useChatSession's reuse branch: switching to a
@@ -171,6 +174,7 @@ export default function SessionDropdown() {
 
   const onDeleteSessionById = async (targetId: string) => {
     if (isStreaming) return;
+    sessionActionRef.current += 1;
     setSessionErrorCopy(null);
     setConfirmDeleteId(null);
     await deleteSession(targetId);
@@ -187,6 +191,12 @@ export default function SessionDropdown() {
     }
     const remaining = useDocTalkStore.getState().sessions;
     if (targetId === sessionId) {
+      // The open conversation is gone: take it off screen before its
+      // replacement loads, so nothing can be sent into it meanwhile. The
+      // reader shows its "initializing chat" placeholder until then; if the
+      // replacement cannot load, this menu stays open to pick another one.
+      setSessionId(null);
+      setMessages([]);
       if (remaining.length > 0) {
         await onSwitchSession(remaining[0].session_id);
       } else {

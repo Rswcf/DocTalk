@@ -242,14 +242,14 @@ test('the other start-up branches already publish session and transcript togethe
 // publish the new id, then fetch). It is reachable from the auto-submit: once
 // a `?question=` link lands on a restored conversation and does not fire,
 // switching to another conversation in the dropdown would fire it there.
-function dropdownHarness({ getMessages, isDemo = false }) {
+function dropdownHarness({ getMessages, createSession, isDemo = false }) {
   const store = createStore();
   const state = store.getState();
   state.setIsDemo(isDemo);
   state.setSessions([row('current', 2), row('older', 2), row('oldest', 2)]);
   state.setSessionId('current');
   state.setMessages(earlier);
-  const calls = { pointers: [], accounting: [] };
+  const calls = { pointers: [], accounting: [], deleted: [] };
   for (const name of ['setDemoMessagesUsed', 'setDemoRestoredUserMsgCount', 'bumpDemoAccountingEpoch']) {
     const original = store.getState()[name];
     store.setState({ [name]: (...args) => { calls.accounting.push([name, store.getState().sessionId, ...args]); original(...args); } });
@@ -282,9 +282,9 @@ function dropdownHarness({ getMessages, isDemo = false }) {
     '../store': { useDocTalkStore: useStore },
     '../i18n': { useLocale: () => ({ t, tOr: (key, fallback) => fallback }) },
     '../lib/api': {
-      createSession: async () => { throw new Error('not under test'); },
+      createSession: createSession || (async () => { throw new Error('not under test'); }),
       getMessages,
-      deleteSession: async () => {},
+      deleteSession: async (id) => { calls.deleted.push(id); },
     },
     '../lib/errorCopy': { errorCopy: () => ({ body: 'error' }) },
     '../lib/analytics': { trackEvent() {} },
@@ -303,13 +303,24 @@ function dropdownHarness({ getMessages, isDemo = false }) {
     return [element, ...nodes(element.props?.children)];
   };
   nodes(render()).find((node) => node.props?.['data-tour']).props.onClick();
+  const textOf = (element) => {
+    if (element == null || typeof element === 'boolean') return '';
+    if (Array.isArray(element)) return element.map(textOf).join('');
+    if (typeof element !== 'object') return String(element);
+    return textOf(element.props?.children);
+  };
+  const click = (label, event) => {
+    const target = nodes(render()).find((node) => node.type === 'button' && textOf(node).trim() === label);
+    assert.ok(target, `Missing button: ${label}`);
+    return target.props.onClick(event);
+  };
   const switchTo = (id) => {
     const target = nodes(render()).find((node) => node.type === 'button'
       && nodes(node.props.children).some((child) => child.props?.title === id));
     assert.ok(target, `Missing session row: ${id}`);
     return target.props.onClick();
   };
-  return { store, calls, switchTo };
+  return { store, calls, switchTo, click };
 }
 
 const olderTranscript = [
@@ -373,4 +384,75 @@ test('switching to an anonymous demo conversation installs its accounting with i
     ['bumpDemoAccountingEpoch', 'older'],
   ]);
   assert.deepEqual(h.calls.pointers, [['doc-1', 'older']]);
+});
+
+// Codex r1 (MAJOR): every session action supersedes a pending switch, not
+// only a later switch click.
+test('a New Chat started while a switch is loading is not overwritten by that switch', async () => {
+  const transcript = deferred();
+  const h = dropdownHarness({
+    isDemo: true,
+    getMessages: () => transcript.promise,
+    createSession: async () => ({ session_id: 'fresh', created_at: '2026-10-11', demo_messages_used: 2 }),
+  });
+  const switching = h.switchTo('older');
+  await settle();
+  await h.click('session.newChat');
+  assert.equal(h.store.getState().sessionId, 'fresh');
+  transcript.resolve({ messages: olderTranscript, demo_messages_used: 2 });
+  await switching;
+
+  assert.equal(h.store.getState().sessionId, 'fresh');
+  assert.deepEqual(h.store.getState().messages, []);
+  assert.deepEqual(h.calls.pointers, [['doc-1', 'fresh']], 'the demo pointer must stay on the new chat');
+});
+
+// Codex r1 (MAJOR): the deleted conversation must not stay live while its
+// replacement loads — a send there would strand the reader on it.
+test('deleting the open conversation unpublishes it before the replacement loads', async () => {
+  const transcript = deferred();
+  const h = dropdownHarness({ getMessages: (id) => { assert.equal(id, 'older'); return transcript.promise; } });
+  h.click('session.deleteChat');
+  const deleting = h.click('common.yes');
+  await settle();
+  assert.deepEqual(h.calls.deleted, ['current']);
+  assert.equal(h.store.getState().sessionId, null, 'the deleted conversation is still published');
+  assert.deepEqual(h.store.getState().messages, []);
+  transcript.resolve({ messages: olderTranscript });
+  await deleting;
+
+  assert.equal(h.store.getState().sessionId, 'older');
+  assert.deepEqual(h.store.getState().messages, olderTranscript);
+});
+
+test('a failed replacement fetch after deleting the open conversation never re-publishes it', async () => {
+  const h = dropdownHarness({ getMessages: async () => { throw new Error('network'); } });
+  h.click('session.deleteChat');
+  await assert.rejects(h.click('common.yes'), /network/);
+
+  assert.equal(h.store.getState().sessionId, null);
+  assert.deepEqual(h.store.getState().messages, []);
+});
+
+// Codex r1 (MINOR): the start-up restore must not overwrite a conversation the
+// user already opened from the dropdown while the first transcript loaded.
+test('a conversation opened while the start-up transcript loads is kept', async () => {
+  const picked = [{ id: 'p-u', role: 'user', text: 'Picked by hand', createdAt: 5 }];
+  for (const branch of ['reuse', 'adoption']) {
+    const store = createStore();
+    const transcript = deferred();
+    runUseChatSession(store, {
+      listSessions: async () => ({ sessions: [row('latest', 2), row('picked', 1)] }),
+      getMessages: () => transcript.promise,
+      createSession: async () => { throw new Error('must not create'); },
+    }, branch === 'adoption' ? { readDemoSession: () => 'stored' } : {});
+    await settle();
+    store.getState().setSessionId('picked');
+    store.getState().setMessages(picked);
+    transcript.resolve({ messages: earlier, demo_messages_used: 1 });
+    await settle();
+
+    assert.equal(store.getState().sessionId, 'picked', branch);
+    assert.deepEqual(store.getState().messages, picked, branch);
+  }
 });
