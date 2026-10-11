@@ -184,6 +184,61 @@ test('a code block is marked only where the range covers it', () => {
   assert.deepEqual(marks(fenceOnly), [], 'the fence line alone marks nothing');
 });
 
+const { articleEvidence, articlePage, bodyRanges } = require(path.join(SRC, 'lib/articleEvidence.ts'));
+
+/** What the URL article view renders, and the status TextViewer shows. */
+function renderArticle(pages, located) {
+  const shown = articleEvidence(pages, located);
+  const rendered = pages.flatMap((page) => {
+    const article = articlePage(page);
+    const ranges = shown.ranges.filter(r => r.page === page.page_number)
+      .map(r => ({ start: r.start, end: r.end, kind: r.emphasis ? 'exact' : 'region' }));
+    const body = bodyRanges(article, ranges);
+    return body.length ? marks(render(article.body, body)) : [];
+  });
+  return { status: shown.kind, rendered };
+}
+function assertStatusMatchesMarks({ status, rendered }, label) {
+  if (status === 'page') assert.deepEqual(rendered, [], `${label}: page shows no mark`);
+  else if (status === 'exact') assert.ok(rendered.some(m => m.kind === 'exact'), `${label}: exact shows an exact mark`);
+  else assert.ok(rendered.length && rendered.every(m => m.kind === 'region'), `${label}: region shows region marks only`);
+}
+
+test('Codex r2 #3: the URL article view never claims an exact passage it does not render', () => {
+  const text = '## Market Dynamics\n\nEnterprise buyers increasingly demand team workspaces and SSO.';
+  const pages = [{ page_number: 1, text }];
+  const body = 'Enterprise buyers increasingly demand team workspaces and SSO.';
+  for (const chunk of [null, `Market Dynamics\n\n${body}`, text]) {
+    const located = locateTextEvidence(pages, { page: 1, pageEnd: 1 }, chunk, 'Market Dynamics');
+    assert.equal(located.kind, 'exact', 'the focus is the heading the article view strips');
+    const shown = renderArticle(pages, located);
+    assert.deepEqual(shown, { status: 'page', rendered: [] }, String(chunk));
+  }
+  // A focus in the body stays exact; a region over heading and body is clipped to the body.
+  const focused = renderArticle(pages, locateTextEvidence(pages, { page: 1, pageEnd: 1 }, text, body));
+  assert.equal(focused.status, 'exact');
+  assert.deepEqual(focused.rendered.map(m => [m.kind, m.text]), [['exact', body]]);
+  const regionOnly = renderArticle(pages, locateTextEvidence(pages, { page: 1, pageEnd: 1 }, text, null));
+  assert.equal(regionOnly.status, 'region');
+  assert.deepEqual(regionOnly.rendered.map(m => [m.kind, m.text]), [['region', body]]);
+  for (const [label, shown] of [['focused', focused], ['region', regionOnly]]) assertStatusMatchesMarks(shown, label);
+});
+
+test('the article body offset is exact even when the body repeats its own heading', () => {
+  const text = '## Revenue grew strongly\n\nRevenue grew';
+  const article = articlePage({ page_number: 1, text });
+  assert.equal(article.body, 'Revenue grew');
+  assert.equal(article.bodyStart, text.length - 'Revenue grew'.length, 'not indexOf, which finds it inside the heading');
+  assert.deepEqual(bodyRanges(article, [{ start: article.bodyStart, end: text.length }]), [{ start: 0, end: 12 }]);
+});
+
+test('TextViewer passes URL evidence through articleEvidence before it sets the status', () => {
+  const code = stripComments(read('components/TextViewer/TextViewer.tsx'));
+  assert.match(code, /const result = isUrlSource \? articleEvidence\(pages, located\) : located;\s*setEvidence\(\{ citation: target, status: result\.kind, byPage: marksByPage\(result\) \}\)/);
+  assert.match(code, /bodyRanges\(article, marks\)/);
+  assert.doesNotMatch(code, /page\.text\.indexOf\(body\)/);
+});
+
 test('the anchor moves to the first mark when its own range renders none', () => {
   const source = 'Kept paragraph text here.\n\n<div>raw html is dropped</div>';
   const html = render(source, [

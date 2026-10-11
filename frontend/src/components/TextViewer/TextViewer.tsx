@@ -9,6 +9,7 @@ import { useLocale } from '../../i18n';
 import { Spinner } from '../spell';
 import { citationChunkText, citationPageRange, dropTrailingFragment } from '../../lib/citationText';
 import { locateTextEvidence, type TextEvidence } from '../../lib/textEvidence';
+import { articleEvidence, articlePage, bodyRanges, leadingMarkdownHeading } from '../../lib/articleEvidence';
 import { rehypeMarkRanges, type MarkRange } from '../../lib/rehypeMarkRanges';
 import type { Citation } from '../../types';
 
@@ -115,34 +116,6 @@ function estimateReadableUnits(text: string): number {
   const latinWords = text.match(/[A-Za-z0-9][A-Za-z0-9'-]*/g)?.length ?? 0;
   const cjkChars = text.match(/[\u3400-\u9fff]/g)?.length ?? 0;
   return latinWords + Math.ceil(cjkChars / 2);
-}
-
-function stripLeadingMatchingHeading(text: string, title?: string | null): string {
-  const lines = text.split('\n');
-  const firstContentIndex = lines.findIndex((line) => line.trim().length > 0);
-  if (firstContentIndex === -1) return text;
-
-  const first = lines[firstContentIndex].trim();
-  const match = first.match(/^#{1,6}\s+(.+)$/);
-  if (!match) return text;
-
-  const heading = match[1].trim();
-  if (title && heading !== title.trim()) return text;
-
-  return [
-    ...lines.slice(0, firstContentIndex),
-    ...lines.slice(firstContentIndex + 1),
-  ].join('\n').trimStart();
-}
-
-function leadingMarkdownHeading(text: string): string | null {
-  for (const line of text.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const match = trimmed.match(/^#{1,6}\s+(.+)$/);
-    return match ? match[1].trim() : null;
-  }
-  return null;
 }
 
 /**
@@ -359,7 +332,10 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
     }
     const focus = highlightFocus ?? target.focusSnippet ?? null;
     const settle = (chunkText: string | null) => {
-      const result = locateTextEvidence(pages, target, chunkText, focus);
+      const located = locateTextEvidence(pages, target, chunkText, focus);
+      // The article view renders no mark in a page's leading heading; the
+      // status must name what it does render.
+      const result = isUrlSource ? articleEvidence(pages, located) : located;
       setEvidence({ citation: target, status: result.kind, byPage: marksByPage(result) });
     };
     const known = citationChunkText(target);
@@ -371,7 +347,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       settle(full ?? (known ? dropTrailingFragment(known.text) : target.textSnippet || null));
     });
     return () => { cancelled = true; };
-  }, [markdownCitation, highlightFocus, pages]);
+  }, [markdownCitation, highlightFocus, pages, isUrlSource]);
 
   useEffect(() => { setHiddenEvidence(false); }, [citation]);
 
@@ -626,20 +602,18 @@ function WebArticleView({
   }, [pages]);
 
   // Each section renders its body without the leading heading, so evidence
-  // offsets (into the page text) shift by where the body starts.
+  // offsets (into the page text) shift by where the body starts. The evidence
+  // was already passed through articleEvidence, so no mark starts in a heading.
   const articlePages = useMemo(() => pages.map((page) => {
-    const pageTitle = page.section_title?.trim() || leadingMarkdownHeading(page.text);
-    const body = stripLeadingMatchingHeading(page.text, pageTitle);
-    return { page, pageTitle, body, bodyStart: page.text.indexOf(body) };
+    const article = articlePage(page);
+    return { page, article, pageTitle: article.title, body: article.body };
   }), [pages]);
   const bodyMarks = useMemo(() => {
     const byPage = new Map<number, MarkRange[]>();
-    for (const { page, body, bodyStart } of articlePages) {
+    for (const { page, article } of articlePages) {
       const marks = evidenceByPage.get(page.page_number);
-      if (!marks || bodyStart < 0) continue;
-      const shifted = bodyStart === 0 ? marks : marks
-        .filter((mark) => mark.start >= bodyStart)
-        .map((mark) => ({ ...mark, start: mark.start - bodyStart, end: Math.min(mark.end - bodyStart, body.length) }));
+      if (!marks) continue;
+      const shifted = bodyRanges(article, marks);
       if (shifted.length) byPage.set(page.page_number, shifted);
     }
     return byPage;
