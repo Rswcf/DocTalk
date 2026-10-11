@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 # trigger + OSD-narrowed OCR language set. v3 = off-axis text is never a heading, and
 # off-axis text or an arXiv stamp in the page margin is dropped from chunks (vertical
 # writing mode excepted). v5 = the heading size rule compares a line with its page's body
-# size (paragraph runs of running text, floored at the document line median) instead of
-# one document median that chart labels and table cells pull under the body; a line in a
-# run of 4+ same-size lines, or one made mostly of figures, is never a heading by size.
+# size (from paragraph runs of running text) and the document's median line, instead of
+# with that median alone, which chart labels and table cells pull under the body; a line
+# in a run of 4+ same-size lines (unless twice the body size), or one made mostly of
+# figures, is never a heading by size.
 PARSE_PIPELINE_VERSION = 5
 
 # A line that starts with an arXiv identifier is a submission stamp or a wrapped
@@ -336,6 +337,7 @@ class ParseService:
     # labels, axis ticks and table cells never set it.
     HEADING_SIZE_FACTOR = 1.25
     HEADING_MAX_WRAP_LINES = 3  # a run longer than this is a paragraph, not a wrapped heading
+    HEADING_DISPLAY_FACTOR = 2.0  # ...unless it is this much larger than the page body (a cover title)
     RUN_GAP_LINE_HEIGHTS = 1.0  # the next line of a run starts within one line height
     RUN_MIN_OVERLAP = 0.30  # of the narrower line's extent across the column
     RUN_ACTIVE_CAP = 400  # earlier lines a sweep step compares against, at most
@@ -963,32 +965,41 @@ class ParseService:
         return clusters
 
     def _running_text_chars(
-        self, blocks: Sequence[CleanBlock], vertical: bool, band_w: float, band_h: float
+        self,
+        blocks: Sequence[CleanBlock],
+        vertical: bool,
+        band_w: float,
+        band_h: float,
+        body_sizes: Sequence[float] = (),
     ) -> dict[float, float]:
-        """Characters of running text per size on one page: on-axis lines in a run of
-        2+ that span at least REF_MIN_LINE_EXTENT of the page along the line.
+        """Characters of running text per size on one page: the lines of runs with at
+        least two lines that span REF_MIN_LINE_EXTENT of the page along the line (one
+        wide line over a short axis tick is a chart subtitle, not a paragraph).
 
         A run of at most HEADING_MAX_WRAP_LINES lines counts only when the page has
-        another such run of its size. Alone it is shaped like a wrapped heading (a
-        two-line slide or cover title), and as the page's largest substantial size
-        it would become the reference it has to exceed.
+        another such run of its size, or its size is one of `body_sizes` (other
+        pages' body sizes). Alone it is shaped like a wrapped heading (a two-line
+        slide or cover title), and as the page's largest substantial size it would
+        become the reference it has to exceed.
         """
         page_extent = band_h if vertical else band_w
         runs: dict[int, List[CleanBlock]] = {}
         for b in blocks:
-            if b.run_len < 2 or self._rule_size(b) <= 0:  # off-axis lines never join a run
+            if b.run_id < 0 or self._rule_size(b) <= 0:  # off-axis lines never join a run
                 continue
             x0, y0, x1, y1 = b.bbox
             length = (y1 - y0) if vertical else (x1 - x0)
             if length < self.REF_MIN_LINE_EXTENT * page_extent:
                 continue
             runs.setdefault(b.run_id, []).append(b)
+        runs = {rid: lines for rid, lines in runs.items() if len(lines) >= 2}
 
         run_size = {rid: self._rule_size(lines[0]) for rid, lines in runs.items()}
         chars: dict[float, float] = {}
         for rid, lines in runs.items():
-            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not any(
-                other != rid and self._same_size(run_size[rid], size) for other, size in run_size.items()
+            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not (
+                any(other != rid and self._same_size(run_size[rid], size) for other, size in run_size.items())
+                or any(self._same_size(run_size[rid], size) for size in body_sizes)
             ):
                 continue
             for b in lines:
@@ -1018,6 +1029,10 @@ class ParseService:
         text of its own takes the document's body size: the largest page body size
         held by REF_DOC_PAGE_SHARE of ALL pages, so one text page cannot set it for a
         deck of chart pages; with none, the page has only the floors (v4 behaviour).
+        Before that, a page with no body size gets a second look in which a lone
+        2-3-line run counts if its size is another page's body size: the one comment
+        paragraph of a broker's exhibit page, not a wrapped title (titles are larger
+        than any page's body).
         """
         font_sizes = [cb.font_size for _p, _v, blocks in per_page for cb in blocks if cb.font_size > 0]
         rule_sizes = [self._rule_size(cb) for _p, _v, blocks in per_page for cb in blocks if self._rule_size(cb) > 0]
@@ -1027,6 +1042,13 @@ class ParseService:
         for p, vertical, blocks in per_page:
             band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
             page_refs[p.page_number] = self._page_reference(self._running_text_chars(blocks, vertical, band_w, band_h))
+        body_sizes = sorted({r for r in page_refs.values() if r is not None})
+        if body_sizes:
+            for p, vertical, blocks in per_page:
+                if page_refs[p.page_number] is None:
+                    band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
+                    chars = self._running_text_chars(blocks, vertical, band_w, band_h, body_sizes)
+                    page_refs[p.page_number] = self._page_reference(chars)
 
         pages_per_size: dict[float, float] = {}
         for r in page_refs.values():
@@ -1059,15 +1081,23 @@ class ParseService:
         The line must clear HEADING_SIZE_FACTOR x its page's body size, and also x the
         document's median line in the same unit as one of its two sizes: a span mean
         pulled down by a superscript or a small whitespace span cannot make an
-        ordinary line clear a median that other lines' means pulled down too.
+        ordinary line clear a median that other lines' means pulled down too. The
+        dominant size is held to the larger median, since a span mean can also be
+        pushed above it (a large trailing space after small cell text).
         """
-        if block.run_len > self.HEADING_MAX_WRAP_LINES:
-            return False
         rule_size = self._rule_size(block)
+        font_floor, rule_floor = floors
+        if (
+            block.run_len > self.HEADING_MAX_WRAP_LINES
+            and rule_size < self.HEADING_DISPLAY_FACTOR * max(reference_size, font_floor, rule_floor)
+        ):
+            return False
         if rule_size <= reference_size * self.HEADING_SIZE_FACTOR:
             return False
-        font_floor, rule_floor = floors
-        if block.font_size <= font_floor * self.HEADING_SIZE_FACTOR and rule_size <= rule_floor * self.HEADING_SIZE_FACTOR:
+        if (
+            block.font_size <= font_floor * self.HEADING_SIZE_FACTOR
+            and rule_size <= max(rule_floor, font_floor) * self.HEADING_SIZE_FACTOR
+        ):
             return False
         if block.extractor_title:
             return True

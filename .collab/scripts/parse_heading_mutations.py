@@ -38,11 +38,10 @@ M = {
     "dominant counts whitespace": ('n_chars = len((s.get("text") or "").strip())', 'n_chars = len((s.get("text") or "")) or 1'),
     "rule floor = font median": ("median(rule_sizes) if rule_sizes else 12.0)", "median(font_sizes) if font_sizes else 12.0)"),
     "font floor = rule median": ("floors = (median(font_sizes) if font_sizes", "floors = (median(rule_sizes) if rule_sizes"),
-    "no floor gate": ("        if block.font_size <= font_floor * self.HEADING_SIZE_FACTOR and rule_size <= rule_floor * self.HEADING_SIZE_FACTOR:\n            return False\n", ""),
+    "no floor gate": ("            block.font_size <= font_floor * self.HEADING_SIZE_FACTOR\n            and rule_size", "            False\n            and rule_size"),
     "same-row check removed": ("                    if lo < jlo + 0.5 * jh:", "                    if False:"),
     "off-axis join runs": ("on_axis = [i for i, b in enumerate(blocks) if not b.off_axis]", "on_axis = list(range(len(blocks)))"),
-    "running text run>=1": ("if b.off_axis or b.run_len < 2 or self._rule_size(b) <= 0:", "if b.off_axis or self._rule_size(b) <= 0:"),
-    "single short run counts": ("            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not any(", "            if False and not any("),
+    "single short run counts": ("            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not (", "            if False and not ("),
     "extent 0": ("REF_MIN_LINE_EXTENT = 0.20", "REF_MIN_LINE_EXTENT = 0.0"),
     "page share 0.0": ("REF_SUBSTANTIAL_SHARE = 0.30", "REF_SUBSTANTIAL_SHARE = 0.0"),
     "page share 0.99": ("REF_SUBSTANTIAL_SHARE = 0.30", "REF_SUBSTANTIAL_SHARE = 0.99"),
@@ -53,18 +52,44 @@ M = {
     "neighbour by font_size": ("        size_of = [self._rule_size(b) for b in blocks]", "        size_of = [b.font_size for b in blocks]"),
     "rule_size = font_size": ("rule_size=b.dominant_size if b.dominant_size > 0 else b.font_size,", "rule_size=b.font_size,"),
     "vertical ignored": ("            vertical = int(angle) % 180 == 90\n", "            vertical = False\n"),
-    "no continuity guard": ("        if block.run_len > self.HEADING_MAX_WRAP_LINES:\n            return False\n        rule_size", "        rule_size"),
+    "no continuity guard": ("            block.run_len > self.HEADING_MAX_WRAP_LINES\n", "            False\n"),
     "no size groups": ("            if groups and self._same_size(size_of[groups[-1][-1]], size_of[k]):", "            if groups:"),
+    # review r2
+    "A: one wide line is a run": ("        runs = {rid: lines for rid, lines in runs.items() if len(lines) >= 2}\n", ""),
+    "B: no display exemption": ("            and rule_size < self.HEADING_DISPLAY_FACTOR * max(reference_size, font_floor, rule_floor)\n", ""),
+    "B: display factor 1.2": ("HEADING_DISPLAY_FACTOR = 2.0", "HEADING_DISPLAY_FACTOR = 1.2"),
+    "C: rule floor only": ("and rule_size <= max(rule_floor, font_floor) * self.HEADING_SIZE_FACTOR", "and rule_size <= rule_floor * self.HEADING_SIZE_FACTOR"),
+    "E: no second look": ("                or any(self._same_size(run_size[rid], size) for size in body_sizes)\n", ""),
+    "lone 3-line run counts": ("            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not (", "            if lines[0].run_len < 3 and not ("),
+    "chain anchored at first size": ("            if groups and self._same_size(size_of[groups[-1][-1]], size_of[k]):", "            if groups and self._same_size(size_of[groups[-1][0]], size_of[k]):"),
+    "overlap vs wider line": ("overlap < min_overlap * (width if width < jwidth else jwidth)", "overlap < min_overlap * (width if width > jwidth else jwidth)"),
+    "kana weight 1": ('            or "\\u3040" <= ch <= "\\u30ff"  # hiragana + katakana\n', ""),
+    "ext-A weight 1": ('            or "\\u3400" <= ch <= "\\u4dbf"  # extension A\n', ""),
+    "compat ideographs weight 1": ('            or "\\uf900" <= ch <= "\\ufaff"  # compatibility ideographs\n', ""),
+}
+
+
+# Mutants that no test kills on purpose, with the reason.
+ACCEPTED = {
+    # Extractor titles become headings before any size test: differs only for a non-PDF document
+    # with a title on every page, which loses them all in v3 too (a separate task); not pinned.
+    "extractor title ahead of size checks": (
+        '        rule_size = self._rule_size(block)\n        font_floor, rule_floor = floors\n',
+        '        if block.extractor_title:\n            return True\n        rule_size = self._rule_size(block)\n        font_floor, rule_floor = floors\n',
+    ),
+    "reach over every line": ("            reach = gap * max(ext[i][1] - ext[i][0] for i in group)", "            reach = gap * max(e[1] - e[0] for e in ext)"),  # cost only
+    "doc ref fallback = span-mean floor": ("doc_ref = max(common) if common else 0.0", "doc_ref = max(common) if common else floors[0]"),  # differs only for lines whose dominant size is below their span mean (drop caps)
 }
 
 
 def main() -> int:
     orig = SERVICE.read_text()
-    survivors = []
+    survivors, stale = [], []
     try:
-        for name, (old, new) in M.items():
+        for name, (old, new) in {**M, **ACCEPTED}.items():
             if orig.count(old) != 1:
                 print(f"!! pattern for {name!r} found {orig.count(old)}x")
+                stale.append(name)
                 continue
             SERVICE.write_text(orig.replace(old, new))
             run = subprocess.run(
@@ -72,13 +97,14 @@ def main() -> int:
                 capture_output=True, text=True, cwd=BACKEND,
             )
             failed = [line.split("::")[-1].split(" ")[0] for line in run.stdout.splitlines() if line.startswith("FAILED")]
-            if not failed:
+            if not failed and name not in ACCEPTED:
                 survivors.append(name)
-            print(f"{name:30} -> {'SURVIVES' if not failed else 'killed by ' + failed[0]}")
+            tag = " (accepted)" if name in ACCEPTED else ""
+            print(f"{name:36} -> {'SURVIVES' + tag if not failed else 'killed by ' + failed[0]}")
     finally:
         SERVICE.write_text(orig)
-    print("survivors:", survivors)
-    return 1 if survivors else 0
+    print(f"{len(M)} mutations, {len(ACCEPTED)} accepted; survivors: {survivors}; stale patterns: {stale}")
+    return 1 if survivors or stale else 0
 
 
 if __name__ == "__main__":

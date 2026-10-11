@@ -1136,3 +1136,102 @@ class TestHeadingSizeUsesPageBodySize:
         self.svc._annotate_runs(blocks)
 
         assert blocks[0].run_len == blocks[-1].run_len == 2
+
+    # ---- review r2 (2026-10-11, .collab/reviews/2026-10-11-parse-heading-body-size-review-r2.md) ----
+
+    def test_wrapped_three_line_slide_title_is_not_the_page_body(self):
+        pages = []
+        for pn in (1, 2):
+            blocks = [BlockInfo(page=pn, text=f"Title line {k} of a long action title on slide {pn}",
+                                bbox=(60, 50 + k * 34, 760, 80 + k * 34), font_size=28) for k in range(3)]
+            blocks += [BlockInfo(page=pn, text=f"• Bullet {b} states one result in a single line", bbox=(60, 200 + b * 24, 700, 220 + b * 24),
+                                 font_size=18) for b in range(5)]
+            pages.append(_page(pn, blocks, width=960, height=540))
+
+        assert len(self._headings(pages)) == 6
+
+    def test_chart_subtitle_over_an_axis_tick_is_not_a_paragraph(self):
+        # R2-1 (JPM Guide p18): an 11.8pt chart title over a one-line 9.6pt subtitle,
+        # whose top axis tick (8.9pt) sits right under it. Subtitle + tick share a
+        # size class and stack, but one wide line is not running text.
+        blocks = []
+        for k, x in enumerate((40, 330)):
+            blocks += [
+                BlockInfo(page=1, text=f"Nonfarm payroll gains, chart {k}", bbox=(x, 60, x + 240, 74), font_size=11.8),
+                BlockInfo(page=1, text=f"Change in thousands of jobs, seasonally adjusted, chart {k}", bbox=(x, 80, x + 260, 92),
+                          font_size=9.6),
+                BlockInfo(page=1, text="1,000", bbox=(x, 94, x + 20, 105), font_size=8.9),
+            ]
+        blocks += _cells(1, 300, 30, size=8)  # median line 8pt, as on the JPM page
+        blocks += _body_lines(1, 40, 620, 4, size=8, width=520, text="Source: BLS, FactSet, J.P. Morgan Asset Management")
+        headings = self._headings([_page(1, blocks)])
+
+        assert {text for _p, text in headings} == {"Nonfarm payroll gains, chart 0", "Nonfarm payroll gains, chart 1"}
+
+    def test_four_line_display_title_is_not_a_paragraph(self):
+        # R2-2 (BIS working-paper cover): a 22pt title wrapped to 4 lines in a narrow column.
+        title = ["AI adoption, productivity", "and employment:", "evidence from European", "firms"]
+        blocks = [BlockInfo(page=1, text=line, bbox=(60, 120 + k * 26, 310, 144 + k * 26), font_size=22) for k, line in enumerate(title)]
+        blocks += _body_lines(1, 60, 300, 12, width=480)
+
+        assert {text for _p, text in self._headings([_page(1, blocks)])} == set(title)
+
+    def test_lone_comment_on_an_exhibit_page_uses_other_pages_body_size(self):
+        # R2-3: a broker note — 10pt body pages, exhibit pages with one 3-line 10pt
+        # comment, a longer 7pt disclosure appendix. The comment's size is another
+        # page's body size, so it is that page's body too.
+        pages = [_page(pn, [BlockInfo(page=pn, text=f"Note title {pn}", bbox=(40, 40, 400, 60), font_size=16)]
+                       + _body_lines(pn, 40, 80, 40, width=500)) for pn in (1, 2)]
+        for pn in (3, 4, 5, 6):
+            blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: DRAM contract prices", bbox=(40, 40, 400, 54), font_size=12)]
+            blocks += _cells(pn, 80, 25)
+            blocks += _body_lines(pn, 40, 400, 3, width=500,
+                                  text=f"DRAM contract prices rose for a fourth straight quarter on exhibit page {pn}")
+            pages.append(_page(pn, blocks))
+        pages += [_page(pn, _body_lines(pn, 40, 60, 80, size=7, width=520, text="Disclosure text")) for pn in (7, 8, 9, 10)]
+
+        chunk_text = " ".join(c.text for c in self.svc.chunk_document(pages))
+
+        assert self._headings(pages) == {(1, "Note title 1"), (2, "Note title 2")}
+        assert "rose for a fourth straight quarter on exhibit page 3 0" in chunk_text
+
+    def test_dominant_size_is_held_to_the_larger_median(self):
+        # R2-4: table cells whose span mean is pushed UP by a large trailing space
+        # (mean 9.5pt, dominant 7pt) put the dominant-size median under the span-mean
+        # one; a 9pt source line must not clear the lower of the two.
+        pages = [_page(1, _body_lines(1, 40, 60, 30, width=500))]
+        for pn in range(2, 8):
+            blocks = [BlockInfo(page=pn, text="12.3", bbox=(40 + c * 60, 60 + r * 10, 70 + c * 60, 68 + r * 10),
+                                font_size=9.5, dominant_size=7.0) for r in range(10) for c in range(5)]
+            blocks.append(BlockInfo(page=pn, text=f"Source: Company filings, FactSet and our estimates {pn}",
+                                    bbox=(40, 200, 400, 210), font_size=9.0, dominant_size=9.0))
+            pages.append(_page(pn, blocks))
+
+        assert self._headings(pages) == set()
+
+    def test_drifting_sizes_stay_one_run(self):
+        # OCR drift 10.0 -> 10.7 -> 11.5: each step is one size class, the ends are not.
+        sizes = [10.0, 10.7, 11.5, 10.7, 10.0]
+        blocks = [CleanBlock(page=1, text=f"line {i}", bbox=(40, 100 + i * 14, 400, 112 + i * 14), font_size=s)
+                  for i, s in enumerate(sizes)]
+
+        self.svc._annotate_runs(blocks)
+
+        assert [b.run_len for b in blocks] == [5] * 5
+
+    def test_short_last_line_stays_in_its_paragraph(self):
+        blocks = [CleanBlock(page=1, text=f"long line {i}", bbox=(40, 100 + i * 12.5, 440, 111.5 + i * 12.5), font_size=10)
+                  for i in range(3)]
+        blocks.append(CleanBlock(page=1, text="end.", bbox=(40, 137.5, 70, 149), font_size=10))
+
+        self.svc._annotate_runs(blocks)
+
+        assert [b.run_len for b in blocks] == [4] * 4
+
+    def test_size_rule_weights_kana_and_rare_ideographs(self):
+        def by_size(text: str) -> bool:
+            block = CleanBlock(page=1, text=text, bbox=(40, 60, 200, 90), font_size=14, rule_size=14)
+            return self.svc._is_heading_by_size(block, 10.0)
+
+        for text in ("トヨタ 2026", "㐂㐆㐇 2026", "\uf900\uf901\uf902 2026"):  # U+F900.. compatibility ideographs
+            assert by_size(text), text

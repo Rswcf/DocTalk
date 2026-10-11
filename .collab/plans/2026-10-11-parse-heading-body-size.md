@@ -242,7 +242,7 @@ Classes: 1 sell-side/bank research, 2 CN broker (券商研报), 3 econ/policy wo
 4. **A page whose running text is dominated (≥ 30 %) by text larger than the body** (a long 12 pt box on a 10 pt page) raises that page's reference, so its 14 pt headings need > 15 pt. Appears on no corpus page; would only lose headings, never body.
 5. **Pages inheriting the document reference** when 25 %+ of referenced pages have a larger body (long 12 pt executive summary in a 10 pt report): sparse pages' 14 pt headings missed. Loses headings only.
 6. **OCR noise > 8 %**: no runs → v3 classification on that document (no guard, line-median reference).
-7. **Headings wrapping to ≥ 4 lines** are body. Rare (paper titles wrap to ≤ 3 in both corpora).
+7. **Headings wrapping to ≥ 4 lines** are body unless they are ≥ 2× the page body and both medians. Not rare: the BIS working-paper cover wraps its 22pt title to 4 lines (review r2 R2-2, fixed by the 2× exemption); a 1.75× stack of a page header and a note heading in the MS 10-Q (p52) is still guarded.
 8. The floor means v5 **cannot** detect a heading on a page whose body is smaller than the document's median line unless the heading also clears 1.25 × that median: appendix headings in documents whose line median already sits on the main body. Loses low-value headings only; the alternative (no floor) adds chart legends as headings (S8 7.4 → 37.4 %, JPM −775 chars).
 9. `chunk_document` still sets `section_title` from the *last* line of a wrapped heading (`the HBM transition`); unchanged behaviour, see §10.
 
@@ -305,3 +305,23 @@ Fresh-context review (`.collab/reviews/2026-10-11-parse-heading-body-size-review
   (`BlockInfo.extractor_title`, set by `parse_worker`) skip the shape guards.
 - **Sweep (§4.3)**: one sweep per chain of same-size sizes; overlap tested first.
 - Corpus after the round: 47 PDFs, paragraph characters fell in 0; the targets unchanged (chicagofed 66.8% → 6.6%).
+
+## 13. Review round 2 (2026-10-11)
+
+Fresh-context review (`.collab/reviews/2026-10-11-parse-heading-body-size-review-r2.md`), response in
+`…-review-r2-response.md`. Changes to the spec:
+
+- **Running text**: a run counts only with ≥ 2 lines spanning 20% of the page (R2-1: a chart subtitle plus its top
+  axis tick made "runs" that partnered each other and set JPM p18/p29's body to the subtitle size).
+- **Second look (R2-3)**: a page still without a body size re-reads its runs, and a lone 2–3-line run counts if its
+  size is another page's body size (a broker exhibit page's one comment paragraph).
+- **Display exemption (R2-2)**: the continuity guard does not apply at ≥ 2× max(page body, both medians).
+- **Floor (R2-4)**: the dominant size is compared with the larger of the two medians.
+- **Accepted loss (R2-1(b), constructed only)**: an IR slide whose 2×2 tiles each have a 2-line title larger than
+  the tile text — the four short title runs partner each other, hold ≥ 30% of the running text and become the page
+  body, so the tile titles are not headings (v3 found them through its floor). Distinguishing "four titles over four
+  paragraphs" from "four short paragraphs" needs layout pairing; candidate W (round 1) added body headings on 3 real
+  PDFs instead. No corpus PDF has the shape at ≥ 1.25×.
+- **Not done (R2-7)**: computing `_prepare_blocks` once for both worker calls. Dense table pages cost ~2.5× v3
+  (137–184 ms against 57–68 ms per 3,300-line page); embedding such documents dominates either way.
+- Corpus: 47 PDFs, paragraph characters fell in 0; chicagofed 66.8% → 6.3%.
