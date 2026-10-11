@@ -117,7 +117,7 @@ A compliance officer asks about a policy document: "What are the reporting deadl
 
 | Tool | Citation Type | Verification Effort | Can You See Context? |
 |---|---|---|---|
-| **DocTalk** | Click-to-navigate highlighting, with the page on each citation | Seconds per citation | Yes — highlighted in the original document |
+| **DocTalk** | Click-to-navigate citations with the page on each; the passage is highlighted in PDF and plain-text (.txt) files | Seconds per citation | Yes — jumps to the cited location; highlighted in PDF and plain-text (.txt) files |
 | ChatDOC | Page number on each answer; click it to jump | Low | Yes — jumps to the section |
 | Adobe Acrobat AI Assistant | Highlights where it found the answer; page number in PDF Spaces | Low | Yes — highlighted in the document |
 | ChatPDF | Clickable citations that scroll to the source | Low | Yes — jumps to the source passage |

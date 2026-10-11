@@ -380,10 +380,11 @@ the new English value in full, keeping each locale's link-lead ending. `compareH
 `comparePdfai.whatIsDocTalkDescription` and the hero: only the highlight clause changed per locale (exact fragment
 replacement), so prices and other sentences are byte-identical.
 
-Left as is (same rule as the competitor-facts batch): values that list highlighting and format count as two
-separate features ("highlights the cited passage, reads seven formats"), `alts*.adv*` "Real-time citation
-highlighting" on PDF-tool pages (ChatPDF, Humata, AskYourPDF, PDF.ai), and `featuresCitations.heroTitle`/`metaTitle`
-("Real-Time Highlighting", metaTitle rule).
+Left as is in Phase 3: values that listed highlighting and format count as two separate features. **Superseded
+by Codex r2 below**: a full sentence whose subject is DocTalk and whose verb is "highlights the cited passage" is a
+factual claim, false for 5 of 7 formats, so those sentences now carry the PDF/.txt limit too. Still left as is:
+`alts*.adv*` "Real-time citation highlighting" on PDF-tool pages (ChatPDF, Humata, AskYourPDF, PDF.ai), and
+`featuresCitations.heroTitle`/`metaTitle` ("Real-Time Highlighting", metaTitle rule).
 
 Cross-page check (vendor cells on `/features/*` vs the live `/compare/*` and `/alternatives/*` tables), all
 consistent: ChatPDF formats PDF/DOC(X)/PPT(X)/MD/TXT + URL ✓, click = "Jumps to source"; AskYourPDF formats
@@ -406,3 +407,39 @@ listed" (multi-format citations = not verified); Gemini Notebook DOCX/PPTX/TXT/M
    (homepage heading "Highlights citations", no statement of what or where), so both
    `/features/citations` and the live `/compare/humata` "Citation Highlighting" cell now show "Partial". The
    compare page's ✓ was the outlier: its own prose already said Humata "does not say what is highlighted".
+
+## Codex r2 (2026-10-11): REWORK, applied
+
+Rule applied from this round on, in one sentence: **every sentence that says what clicking a citation does, and
+every full sentence whose subject is DocTalk and whose verb is "highlights the cited passage", says the passage is
+highlighted in PDF and plain-text (.txt) files.** Kept unchanged: feature names ("Citation Highlighting"),
+noun-phrase capability lists ("citation highlighting, 7 formats, 11 languages"), audience lines ("users who need
+one-click highlighting"), recommendation lines ("if you want highlighted citations, choose DocTalk"), and
+demo-context sentences (the demo documents are PDFs).
+
+All edits are exact fragment replacements in all 11 locales (each fragment asserted to occur once, and the value
+asserted to have no ".txt" before the edit). Competitor sentences, prices and other sentences are byte-identical.
+
+1. Codex's 3 keys: `compareNotebooklm.faq.a3`, `altsChatpdf.faq3Answer`, `comparePdfai.faq3Answer` (click
+   sentences, with Codex's own English wording).
+2. 7 more click sentences or Excel couplings found by the same sweep: `compareChatpdf.heroDescription`,
+   `compareChatpdf.verdictP2`, `compareChatpdf.faq.a1`, `compareNotebooklm.verdictP2`, `compareNotebooklm.faq.a1`,
+   `comparePdfai.verdictParagraph2`, `featuresMultilingual.cjk.p3`.
+3. 5 declarative DocTalk sentences that Phase 3 had left as "two separate features": `compareHumata.heroDescription`,
+   `compareHumata.verdictParagraph2`, `comparePdfai.heroDescription`, `compareAskyourpdf.verdictParagraph2`,
+   `compareAskyourpdf.faq1Answer`. Search titles and descriptions are not affected: `compareChatpdf`,
+   `compareHumata` and `comparePdfai` `metaDescription` do not mention highlighting, and neither hero equals its
+   meta value.
+4. 2 blog lines (both posts already carry `updated: "2026-10-11"`):
+   `notebooklm-alternatives-2026.md:153` ("DocTalk jumps to the cited location and, in PDF and plain-text (.txt)
+   files, highlights the passage; Quote Finder gives machine-checked quotes with page attribution") and the DocTalk
+   row of the table in `citation-highlighting-matters.md:120`.
+
+Left as is, by the rule above: `demo.hint`, `featuresDemo.steps.step4.description` (demo = PDFs);
+`useCasesStudents.multilingual.p3` (its example is a Japanese PDF); `compareHub.tagline.pdfai` (already says "PDF
+citations"); `compareHub.tagline.chatpdf`, `alts*.ctaDescription`, `alts*.chooseNeed1` (capability lists);
+`compare*.whoDocTalk*` (audience lines); `compareChatpdf.verdictP3Pre`, `compareNotebooklm.verdictP3Pre`,
+`comparePdfai.verdictParagraph3`, `compareAskyourpdf.verdictParagraph3`, "Choose DocTalk for highlighted citations"
+in `compareNotebooklm.faq.a1` (recommendation lines); and the worked examples in `citation-highlighting-matters.md`
+(lines 94–114 describe a contract, an earnings report, a paper, medical records and a policy document; the post's
+CTA says "Upload a PDF").

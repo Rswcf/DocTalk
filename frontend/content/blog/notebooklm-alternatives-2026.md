@@ -150,7 +150,7 @@ Checked 30 September 2026 on each vendor's own site unless marked.
 
 ## When to Switch
 
-- **You must verify answers against the original page** (legal, compliance, academic): DocTalk highlights the cited passage and gives machine-checked quotes with page attribution.
+- **You must verify answers against the original page** (legal, compliance, academic): DocTalk jumps to the cited location and, in PDF and plain-text (.txt) files, highlights the passage; Quote Finder gives machine-checked quotes with page attribution.
 - **You work in Excel files:** DocTalk reads .xlsx natively.
 - **You cannot or prefer not to use a Google account:** DocTalk, ChatPDF, AskYourPDF, Humata and PDF.ai do not need one; DocTalk's [demo](/demo) needs no signup.
 - **Your team shares documents:** Humata.
