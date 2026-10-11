@@ -68,13 +68,17 @@ export default async function CitationsContent({ locale }: { locale: string }) {
     },
   ];
 
+  // Competitor cells follow each vendor's own pages (checked 2026-10); a
+  // feature the vendor does not document is "Not verified", never "No".
+  // Source: .collab/reviews/2026-10-10-step5-page-citations/vendor-evidence.md.
+  const notVerified = t('comparison.notVerified');
   const comparisonRows = [
-    { feature: t('featuresCitations.compNumberedCitations'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
-    { feature: t('featuresCitations.compClickHighlight'), doctalk: true, chatpdf: t('comparison.jumpsToSource'), askyourpdf: false, humata: false },
-    { feature: t('featuresCitations.compPageAttribution'), doctalk: true, chatpdf: true, askyourpdf: 'partial' as const, humata: 'partial' as const },
-    { feature: t('featuresCitations.compBboxHighlight'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
-    { feature: t('featuresCitations.compTextSnippet'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
-    { feature: t('featuresCitations.compMultiFormat'), doctalk: true, chatpdf: false, askyourpdf: false, humata: false },
+    { feature: t('featuresCitations.compNumberedCitations'), doctalk: true, chatpdf: notVerified, askyourpdf: notVerified, humata: notVerified },
+    { feature: t('featuresCitations.compClickHighlight'), doctalk: true, chatpdf: t('comparison.jumpsToSource'), askyourpdf: t('comparison.linksToPage'), humata: true },
+    { feature: t('featuresCitations.compPageAttribution'), doctalk: true, chatpdf: true, askyourpdf: true, humata: 'partial' as const },
+    { feature: t('featuresCitations.compBboxHighlight'), doctalk: true, chatpdf: notVerified, askyourpdf: notVerified, humata: notVerified },
+    { feature: t('featuresCitations.compTextSnippet'), doctalk: true, chatpdf: notVerified, askyourpdf: notVerified, humata: notVerified },
+    { feature: t('featuresCitations.compMultiFormat'), doctalk: true, chatpdf: notVerified, askyourpdf: notVerified, humata: notVerified },
   ];
 
   const useCases = [
