@@ -847,7 +847,7 @@ PDF 引用仅使用一套覆盖层：完整、唯一且属于引用页/区域的
 - **重新生成**：重新发送上一条用户消息，获取新的 AI 回答
 - **导出**：将完整对话下载为 Markdown 文件，引用转为脚注（通过 "+" 菜单访问）
 
-**非 PDF 引文高亮**（MD、DOCX/PPTX 文本视图、XLSX、URL）：`TextViewer` 在页面存储的 Markdown 中定位被引用的分块（`lib/textEvidence.ts`），再通过 rehype 插件（`lib/rehypeMarkRanges.ts`）行内标记，状态行与 PDF 阅读器共用 `evidence.*`。每个被标记的句子必须在整个文档中唯一，且定位到的文本至少覆盖分块的 30%；否则状态为"仅定位到页面"。状态行描述实际渲染出的标记（例如位于原始 HTML 中的定位范围不会渲染任何标记），绝不超出定位结果。DOCX/PPTX 页面视图显示 LibreOffice 生成的 PDF，其第 N 页并不是 DOCX 提取器的第 N 页（提取器按标题分节或按 3,000 字符切分）：在那里，文本层候选只有在整个转换文档中只出现一次、且出现在被引用页时才会保留。因此 DOCX 默认以文本视图打开，PPTX 默认以页面视图打开，切换按钮仍可切换（`lib/readerView.ts`）。文本视图的跳转（引文、`?highlight=`、`?page=N`）要等所有懒加载的页面正文都挂载后才滚动（`lib/textJump.ts`），因此按最终布局计算位置。
+**非 PDF 引文高亮**（MD、DOCX/PPTX 文本视图、XLSX、URL、TXT）：`TextViewer` 在页面存储的 Markdown 中定位被引用的分块（`lib/textEvidence.ts`），再通过 rehype 插件（`lib/rehypeMarkRanges.ts`）行内标记，状态行与 PDF 阅读器共用 `evidence.*`。每个被标记的句子必须在整个文档中唯一，且定位到的文本至少覆盖分块的 30%；否则状态为"仅定位到页面"。状态行描述实际渲染出的标记（例如位于原始 HTML 中的定位范围不会渲染任何标记），绝不超出定位结果。DOCX/PPTX 页面视图显示 LibreOffice 生成的 PDF，其第 N 页并不是 DOCX 提取器的第 N 页（提取器按标题分节或按 3,000 字符切分）：在那里，文本层候选只有在整个转换文档中只出现一次、且出现在被引用页时才会保留。因此 DOCX 默认以文本视图打开，PPTX 默认以页面视图打开，切换按钮仍可切换（`lib/readerView.ts`）。文本视图的跳转（引文、`?highlight=`、`?page=N`）要等所有懒加载的页面正文都挂载后才滚动（`lib/textJump.ts`），因此按最终布局计算位置。TXT 页面走同一条路径，但按纯文本渲染（`lib/plainEvidence.ts`）：Markdown 和 HTML 字符按原样显示，标记与存储文本一一对应。只有原始文件丢失的 PDF 仍使用旧的片段前缀匹配。
 
 **PDF 搜索**：Ctrl+F 触发阅读器内搜索栏。通过 `pdfjs page.getTextContent()` 提取文本，使用 `customTextRenderer` 的 `<mark>` 标签高亮匹配，上下翻页在匹配项之间滚动。
 

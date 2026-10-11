@@ -962,7 +962,7 @@ PDF citation evidence uses one overlay: a complete unique quote, restricted to t
   snapshots get new tokens. The dialog can revoke all versions of that answer.
   Existing full-conversation links retain their conversation scope.
 
-**Non-PDF citation highlights** (MD, DOCX/PPTX text view, XLSX, URL): `TextViewer`
+**Non-PDF citation highlights** (MD, DOCX/PPTX text view, XLSX, URL, TXT): `TextViewer`
 locates the cited chunk in the page's stored Markdown (`lib/textEvidence.ts`) and
 marks it inline through a rehype plugin (`lib/rehypeMarkRanges.ts`), with the same
 `evidence.*` status line as the PDF viewer. Every marked sentence must be unique in
@@ -976,7 +976,10 @@ occurs once in the whole converted document, on the cited page. A DOCX therefore
 opens in the text view; a PPTX opens in the slide view; the toggle still switches
 (`lib/readerView.ts`). A text-view jump (citation, `?highlight=`, `?page=N`) waits
 until every lazily rendered page body has mounted before it scrolls
-(`lib/textJump.ts`), so it is measured against the final layout.
+(`lib/textJump.ts`), so it is measured against the final layout. TXT pages take
+the same path but render as plain text (`lib/plainEvidence.ts`): Markdown and HTML
+characters stay literal, and the marks sit on the stored text one to one. Only a
+PDF whose stored file is missing still uses the old snippet prefix match.
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 

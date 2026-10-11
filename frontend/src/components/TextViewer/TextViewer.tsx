@@ -13,6 +13,7 @@ import { articleEvidence, articlePage, bodyRanges, leadingMarkdownHeading } from
 import { NO_RENDERED_MARKS, shownEvidenceStatus, type EvidenceStatus, type RenderedMarks } from '../../lib/evidenceStatus';
 import { rehypeMarkRanges, type MarkRange } from '../../lib/rehypeMarkRanges';
 import { anchorScrolls, bodiesReady as allBodiesMounted, jumpTarget } from '../../lib/textJump';
+import { plainEvidenceSegments, type PlainPart } from '../../lib/plainEvidence';
 import type { Citation } from '../../types';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
@@ -50,8 +51,9 @@ function EvidenceMark(props: React.ComponentPropsWithoutRef<'mark'> & { node?: u
   return <mark {...rest} ref={isAnchor && onAnchor ? onAnchor : undefined} />;
 }
 
-/** Mounts with the Markdown it follows, i.e. once react-markdown has loaded. */
-function MarkdownBodyMounted() {
+/** Mounts with the page body it follows: for Markdown, once react-markdown
+ * has loaded; a plain-text body mounts at once. */
+function PageBodyMounted() {
   const report = useContext(RenderedMarksContext);
   useLayoutEffect(() => report?.('bodies'), [report]);
   return null;
@@ -208,6 +210,10 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const { t } = useLocale();
   const isUrlSource = sourceMeta.isUrlSource || fileType === 'url';
   const isMarkdown = isUrlSource || shouldRenderMarkdown(fileType);
+  // TXT pages take the same evidence path, rendered as plain text. A
+  // missing-file PDF (also plain) keeps the backend snippet match.
+  const isPlainEvidence = !isMarkdown && fileType === 'txt';
+  const usesEvidence = isMarkdown || isPlainEvidence;
   const [evidence, setEvidence] = useState<EvidenceState | null>(null);
   const [hiddenEvidence, setHiddenEvidence] = useState(false);
   const renderedCounts = useRef<RenderedMarks>({ ...NO_RENDERED_MARKS });
@@ -230,7 +236,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const mountedAnchor = useRef<{ citation: Citation; element: HTMLElement } | null>(null);
   const citationRef = useRef(citation);
   citationRef.current = citation;
-  const markdownCitation = isMarkdown ? citation ?? null : null;
+  const evidenceCitation = usesEvidence ? citation ?? null : null;
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
@@ -333,10 +339,10 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
     if (!targetPage || pages.length === 0) return;
     const openingPage = !initialPageApplied.current && targetPage > 1;
     if (!scrollNonce && !openingPage) return;
-    const active = scrollNonce && isMarkdown ? citationRef.current ?? null : null;
+    const active = scrollNonce && usesEvidence ? citationRef.current ?? null : null;
     pendingAnchor.current = active;
     pendingJump.current = { page: targetPage, citation: active };
-  }, [targetPage, scrollNonce, pages, isMarkdown]);
+  }, [targetPage, scrollNonce, pages, usesEvidence]);
   useEffect(() => {
     if (!pendingJump.current || !bodiesReady) return;
     // Use requestAnimationFrame to wait for highlight render
@@ -364,15 +370,15 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       }
     });
     return () => cancelAnimationFrame(frame);
-  }, [targetPage, scrollNonce, pages, isMarkdown, bodiesReady]);
+  }, [targetPage, scrollNonce, pages, usesEvidence, bodiesReady]);
 
   // Locate the cited chunk in the Markdown page text. Chat citations carry
   // the chunk (cut at 900 characters) in context_text; anything shorter than
   // the whole chunk is completed from /api/chunks/{id}, and a failed fetch
   // falls back to what the citation carries.
   useEffect(() => {
-    if (!markdownCitation || pages.length === 0) { setEvidence(null); return; }
-    const target = markdownCitation;
+    if (!evidenceCitation || pages.length === 0) { setEvidence(null); return; }
+    const target = evidenceCitation;
     const lastPage = Math.max(target.pageEnd || target.page, target.page);
     if (!pages.some((page) => page.page_number >= target.page && page.page_number <= lastPage)) {
       setEvidence({ citation: target, status: 'unavailable', byPage: NO_MARKS_BY_PAGE });
@@ -395,17 +401,17 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       settle(full ?? (known ? dropTrailingFragment(known.text) : target.textSnippet || null));
     });
     return () => { cancelled = true; };
-  }, [markdownCitation, highlightFocus, pages, isUrlSource]);
+  }, [evidenceCitation, highlightFocus, pages, isUrlSource]);
 
   useEffect(() => { setHiddenEvidence(false); }, [citation]);
 
-  const currentEvidence = evidence && evidence.citation === markdownCitation ? evidence : null;
+  const currentEvidence = evidence && evidence.citation === evidenceCitation ? evidence : null;
   const locatedStatus: EvidenceStatus = currentEvidence?.status ?? 'loading';
   const evidenceByPage = currentEvidence?.byPage ?? NO_MARKS_BY_PAGE;
   // A located range may render no mark (raw HTML, a cut reference, an
   // ambiguous alignment): the status follows the marks that rendered.
   const evidenceStatus = shownEvidenceStatus(locatedStatus, renderedMarks);
-  const captionPage = markdownCitation && evidenceStatus === 'page' ? markdownCitation.page : null;
+  const captionPage = evidenceCitation && evidenceStatus === 'page' ? evidenceCitation.page : null;
 
   // A new evidence state (or the bodies becoming ready) gets a new callback,
   // so React re-attaches it to the anchor mark even when the element itself
@@ -421,15 +427,16 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const cancelPendingAnchor = useCallback(() => { pendingAnchor.current = null; pendingJump.current = null; }, []);
 
   // Compute which page has a highlight match
-  // Plain text (TXT, missing-file PDFs) keeps matching the backend snippet.
+  // A missing-file PDF keeps matching the backend snippet; every evidence
+  // format (Markdown, URL, TXT) never uses it.
   const highlightMatch = useMemo(() => {
-    if (isMarkdown || !highlightSnippet || !targetPage) return null;
+    if (usesEvidence || !highlightSnippet || !targetPage) return null;
     const page = pages.find(p => p.page_number === targetPage);
     if (!page) return null;
     const match = findSnippetInPage(page.text, highlightSnippet);
     if (!match) return null;
     return { pageNumber: targetPage, start: match[0], length: match[1] };
-  }, [highlightSnippet, targetPage, pages, scrollNonce, isMarkdown]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [highlightSnippet, targetPage, pages, scrollNonce, usesEvidence]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcut: Ctrl+F to open search
   useEffect(() => {
@@ -477,10 +484,10 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       onPointerDownCapture={cancelPendingAnchor}
       onKeyDownCapture={cancelPendingAnchor}
     >
-      {markdownCitation && (
+      {evidenceCitation && (
         <div className="dt-evidence-bar flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--reader-evidence-border)] bg-[var(--reader-evidence-soft)] px-3 py-1.5 text-xs">
           <span role="status" className="dt-evidence-status min-w-0" tabIndex={-1}>
-            {t('evidence.reference', { index: markdownCitation.refIndex, page: citationPageRange(markdownCitation) })}
+            {t('evidence.reference', { index: evidenceCitation.refIndex, page: citationPageRange(evidenceCitation) })}
             {' · '}{t(hiddenEvidence && hasMarks ? 'evidence.hidden' : `evidence.${evidenceStatus}`)}
           </span>
           <span className="flex flex-wrap items-center gap-1">
@@ -589,6 +596,20 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
                     captionPage={captionPage === page.page_number ? captionPage : null}
                     markRanges={evidenceByPage.get(page.page_number) || NO_MARKS}
                     highlightRef={highlightRef}
+                  />
+                ) : isPlainEvidence ? (
+                  <PlainEvidenceContent
+                    text={page.text}
+                    captionPage={captionPage === page.page_number ? captionPage : null}
+                    markRanges={evidenceByPage.get(page.page_number) || NO_MARKS}
+                    highlightRef={highlightRef}
+                    searchQuery={searchQuery}
+                    searchMatches={pageSearchMatches}
+                    currentActiveMatch={
+                      searchMatches.length > 0 && searchMatches[currentMatchIndex]?.page === page.page_number
+                        ? searchMatches[currentMatchIndex].index
+                        : null
+                    }
                   />
                 ) : (
                   <PlainTextContent
@@ -788,7 +809,69 @@ function WebArticleView({
   );
 }
 
-/** Plain text renderer with search and citation highlights */
+/** A TXT page with inline citation evidence: the stored text as written
+ * (`#`, `*`, `&amp;` and HTML stay characters), evidence ranges as flat
+ * `<mark data-dt-evidence>` at their raw offsets, search matches inside or
+ * between them (lib/plainEvidence.ts). */
+function PlainEvidenceContent({
+  text,
+  captionPage,
+  markRanges,
+  highlightRef,
+  searchQuery,
+  searchMatches,
+  currentActiveMatch,
+}: {
+  text: string;
+  /** The cited page when no passage could be located: show a page caption. */
+  captionPage: number | null;
+  markRanges: MarkRange[];
+  highlightRef: React.RefObject<HTMLSpanElement>;
+  searchQuery: string;
+  searchMatches: number[];
+  currentActiveMatch: number | null;
+}) {
+  const { t } = useLocale();
+  const segments = useMemo(() => plainEvidenceSegments(text, markRanges, {
+    starts: searchQuery.length >= 2 ? searchMatches : [],
+    length: searchQuery.length,
+    active: currentActiveMatch,
+  }), [text, markRanges, searchQuery.length, searchMatches, currentActiveMatch]);
+  const renderParts = (parts: PlainPart[]) => parts.map((part, i) => (
+    part.search === 'active' ? (
+      <mark key={i} className="search-match-active bg-amber-400 dark:bg-amber-500 dark:text-white text-zinc-900 rounded-sm">{part.text}</mark>
+    ) : part.search === 'match' ? (
+      <mark key={i} className="bg-yellow-200 dark:bg-yellow-700/50 rounded-sm">{part.text}</mark>
+    ) : (
+      <React.Fragment key={i}>{part.text}</React.Fragment>
+    )
+  ));
+
+  return (
+    <>
+      {captionPage != null && (
+        <p dir="auto" className="mb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+          <span ref={highlightRef}>
+            {t('citation.page', { page: captionPage })}
+          </span>
+        </p>
+      )}
+      <pre dir="auto" className="whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200 font-sans leading-relaxed">
+        {segments.map((segment, i) => (segment.mark ? (
+          <EvidenceMark key={i} data-dt-evidence={segment.mark.kind} data-dt-evidence-anchor={segment.mark.anchor ? 'true' : undefined}>
+            {renderParts(segment.parts)}
+          </EvidenceMark>
+        ) : (
+          <React.Fragment key={i}>{renderParts(segment.parts)}</React.Fragment>
+        )))}
+      </pre>
+      <PageBodyMounted />
+    </>
+  );
+}
+
+/** Plain text renderer with search and citation highlights (missing-file PDFs:
+ * the backend snippet's prefix match). */
 function PlainTextContent({
   text,
   citationMatch,
@@ -955,7 +1038,7 @@ const MarkdownContent = React.memo(function MarkdownContent({
       )}
       <Suspense fallback={markdownFallback}>
         <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={rehypePlugins} components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
-        <MarkdownBodyMounted />
+        <PageBodyMounted />
       </Suspense>
     </div>
   );
