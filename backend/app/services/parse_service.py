@@ -350,6 +350,7 @@ class ParseService:
     REF_MIN_PAGE_CHARS = 200  # less running text than this: the page takes the document's size
     REF_SUBSTANTIAL_SHARE = 0.30  # the largest size with this share of a page's running text
     REF_DOC_PAGE_SHARE = 0.25  # the largest page size held by this share of pages
+    REF_SECOND_LOOK_MIN_CHARS = 1000  # ...or one full text page of it, admits a size on the second look
 
     TARGET_MIN_TOKENS = 150
     TARGET_MAX_TOKENS = 300
@@ -1052,12 +1053,13 @@ class ParseService:
         median line size by span mean (font_size, the reference v1-v4 used
         everywhere) and by dominant span (rule_size). A page without enough running
         text of its own takes the document's body size: the largest page body size
-        held by REF_DOC_PAGE_SHARE of ALL pages, so one text page cannot set it for a
+        held by REF_DOC_PAGE_SHARE of all pages with text, so one text page cannot set it for a
         deck of chart pages; with none, the page has only the floors (v1-v4 behaviour).
         A page with no body size of its own gets a second look in which a lone short
-        run counts if its size is the body size of at least two other pages (the one
-        comment paragraph of a broker's exhibit page; one cover standfirst is not
-        enough to make its size body text everywhere). The document body size is taken from first-look
+        run counts if its size is the body size of at least two other pages, or holds
+        REF_SECOND_LOOK_MIN_CHARS of their running text (the one comment paragraph of
+        a broker's exhibit page, also after a one-page flash note; one cover
+        standfirst is not enough to make its size body text everywhere). The document body size is taken from first-look
         sizes only, and a second-look size below it is ignored: a 3-line 7pt source
         note under an exhibit is not the page body because a disclosure appendix is 7pt.
         `sources`, when given, receives where each page's size came from: "own",
@@ -1068,9 +1070,13 @@ class ParseService:
         floors = (median(font_sizes) if font_sizes else 12.0, median(rule_sizes) if rule_sizes else 12.0)
 
         page_refs: dict[int, Optional[float]] = {}
+        body_chars: dict[float, float] = {}  # first-look running characters at each page's own body size
         for p, vertical, blocks in per_page:
             band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
-            page_refs[p.page_number] = self._page_reference(self._running_text_chars(blocks, vertical, band_w, band_h))
+            chars = self._running_text_chars(blocks, vertical, band_w, band_h)
+            ref = page_refs[p.page_number] = self._page_reference(chars)
+            if ref is not None:
+                body_chars[ref] = body_chars.get(ref, 0.0) + sum(w for s, w in chars.items() if self._same_size(s, ref))
         pages_per_size: dict[float, float] = {}
         for r in page_refs.values():
             if r is not None:
@@ -1078,7 +1084,12 @@ class ParseService:
         common = [s for s, n in self._cluster_sizes(pages_per_size) if n >= self.REF_DOC_PAGE_SHARE * len(per_page)]
         doc_ref = max(common) if common else 0.0
 
-        body_sizes = sorted(size for size, n in self._cluster_sizes(pages_per_size) if n >= 2)
+        body_sizes = sorted(
+            size
+            for size, n in self._cluster_sizes(pages_per_size)
+            if n >= 2
+            or sum(w for s, w in body_chars.items() if self._same_size(s, size)) >= self.REF_SECOND_LOOK_MIN_CHARS
+        )
         references: dict[int, float] = {}
         for p, vertical, blocks in per_page:
             ref, source = page_refs[p.page_number], "own"

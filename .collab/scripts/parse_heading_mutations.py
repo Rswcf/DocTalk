@@ -76,7 +76,7 @@ M = {
     "compat ideographs weight 1": ('            or "\\uf900" <= ch <= "\\ufaff"  # compatibility ideographs\n', ""),
     # review r4
     "H: short-text run needs no partner": (" or lines[0].run_chars <= self.HEADING_DISPLAY_MAX_CHARS\n", "\n"),
-    "J: one page makes a body size": ("for size, n in self._cluster_sizes(pages_per_size) if n >= 2)", "for size, n in self._cluster_sizes(pages_per_size) if n >= 1)"),
+    "J: one page makes a body size": ("            if n >= 2\n            or sum(", "            if n >= 1\n            or sum("),
     "K: CJK counted once in run_chars": ("chars[roots[i]] += len(text) + sum(1 for ch in text if self._letter_weight(ch) == 2)", "chars[roots[i]] += len(text)"),
     "run_chars = longest line": ("chars[roots[i]] += len(text) + sum(1 for ch in text if self._letter_weight(ch) == 2)", "chars[roots[i]] = max(chars[roots[i]], len(text))"),
     "document body counts second-look sizes": (
@@ -92,11 +92,19 @@ M = {
         "        common = [s for s, n in self._cluster_sizes(pages_per_size) if n >= self.REF_DOC_PAGE_SHARE * len(per_page)]\n"
         "        doc_ref = max(common) if common else 0.0\n\n        body_sizes = ",
     ),
+    # review r5
+    "M: no character admission": ("            or sum(w for s, w in body_chars.items() if self._same_size(s, size)) >= self.REF_SECOND_LOOK_MIN_CHARS\n", ""),
+    "M: threshold 100": ("REF_SECOND_LOOK_MIN_CHARS = 1000", "REF_SECOND_LOOK_MIN_CHARS = 100"),
+    "J on raw sizes": ("            for size, n in self._cluster_sizes(pages_per_size)\n            if n >= 2", "            for size, n in pages_per_size.items()\n            if n >= 2"),
+    "K at x3": ("chars[roots[i]] += len(text) + sum(1 for ch in text if self._letter_weight(ch) == 2)", "chars[roots[i]] += len(text) + 2 * sum(1 for ch in text if self._letter_weight(ch) == 2)"),
+    "display base without rule floor": ("        base = max(reference_size, font_floor, rule_floor)", "        base = max(reference_size, font_floor)"),
 }
 
 
 # Mutants that no test kills on purpose, with the reason.
 ACCEPTED = {
+    # A second-look size in the document body size's class but below its float value: only relabels the source.
+    "second look same-class clause": ("(second >= doc_ref or self._same_size(second, doc_ref))", "second >= doc_ref"),
     # Extractor titles become headings before any size test: differs only for a non-PDF document
     # with a title on every page, which loses them all in v3 too (a separate task); not pinned.
     "extractor title ahead of size checks": (

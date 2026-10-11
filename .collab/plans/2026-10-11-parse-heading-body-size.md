@@ -349,10 +349,9 @@ Fresh-context review (`.collab/reviews/2026-10-11-parse-heading-body-size-review
 - Corpus: 47 PDFs, paragraph characters fell in 0; the round's changes over a9e8245d restore 21 v3 headings (agenda
   rows, the 10-Q p52 stack, a vertical cover label) and drop one (`fed_feds_ai_coder` p57 `All Industries`).
 
-## 15. Final spec (after review round 4, 2026-10-11)
+## 15. Final spec (after review round 5, 2026-10-11)
 
-Authoritative; supersedes §3. Review r4 (`…-review-r4.md`, response `…-review-r4-response.md`) added the last three
-items marked r4.
+Authoritative; supersedes §3. Rounds 4 and 5 (`…-review-r{4,5}.md` and responses) added the items marked r4 / r5.
 
 | Term | Rule |
 |---|---|
@@ -360,16 +359,20 @@ items marked r4.
 | **same size class** | `|a − b| ≤ max(0.35, 0.08 × max(a, b))`. |
 | **neighbour / run** | as §3 (same class, ≥ 30 % overlap of the narrower line, next line starts within 1.0 line height and below the upper line's middle; off-axis lines never). Swept per chain of same-size sizes, overlap tested first, active list capped at 400. `run_len` = lines; `run_chars` = characters of the whole run, CJK/kana/hangul counted twice (r4 K). |
 | **running text** | lines of runs with ≥ 2 lines spanning ≥ 20 % of the page (fix A). A **short** run — ≤ 3 lines or ≤ 160 `run_chars` (r4 H) — counts only when the page has another such run of its size. |
-| **page body size (first look)** | the largest size class holding ≥ 30 % of the page's running text; none below 200 running characters. |
-| **document body size** | the largest first-look page body size held by ≥ 25 % of ALL pages; else none (0.0). |
-| **second look** | for a page with no first-look size: a lone short run also counts if its size is the first-look body size of ≥ 2 pages (r4 J) and it is ≤ 1.25 × the page's smallest run. The result is used only if it is ≥ the document body size (or the same class). |
+| **page body size (first look)** | the largest size class holding ≥ 30 % of the page's running text (if none does, the heaviest class); none below 200 running characters. |
+| **document body size** | the largest first-look page body size held by ≥ 25 % of all pages with text (pages with at least one cleaned line); else none (0.0). |
+| **second look** | for a page with no first-look size: a lone short run also counts if its size is the first-look body size of ≥ 2 pages (r4 J) or holds ≥ 1,000 first-look running characters at that size (r5 M: a one-page flash note), and it is ≤ 1.25 × the page's smallest run. The result is used only if it is ≥ the document body size (or the same class). |
 | **page reference** | first look, else second look, else document body size, else 0.0 (`_reference_sizes(…, sources)` reports own / second / document / floor). |
 | **floors** | median `font_size` and median `rule_size` over every cleaned line. |
-| **heading by size** | not in a run of ≥ 4 lines unless `run_chars ≤ 160` and `rule_size ≥ 1.5 × max(reference, floors)`; `rule_size > 1.25 × reference`; `font_size > 1.25 × font floor` or `rule_size > 1.25 × max(both floors)`; then, unless `extractor_title`: not a bare URL/e-mail, letters ≥ 2 and figures < letters (CJK/kana/hangul 2 letters, combining marks 1). |
+| **heading by size** | not in a run of ≥ 4 lines unless `run_chars ≤ 160` (with CJK counted twice: a 4-line CJK display title of up to 80 characters) and `rule_size ≥ 1.5 × max(reference, floors)`; `rule_size > 1.25 × reference`; `font_size > 1.25 × font floor` or `rule_size > 1.25 × max(both floors)`; then, unless `extractor_title`: not a bare URL/e-mail, letters ≥ 2 and figures < letters (CJK/kana/hangul 2 letters, combining marks 1). |
 
 Recorded residuals (all equal to v3 unless noted): F2(b)/F3(a) and R4-2 — a short broker note whose document body is its
 7pt appendix keeps v3 behaviour on exhibit pages carrying a ≥ 2-line source note or a one-line comment (round 3 had
 fixed some of these; R3-1's title-over-text test is the same ratio test, and R3-1 was worse than v3); F5 Word "Double"
 spacing; R2-1(b) IR tile slides (worse than v3, constructed only); R3-4 fix A raising a page body (worse than v3,
-constructed only); R2-7 `_prepare_blocks` computed twice (~2.5× v3 on dense table pages); 4-line body text ≤ 160
+constructed only); R5-2 in documents of ≤ 4 pages a cover standfirst's size can be the document body size, so short
+exhibit titles at that size are lost (worse than v3, pre-existing since round 1, labelled `inherited`); R5-3 a slide whose
+body is one bullet list of ≤ 160 characters has no body size of its own (H), so it takes the document's or the floors —
+titles can be lost through a larger inherited size (`inherited`), bullets can become headings in chart-heavy decks (= v3),
+and one threshold case loses a 14pt heading labelled `body` (all constructed); R2-7 `_prepare_blocks` computed twice (~2.5× v3 on dense table pages); 4-line body text ≤ 160
 characters at ≥ 1.5× its page body is a heading (agenda rows, header stacks, stacked labels — as in v3).

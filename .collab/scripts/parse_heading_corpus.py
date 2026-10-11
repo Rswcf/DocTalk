@@ -16,7 +16,7 @@ writes a per-document comparison:
       run-short  the same, but the whole run is display-short (<= 160 characters)
       run-large  the same, but at 1.5x its page's body size or more
       body       not over 1.25x its own page's body size (the expected reason)
-      body-short the same, but that body size comes only from runs of 2-3 lines
+      body-short the same, but that body size comes only from short runs (<= 3 lines or <= 160 chars)
       inherited  not over 1.25x the document's body size, which its page took
                  because it has too little running text of its own
       floor      not over 1.25x the document's median line (the v1-v4 reference)
@@ -96,7 +96,9 @@ def removal_reasons(module, pages, removed: list) -> dict:
 
     def body_from_short_runs(page: int) -> bool:
         same = [b for b in lines[page] if b.run_len >= 2 and svc._same_size(svc._rule_size(b), references[page])]
-        return bool(same) and all(b.run_len <= svc.HEADING_MAX_WRAP_LINES for b in same)
+        return bool(same) and all(
+            b.run_len <= svc.HEADING_MAX_WRAP_LINES or b.run_chars <= svc.HEADING_DISPLAY_MAX_CHARS for b in same
+        )
 
     factor = svc.HEADING_SIZE_FACTOR
     reasons = {}

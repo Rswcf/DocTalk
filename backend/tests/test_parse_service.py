@@ -1302,6 +1302,7 @@ class TestHeadingSizeUsesPageBodySize:
         assert not run_line(15.0, 161, 10.0, (8.0, 8.0))  # a paragraph is longer
         assert run_line(15.0, 160, 10.0, (8.0, 8.0))
         assert not run_line(16.0, 80, 10.0, (11.0, 11.0))  # 1.6x the page body but under 1.5x the median line
+        assert not run_line(16.0, 80, 10.0, (10.0, 11.0))  # ...the dominant-size median line counts too
 
     def test_second_look_does_not_lower_a_page_below_the_document_body(self):
         # R3-3: exhibit pages carry a 3-line 7pt source note; 7pt is the disclosure
@@ -1386,3 +1387,50 @@ class TestHeadingSizeUsesPageBodySize:
         blocks += _body_lines(1, 40, 160, 30, width=520)
 
         assert self._headings([_page(1, blocks)]) == set()
+
+    # ---- review r5 (2026-10-11, .collab/reviews/2026-10-11-parse-heading-body-size-review-r5.md) ----
+
+    def test_flash_note_with_one_text_page_keeps_exhibit_comments_body(self):
+        # R5-1: a one-page note, six exhibit pages with a 3-line 10pt comment, two 7pt
+        # disclosure pages. One full page of 10pt running text makes 10pt a body size
+        # for the second look, though no size covers a quarter of the pages.
+        pages = [_page(1, [BlockInfo(page=1, text="Flash note title", bbox=(40, 40, 400, 60), font_size=16)]
+                       + _body_lines(1, 40, 80, 40, width=500))]
+        for pn in range(2, 8):
+            blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: DRAM contract prices", bbox=(40, 40, 400, 54), font_size=12)]
+            blocks += _cells(pn, 80, 25)
+            blocks += _body_lines(pn, 40, 400, 3, width=500,
+                                  text=f"Inventories at module makers normalised further on exhibit page {pn}")
+            pages.append(_page(pn, blocks))
+        pages += [_page(pn, _body_lines(pn, 40, 60, 80, size=7, width=520, text="Disclosure text")) for pn in (8, 9)]
+
+        chunk_text = " ".join(c.text for c in self.svc.chunk_document(pages))
+
+        assert "normalised further on exhibit page 4 1" in chunk_text
+
+    def test_second_look_compares_body_sizes_by_class(self):
+        # Two short text pages whose body sizes differ within one class (9.98 / 10.0pt)
+        # make 10pt a body size of two pages for the exhibit pages' second look.
+        pages = [_page(pn, _body_lines(pn, 40, 80, 8, size=size, width=500)) for pn, size in ((1, 9.98), (2, 10.0))]
+        for pn in range(3, 9):
+            blocks = [BlockInfo(page=pn, text=f"Exhibit {pn}: DRAM contract prices", bbox=(40, 40, 400, 54), font_size=12)]
+            blocks += _cells(pn, 80, 25)
+            blocks += _body_lines(pn, 40, 400, 3, width=500,
+                                  text=f"Inventories at module makers normalised further on exhibit page {pn}")
+            pages.append(_page(pn, blocks))
+        pages += [_page(pn, _body_lines(pn, 40, 60, 80, size=7, width=520, text="Disclosure text")) for pn in (9, 10)]
+
+        chunk_text = " ".join(c.text for c in self.svc.chunk_document(pages))
+
+        assert "normalised further on exhibit page 4 1" in chunk_text
+
+    def test_cjk_display_title_of_sixty_characters_stays_a_heading(self):
+        # K's lower side: a 4-line 22pt CJK title of 60 characters counts 120 against
+        # the 160 cap and stays display text.
+        title = ["全球数据中心电力需求展望与投资", "人工智能负载推动用电持续增长而", "电网互联成为新园区建设的约束条", "件我们上调了加速器出货量的预测"]
+        cover = [BlockInfo(page=1, text=line, bbox=(60, 120 + k * 26, 400, 144 + k * 26), font_size=22) for k, line in enumerate(title)]
+        cover += _body_lines(1, 60, 260, 10, size=10.5, width=480, text="原油价格在供给冲击下大幅上涨全球经济增速放缓")
+        pages = [_page(1, cover)] + [_page(pn, _body_lines(pn, 40, 60, 30, size=10.5, width=520,
+                                                              text="原油价格在供给冲击下大幅上涨全球经济增速放缓")) for pn in (2, 3)]
+
+        assert {text for pn, text in self._headings(pages) if pn == 1} == set(title)

@@ -2,8 +2,8 @@
 
 Date: 2026-10-11. Branch `claude/sharp-feynman-4vqkq2`. Design: `.collab/plans/2026-10-11-parse-heading-body-size.md`.
 Implementation: `backend/app/services/parse_service.py` (`_prepare_blocks`, `_annotate_runs`, `_running_text_chars`,
-`_reference_sizes`, `_is_heading_by_size`). This record is for the code after review round 4
-(`2026-10-11-parse-heading-body-size-review-r{1,2,3,4}.md`, responses `…-r{1,2,3,4}-response.md`).
+`_reference_sizes`, `_is_heading_by_size`). This record is for the code after review round 5
+(`2026-10-11-parse-heading-body-size-review-r{1..5}.md`, responses `…-r{1..5}-response.md`).
 
 **Old = `main` (parse v3, d46fc222). New = this branch.** v4 (`fix/parse-heading-detection`, caps/numbered rules) was not
 on origin when this was measured, so the v4 column does not exist yet; re-run with `--old-ref <v4 commit>` after v4 is merged in.
@@ -31,7 +31,7 @@ at ≥ 1.5× its page body), `body` (not over 1.25× its own
 page's body size), `body-short` (the same, on a page whose body size comes only from 2–3-line runs), `inherited`
 (not over 1.25× the document's body size, which its page took for lack of running text), `floor` (not over 1.25× the
 document's median line), `guard` (cleared the sizes, failed a shape guard). Headings whose text the harness could not
-match back to one line (242 of 12,770) are left out of the split. Public classes: 1 sell-side/bank research,
+match back to one line (242 of 12,773) are left out of the split. Public classes: 1 sell-side/bank research,
 2 Chinese broker research, 3 economics working paper, 4 investor slides, 5 control.
 
 ## Result
@@ -40,7 +40,7 @@ match back to one line (242 of 12,770) are left out of the split. Public classes
 `chicagofed_forecasting_economic_effects_ai` is the public copy of the owner's "Forecasting the Economic Effects
 of AI (03-2026)" (225 pp, 9.18pt line median, 12pt body): 66.8% → 6.3%, +259,368 paragraph characters.
 
-12,770 headings removed: run 10,250 · run-short 255 · run-large 60 · body 1,479 · body-short 210 · inherited 249 ·
+12,773 headings removed: run 10,257 · run-short 258 · run-large 53 · body 1,476 · body-short 213 · inherited 249 ·
 floor 0 · guard 25.
 Headings ADDED: 11, all in `slides_digital_core_reit_jun2026` — tile titles such as `Occupancy (2)`, `Leverage (3)`
 whose 9.36pt footnote marker had pulled the 14.04pt line's span mean to 11.7pt; their unmarked siblings
@@ -67,7 +67,7 @@ whose 9.36pt footnote marker had pulled the 14.04pt line's span mean to 11.7pt; 
 | cn_swsc_dram_memory_ai | 2 | 31 | 388 → 377 | 22.7% → 22.6% | 30,329 → 30,384 (+55) | +0 / −11 | 6 / 0 / 0 / 3 / 0 / 2 / 0 / 0 |
 | slides_digital_core_reit_jun2026 | 4 | 39 | 517 → 411 | 22.5% → 14.6% | 32,472 → 35,785 (+3,313) | +11 / −117 | 19 / 36 / 0 / 22 / 25 / 0 / 0 / 12 |
 | cn_donghai_oil_price_cycles_review | 2 | 27 | 228 → 198 | 21.9% → 14.6% | 28,022 → 30,632 (+2,610) | +0 / −30 | 8 / 0 / 0 / 20 / 0 / 0 / 0 / 2 |
-| slides_asml_q2_2026_investor | 4 | 18 | 95 → 56 | 21.4% → 6.8% | 10,539 → 12,489 (+1,950) | +0 / −39 | 22 / 10 / 7 / 0 / 0 / 0 / 0 / 0 |
+| slides_asml_q2_2026_investor | 4 | 18 | 95 → 53 | 21.4% → 6.5% | 10,539 → 12,525 (+1,986) | +0 / −42 | 29 / 13 / 0 / 0 / 0 / 0 / 0 / 0 |
 | slides_ms_2q26_fixed_income_investor | 4 | 11 | 60 → 45 | 16.1% → 4.1% | 10,007 → 11,427 (+1,420) | +0 / −15 | 15 / 0 / 0 / 0 / 0 / 0 / 0 / 0 |
 | slides_ms_4q25_strategic_update | 4 | 21 | 106 → 98 | 12.2% → 11.9% | 15,031 → 15,093 (+62) | +0 / −8 | 0 / 4 / 0 / 0 / 0 / 0 / 0 / 4 |
 | jpm_guide_to_markets_us | 1 | 71 | 871 → 869 | 8.6% → 8.6% | 87,527 → 87,537 (+10) | +0 / −2 | 0 / 0 / 0 / 0 / 0 / 0 / 0 / 2 |
@@ -76,7 +76,7 @@ whose 9.36pt footnote marker had pulled the 14.04pt line's span mean to 11.7pt; 
 | gs_us_power_surge_datacenters | 1 | 35 | 135 → 81 | 3.5% → 1.8% | 82,066 → 83,480 (+1,414) | +0 / −54 | 5 / 34 / 0 / 1 / 0 / 0 / 0 / 0 |
 | gs_tom_genai_too_much_spend | 1 | 31 | 132 → 87 | 3.3% → 1.4% | 135,125 → 137,732 (+2,607) | +0 / −45 | 30 / 3 / 0 / 12 / 0 / 0 / 0 / 0 |
 | ms_research_bridging_datacenter_financing_gap | 1 | 39 | 175 → 126 | 3.1% → 1.9% | 126,021 → 127,589 (+1,568) | +0 / −49 | 20 / 0 / 0 / 3 / 0 / 5 / 0 / 0 |
-| fed_feds_cyclical_frictions_productivity | 3 | 117 | 537 → 491 | 2.2% → 1.6% | 179,801 → 180,972 (+1,171) | +0 / −46 | 0 / 0 / 0 / 43 / 1 / 1 / 0 / 1 |
+| fed_feds_cyclical_frictions_productivity | 3 | 117 | 537 → 491 | 2.2% → 1.6% | 179,801 → 180,972 (+1,171) | +0 / −46 | 0 / 0 / 0 / 40 / 4 / 1 / 0 / 1 |
 | ubs_cio_house_view_aug2026 | 1 | 28 | 130 → 130 | 1.6% → 1.6% | 80,425 → 80,425 (+0) | +0 / −0 | 0 / 0 / 0 / 0 / 0 / 0 / 0 / 0 |
 | bis_wp1325_ai_adoption_european_firms | 3 | 36 | 40 → 38 | 0.8% → 0.7% | 66,450 → 66,498 (+48) | +0 / −2 | 0 / 0 / 0 / 1 / 0 / 0 / 0 / 1 |
 | control_arxiv_2508_02992_memory_specialization | 5 | 9 | 15 → 15 | 0.4% → 0.4% | 43,866 → 43,866 (+0) | +0 / −0 | 0 / 0 / 0 / 0 / 0 / 0 / 0 / 0 |
@@ -146,7 +146,7 @@ whose 9.36pt footnote marker had pulled the 14.04pt line's span mean to 11.7pt; 
 | slides_ms_4q25_strategic_update | https://www.morganstanley.com/content/dam/msdotcom/en/about-us-ir/shareholder/4q2025-strategic-update.pdf |
 | ubs_cio_house_view_aug2026 | https://advisors.ubs.com/mediahandler/media/823469/UBS%20House%20View%20for%20August%202026.pdf |
 
-## Removed headings to read (799: run-short + run-large + body-short + inherited + guard) — read
+## Removed headings to read (798: run-short + run-large + body-short + inherited + guard) — read
 
 - `guard` (25): callouts and dates, never titles — `$1.8 Bn`, `$710m`, `3.5x`, `~2x`, `June 23, 2026`,
   `2026年09月13日`, `No 1325`, a phone/fax line, `of 5.74%`. One subtitle: `——资产配置周报（2026/09/07-2026/09/11）`.
@@ -155,15 +155,16 @@ whose 9.36pt footnote marker had pulled the 14.04pt line's span mean to 11.7pt; 
   the analyst page, the address block of a Chinese broker report's last page, table-of-contents rows, the 10-Q's
   repeated page header (`Notes to Consolidated Financial Statements` / `(Unaudited)`), and a few numbered sub-sections at
   body size (`4.4 锑`, `6.1 锂`, `6.2 钴`; v4's numbered rule is meant for those).
-- `body-short` (210): body text and captions on pages built of short paragraphs — survey answer options in
+- `body-short` (213): body text and captions on pages built of short paragraphs — survey answer options in
   chicagofed's appendix (p182–183), references in the Fed paper, exhibit captions and analysis sentences in broker
   notes, the Guosen report's TOC rows and price commentary, slide tile labels at body size on the REIT deck p37 — and
   five numbered sub-sections of `cn_guosen_oil_gas` set at 1.15× its body (`3.1 原油价格与价差`, `3.3 原油需求：…`,
   `3.7 成品油需求`, `3.10 美国天然气库存`, `3.11 煤层气`): below the size factor by design, for v4's numbered rule (review r3 R3-7).
-- `run-short` (255): stacked short lines that are not titles — table row and column labels (`25th percentile`,
+- `run-short` (258): stacked short lines that are not titles — table row and column labels (`25th percentile`,
   `Economists`, `Group`), short sentences and formula fragments in the Fed papers, address lines of a Chinese broker's
-  contact page, slide labels on the REIT and ASML decks.
-- `run-large` (60): body paragraphs of 10-Q note pages whose page body is a 7pt table class (the paragraph is ≥ 1.5×
+  contact page, slide labels on the REIT and ASML decks, and ASML p7's three KPI callouts (`€9.3 billion` …; a v3
+  heading each, given up for the one-page flash-note fix, review r5 R5-1).
+- `run-large` (53): body paragraphs of 10-Q note pages whose page body is a 7pt table class (the paragraph is ≥ 1.5×
   it but a run of 4+ and over 160 characters), and the stacked row labels of ASML's KPI table on p7 (`Total net
   sales`, `Gross margin`, `Earnings per share (basic)`).
 
@@ -201,8 +202,8 @@ line height / font size p99.99 = 3.1, max 6.4 over 117,152 lines.
 
 ## Tests
 
-`backend/tests/test_parse_service.py`: 29 → 80 (class `TestHeadingSizeUsesPageBodySize`, 51 tests).
-`.collab/scripts/parse_heading_mutations.py`: 62 mutations, all killed; 3 accepted survivors listed with reasons
-(cost-only reach, a near-equivalent fallback, and moving the extractor-title exemption ahead of the size tests — which
-would only change the pre-existing "title on every page" loss, filed as a separate task). Full unit suite: 1196
+`backend/tests/test_parse_service.py`: 29 → 83 (class `TestHeadingSizeUsesPageBodySize`, 54 tests).
+`.collab/scripts/parse_heading_mutations.py`: 67 mutations, all killed; 4 accepted survivors listed with reasons
+(cost-only reach, a near-equivalent fallback, a same-class relabel, and moving the extractor-title exemption ahead of the size tests — which
+would only change the pre-existing "title on every page" loss, filed as a separate task). Full unit suite: 1199
 passed, 138 skipped. Integration suite not run (needs Docker, unavailable in this session).

@@ -26,7 +26,7 @@ first so you do not re-report closed findings; attack the current head. Read:
   final spec**.
 - `backend/app/services/parse_service.py` — `BlockInfo.dominant_size`, `CleanBlock.rule_size/run_len/is_heading`,
   `_prepare_blocks`, `_same_size`, `_rule_size`, `_annotate_runs`, `_cluster_sizes`, `_running_text_chars`,
-  `_page_reference`, `_weighted_median`, `_reference_sizes`, `_is_heading_by_size`, `_is_heading_block`,
+  `_page_reference`, `_reference_sizes`, `_letter_weight`, `_is_heading_by_size`, `_is_heading_block`,
   `_extract_line_blocks`, `_BARE_ADDRESS_RE`; `chunk_document` and `extract_elements` now consume `_prepare_blocks`.
 - `backend/tests/test_parse_service.py` — class `TestHeadingSizeUsesPageBodySize`.
 - `.collab/reviews/2026-10-11-parse-heading-body-size-corpus.md` — before/after over 47 PDFs.
