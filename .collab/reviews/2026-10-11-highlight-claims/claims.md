@@ -389,3 +389,20 @@ Cross-page check (vendor cells on `/features/*` vs the live `/compare/*` and `/a
 consistent: ChatPDF formats PDF/DOC(X)/PPT(X)/MD/TXT + URL ✓, click = "Jumps to source"; AskYourPDF formats
 PDF/DOCX/EPUB/TXT/URL (no PPTX), click = "Links to the cited page"; Humata highlight ✓, formats "others not
 listed" (multi-format citations = not verified); Gemini Notebook DOCX/PPTX/TXT/MD/URL ✓, no XLSX listed.
+
+## Codex r1 (2026-10-11): SHIP-WITH-FIXES, all four applied
+
+1. 12 compare/alts values from the competitor-facts batch said "PDF and text files". Markdown is a text file and
+   does not highlight, so all 12 now say "PDF and plain-text (.txt) files" (exact phrase swap per locale; the
+   15 other es/fr/pt/it/ar values that share the prefix already said ".txt" and were not touched).
+2. The same swap in all 10 translations of those 12 keys (Codex named only `compareAskyourpdf.citationsDocTalk`).
+3. 9 unchanged compare/alts values still said DocTalk highlights the cited passage with no format limit
+   (`compareChatpdf.feature.citationsP2Pre`, `compareChatpdf.faq.a2`, `altsNotebooklm.alt1Desc1`,
+   `altsNotebooklm.faq3Answer`, `compareAskyourpdf.faq2Answer`, `altsAskyourpdf.faq4Answer`,
+   `altsAskyourpdf.whyReason2`, `altsPdfai.faq4Answer`, `altsPdfai.whyReason2`). Each DocTalk sentence now says the
+   citation goes to the cited location and the passage is highlighted in PDF and .txt files, in all 11 locales
+   (exact sentence replacement; the competitor sentences are byte-identical).
+4. Humata click-to-highlight: Codex proposed "Not verified". vendor-evidence.md classifies Humata as **partial**
+   (homepage heading "Highlights citations", no statement of what or where), so both
+   `/features/citations` and the live `/compare/humata` "Citation Highlighting" cell now show "Partial". The
+   compare page's ✓ was the outlier: its own prose already said Humata "does not say what is highlighted".
