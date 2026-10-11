@@ -46,8 +46,9 @@ const REGION_MIN_CHARS = 40;
 // over by a page-start split is content, not a title.
 const TITLE_MAX = 200;
 // Share of the chunk's canonical text that must be located in its page range.
-// Real citations of generated DOCX/PPTX/XLSX/MD/URL corpora located >= 0.65;
-// the same chunks cited on pages that do not hold them located <= 0.07.
+// On generated DOCX/PPTX/XLSX/MD/URL fixture corpora (not production
+// citations) every chunk located >= 0.65; the same chunks cited on pages that
+// do not hold them located <= 0.07.
 const MIN_CHUNK_COVERAGE = 0.3;
 
 interface PageIndex { number: number; raw: string; canon: string; offsets: Array<{ start: number; end: number }> }
