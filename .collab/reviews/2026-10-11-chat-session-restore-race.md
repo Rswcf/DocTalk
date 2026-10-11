@@ -126,7 +126,8 @@ reload of the same URL from sending it again).
   can hit it.
 - Stream writes target "the last message" (`store/index.ts` `updateLastMessage` & co). Targeting the
   assistant placeholder by id would turn any future ordering bug of this kind into a no-op.
-- New Chat and delete-current need a post-await stream guard (r3 (P), pre-existing).
+- New Chat and delete-current need a post-await stream guard (r3 (P), pre-existing). Done in eb95c412,
+  Codex SHIP: see `2026-10-11-session-menu-stream-guard.md`.
 - The per-document latch (efde1f1c) leaves one window, bounded by the 30 s proxy timeout. A menu
   request stalls on document A; the user moves to B, runs a menu action there, and returns to A. A
   fresh latch then lets a New Chat or switch on A run beside the stale request. If the stale request
