@@ -249,6 +249,10 @@ class BlockInfo:
     # with a 6pt superscript reads 8pt there and 10pt here. Read by the heading
     # classifier only; element metadata keeps font_size.
     dominant_size: float = 0.0
+    # A section title a DOCX/PPTX/XLSX/TXT/MD/URL extractor reported (parse_worker).
+    # The PDF shape guards (digits, bare addresses) do not apply to it: a Markdown
+    # "## v2.0.0 (2024-05-01)" is a title, not a chart callout.
+    extractor_title: bool = False
 
 
 @dataclass
@@ -281,8 +285,11 @@ class CleanBlock:
     # Lines in this line's paragraph run (same-size neighbours in the same column
     # within one line height, see _annotate_runs). 1 = isolated.
     run_len: int = 1
+    # Which run on its page the line belongs to (-1 = none: off-axis).
+    run_id: int = -1
     # Set once by _prepare_blocks, so chunk_document and extract_elements agree.
     is_heading: bool = False
+    extractor_title: bool = False  # see BlockInfo.extractor_title
 
 
 @dataclass
@@ -529,6 +536,7 @@ class ParseService:
                     font_size=b.font_size,
                     off_axis=off_axis,
                     rule_size=b.dominant_size if b.dominant_size > 0 else b.font_size,
+                    extractor_title=b.extractor_title,
                 )
             )
 
@@ -840,11 +848,11 @@ class ParseService:
             self._annotate_runs(cleaned, vertical=vertical)
             per_page.append((p, vertical, self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt)))
 
-        references = self._reference_sizes(per_page)
+        references, floors = self._reference_sizes(per_page)
         out: List[CleanBlock] = []
         for p, _vertical, ordered in per_page:
             for cb in ordered:
-                cb.is_heading = self._is_heading_block(cb, references[p.page_number])
+                cb.is_heading = self._is_heading_block(cb, references[p.page_number], floors)
                 out.append(cb)
         return out
 
@@ -865,9 +873,10 @@ class ParseService:
         across the reading direction by RUN_MIN_OVERLAP of the narrower one (same
         column), and the lower one starts below the upper one's middle and within
         RUN_GAP_LINE_HEIGHTS of its end. A run is a connected component of that
-        relation. Lines stack along y, or along x on a vertical page. One sweep in
-        stacking order keeps only the earlier lines still within reach, so the cost
-        is O(n log n + n*k), k = lines within one line height (one table row).
+        relation. Lines stack along y, or along x on a vertical page. One sweep per
+        size group in stacking order keeps only the earlier lines still within reach,
+        so the cost is O(n log n + n*k), k = lines of the group within one line
+        height (one table row).
         """
         # (stack lo, stack hi, across lo, across hi) per line
         ext = [
@@ -875,9 +884,6 @@ class ParseService:
             for b in blocks
         ]
         on_axis = [i for i, b in enumerate(blocks) if not b.off_axis]
-        if len(on_axis) < 2:
-            return
-        max_h = max(ext[i][1] - ext[i][0] for i in on_axis)
         parent = list(range(len(blocks)))
 
         def find(i: int) -> int:
@@ -886,34 +892,58 @@ class ParseService:
                 i = parent[i]
             return i
 
-        active: List[int] = []
-        for i in sorted(on_axis, key=lambda k: (ext[k][0], ext[k][2])):
-            lo, hi, a0, a1 = ext[i]
-            size = self._rule_size(blocks[i])
-            reachable: List[int] = []
-            for j in active:
-                jlo, jhi, ja0, ja1 = ext[j]
-                if lo - jhi > self.RUN_GAP_LINE_HEIGHTS * max_h:
-                    continue  # lines are visited in stacking order: out of reach for good
-                reachable.append(j)
-                if lo - jhi > self.RUN_GAP_LINE_HEIGHTS * max(hi - lo, jhi - jlo):
-                    continue
-                if lo < jlo + 0.5 * (jhi - jlo):
-                    continue  # beside j (a cell in the same table row), not below it
-                if not self._same_size(size, self._rule_size(blocks[j])):
-                    continue
-                overlap = min(a1, ja1) - max(a0, ja0)
-                if overlap <= 0 or overlap < self.RUN_MIN_OVERLAP * min(a1 - a0, ja1 - ja0):
-                    continue
-                root_i, root_j = find(i), find(j)
-                if root_i != root_j:
-                    parent[root_i] = root_j
-            reachable.append(i)
-            active = reachable[-self.RUN_ACTIVE_CAP:]
+        # Neighbours are the same size, so each chain of sizes no more than one
+        # tolerance apart is swept on its own (every same-size pair falls in one
+        # chain): a 72pt watermark cannot widen the reach of a page of 4pt cells.
+        size_of = [self._rule_size(b) for b in blocks]
+        by_size = sorted(on_axis, key=lambda k: size_of[k])
+        groups: List[List[int]] = []
+        for k in by_size:
+            if groups and self._same_size(size_of[groups[-1][-1]], size_of[k]):
+                groups[-1].append(k)
+            else:
+                groups.append([k])
 
-        sizes = Counter(find(i) for i in on_axis)
+        gap = self.RUN_GAP_LINE_HEIGHTS
+        min_overlap = self.RUN_MIN_OVERLAP
+        for group in groups:
+            if len(group) < 2:
+                continue
+            reach = gap * max(ext[i][1] - ext[i][0] for i in group)
+            active: List[int] = []
+            for i in sorted(group, key=lambda k: (ext[k][0], ext[k][2])):
+                lo, hi, a0, a1 = ext[i]
+                h = hi - lo
+                width = a1 - a0
+                reachable: List[int] = []
+                for j in active:
+                    jlo, jhi, ja0, ja1 = ext[j]
+                    if lo - jhi > reach:
+                        continue  # lines are visited in stacking order: out of reach for good
+                    reachable.append(j)
+                    # Cheapest test first: in a table most earlier lines are other columns.
+                    overlap = (a1 if a1 < ja1 else ja1) - (a0 if a0 > ja0 else ja0)
+                    jwidth = ja1 - ja0
+                    if overlap <= 0 or overlap < min_overlap * (width if width < jwidth else jwidth):
+                        continue
+                    jh = jhi - jlo
+                    if lo - jhi > gap * (h if h > jh else jh):
+                        continue
+                    if lo < jlo + 0.5 * jh:
+                        continue  # beside j (a cell in the same table row), not below it
+                    if not self._same_size(size_of[i], size_of[j]):
+                        continue
+                    root_i, root_j = find(i), find(j)
+                    if root_i != root_j:
+                        parent[root_i] = root_j
+                reachable.append(i)
+                active = reachable[-self.RUN_ACTIVE_CAP:]
+
+        roots = {i: find(i) for i in on_axis}
+        sizes = Counter(roots.values())
         for i in on_axis:
-            blocks[i].run_len = sizes[find(i)]
+            blocks[i].run_len = sizes[roots[i]]
+            blocks[i].run_id = roots[i]
 
     def _cluster_sizes(self, weights: dict[float, float]) -> List[Tuple[float, float]]:
         """Group sizes into same-size classes: [(weighted mean size, weight)], ascending."""
@@ -936,18 +966,34 @@ class ParseService:
         self, blocks: Sequence[CleanBlock], vertical: bool, band_w: float, band_h: float
     ) -> dict[float, float]:
         """Characters of running text per size on one page: on-axis lines in a run of
-        2+ that span at least REF_MIN_LINE_EXTENT of the page along the line."""
+        2+ that span at least REF_MIN_LINE_EXTENT of the page along the line.
+
+        A run of at most HEADING_MAX_WRAP_LINES lines counts only when the page has
+        another such run of its size. Alone it is shaped like a wrapped heading (a
+        two-line slide or cover title), and as the page's largest substantial size
+        it would become the reference it has to exceed.
+        """
         page_extent = band_h if vertical else band_w
-        chars: dict[float, float] = {}
+        runs: dict[int, List[CleanBlock]] = {}
         for b in blocks:
-            size = self._rule_size(b)
-            if b.off_axis or b.run_len < 2 or size <= 0:
+            if b.run_len < 2 or self._rule_size(b) <= 0:  # off-axis lines never join a run
                 continue
             x0, y0, x1, y1 = b.bbox
             length = (y1 - y0) if vertical else (x1 - x0)
             if length < self.REF_MIN_LINE_EXTENT * page_extent:
                 continue
-            chars[size] = chars.get(size, 0.0) + len(b.text)
+            runs.setdefault(b.run_id, []).append(b)
+
+        run_size = {rid: self._rule_size(lines[0]) for rid, lines in runs.items()}
+        chars: dict[float, float] = {}
+        for rid, lines in runs.items():
+            if lines[0].run_len <= self.HEADING_MAX_WRAP_LINES and not any(
+                other != rid and self._same_size(run_size[rid], size) for other, size in run_size.items()
+            ):
+                continue
+            for b in lines:
+                size = self._rule_size(b)
+                chars[size] = chars.get(size, 0.0) + len(b.text)
         return chars
 
     def _page_reference(self, chars: dict[float, float]) -> Optional[float]:
@@ -961,66 +1007,81 @@ class ParseService:
         substantial = [s for s, w in clusters if w >= self.REF_SUBSTANTIAL_SHARE * total]
         return max(substantial) if substantial else max(clusters, key=lambda c: c[1])[0]
 
-    @staticmethod
-    def _weighted_median(weights: dict[float, float], default: float) -> float:
-        total = sum(weights.values())
-        acc = 0.0
-        for size, w in sorted(weights.items()):
-            acc += w
-            if acc >= total / 2:
-                return size
-        return default
+    def _reference_sizes(
+        self, per_page: Sequence[Tuple[PageInfo, bool, List[CleanBlock]]]
+    ) -> Tuple[dict[int, float], Tuple[float, float]]:
+        """Reference sizes of the heading size rule.
 
-    def _reference_sizes(self, per_page: Sequence[Tuple[PageInfo, bool, List[CleanBlock]]]) -> dict[int, float]:
-        """Reference size of the heading size rule for each page.
-
-        Page body size, else the document's (the largest page body size held by
-        REF_DOC_PAGE_SHARE of the pages that have one; with none, the char-weighted
-        median of all running text), floored at the document's median line size. The
-        floor is the reference v1-v4 used everywhere, so the size rule can only drop
-        a heading v4 found, never add one (except where dominant_size exceeds a
-        superscript-lowered font_size). Without it a chart page's 9pt legend entries
-        would clear 1.25x its 7pt footnotes.
+        Returns each page's body size (0.0 = unknown) and the document floors: the
+        median line size by span mean (font_size, the reference v1-v4 used
+        everywhere) and by dominant span (rule_size). A page without enough running
+        text of its own takes the document's body size: the largest page body size
+        held by REF_DOC_PAGE_SHARE of ALL pages, so one text page cannot set it for a
+        deck of chart pages; with none, the page has only the floors (v4 behaviour).
         """
         font_sizes = [cb.font_size for _p, _v, blocks in per_page for cb in blocks if cb.font_size > 0]
-        floor = median(font_sizes) if font_sizes else 12.0
+        rule_sizes = [self._rule_size(cb) for _p, _v, blocks in per_page for cb in blocks if self._rule_size(cb) > 0]
+        floors = (median(font_sizes) if font_sizes else 12.0, median(rule_sizes) if rule_sizes else 12.0)
 
         page_refs: dict[int, Optional[float]] = {}
-        pooled: dict[float, float] = {}
         for p, vertical, blocks in per_page:
             band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
-            chars = self._running_text_chars(blocks, vertical, band_w, band_h)
-            page_refs[p.page_number] = self._page_reference(chars)
-            for size, w in chars.items():
-                pooled[size] = pooled.get(size, 0.0) + w
+            page_refs[p.page_number] = self._page_reference(self._running_text_chars(blocks, vertical, band_w, band_h))
 
-        known = [r for r in page_refs.values() if r is not None]
-        if known:
-            pages_per_size: dict[float, float] = {}
-            for r in known:
+        pages_per_size: dict[float, float] = {}
+        for r in page_refs.values():
+            if r is not None:
                 pages_per_size[r] = pages_per_size.get(r, 0.0) + 1.0
-            clusters = self._cluster_sizes(pages_per_size)
-            common = [s for s, n in clusters if n >= self.REF_DOC_PAGE_SHARE * len(known)]
-            doc_ref = max(common) if common else max(clusters, key=lambda c: c[1])[0]
-        else:
-            doc_ref = self._weighted_median(pooled, floor)
-        return {pn: max(floor, r if r is not None else doc_ref) for pn, r in page_refs.items()}
+        common = [s for s, n in self._cluster_sizes(pages_per_size) if n >= self.REF_DOC_PAGE_SHARE * len(per_page)]
+        doc_ref = max(common) if common else 0.0
+        return {pn: r if r is not None else doc_ref for pn, r in page_refs.items()}, floors
 
-    def _is_heading_by_size(self, block: CleanBlock, reference_size: float) -> bool:
-        """The size rule and its guards; the caps rule in _is_heading_block is separate."""
+    @staticmethod
+    def _letter_weight(ch: str) -> int:
+        """Letters for the shape guard. A CJK ideograph, kana or hangul syllable
+        carries about a word, so it counts twice; combining marks (Devanagari
+        matras and virama) count as letters."""
+        if (
+            "\u4e00" <= ch <= "\u9fff"  # CJK unified ideographs
+            or "\u3400" <= ch <= "\u4dbf"  # extension A
+            or "\uf900" <= ch <= "\ufaff"  # compatibility ideographs
+            or "\u3040" <= ch <= "\u30ff"  # hiragana + katakana
+            or "\uac00" <= ch <= "\ud7a3"  # hangul syllables
+        ):
+            return 2
+        return 1 if ch.isalpha() or unicodedata.category(ch).startswith("M") else 0
+
+    def _is_heading_by_size(
+        self, block: CleanBlock, reference_size: float, floors: Tuple[float, float] = (0.0, 0.0)
+    ) -> bool:
+        """The size rule and its guards; the caps rule in _is_heading_block is separate.
+
+        The line must clear HEADING_SIZE_FACTOR x its page's body size, and also x the
+        document's median line in the same unit as one of its two sizes: a span mean
+        pulled down by a superscript or a small whitespace span cannot make an
+        ordinary line clear a median that other lines' means pulled down too.
+        """
         if block.run_len > self.HEADING_MAX_WRAP_LINES:
             return False
-        if self._rule_size(block) <= reference_size * self.HEADING_SIZE_FACTOR:
+        rule_size = self._rule_size(block)
+        if rule_size <= reference_size * self.HEADING_SIZE_FACTOR:
             return False
+        font_floor, rule_floor = floors
+        if block.font_size <= font_floor * self.HEADING_SIZE_FACTOR and rule_size <= rule_floor * self.HEADING_SIZE_FACTOR:
+            return False
+        if block.extractor_title:
+            return True
         text = block.text.strip()
         if _BARE_ADDRESS_RE.match(text):
             return False  # a broker's "www.example.com" line, not a title
-        letters = sum(1 for ch in text if ch.isalpha())
+        letters = sum(self._letter_weight(ch) for ch in text)
         figures = sum(1 for ch in text if ch.isdigit() or ch in "$\u20ac\u00a3\u00a5%\u2030")
-        # "US$ 4.2bn" passes; "Q3 2025", "+12%", "2026E" are chart callouts, not titles.
+        # "US$ 4.2bn" and "\u957f\u946b\u79d1\u6280\uff08688825\uff09" pass; "Q3 2025", "+12%", "2026E" are chart callouts.
         return letters >= 2 and figures < letters
 
-    def _is_heading_block(self, block: CleanBlock, reference_size: float) -> bool:
+    def _is_heading_block(
+        self, block: CleanBlock, reference_size: float, floors: Tuple[float, float] = (0.0, 0.0)
+    ) -> bool:
         text = block.text.strip()
         if not text or len(text) > 220:
             return False
@@ -1030,7 +1091,7 @@ class ParseService:
             return False
         if not any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" for ch in text):
             return False
-        if self._is_heading_by_size(block, reference_size):
+        if self._is_heading_by_size(block, reference_size, floors):
             return True
         words = text.split()
         if 1 <= len(words) <= 12 and len(text) <= 90 and text[-1:] not in self.SENTENCE_DELIMS:

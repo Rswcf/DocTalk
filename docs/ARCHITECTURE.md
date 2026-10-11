@@ -153,7 +153,7 @@ sequenceDiagram
 3. **Chunking**: Text is split into 150–300 token windows with:
    - Heading detection for section titles: a line counts as a heading by size
      when it is over 1.25× its page's body size, measured from paragraph runs
-     of running text (never from chart labels or table cells) and floored at
+     of running text (never from chart labels or table cells), and over 1.25×
      the document's median line size; heading lines are left out of chunk text
      and become the chunk's `section_title`
    - Header/footer filtering to remove repeated page elements

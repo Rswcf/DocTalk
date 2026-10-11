@@ -80,7 +80,7 @@ All geometry is in unrotated page points as `BlockInfo.bbox` already is; `vertic
 |---|---|
 | **rule size** `rule_size` | `BlockInfo.dominant_size` when > 0, else `font_size`. `dominant_size` (new, §4.1) = the span size class holding the most characters on the line (ties → larger). |
 | **same size class** | `abs(a − b) ≤ max(0.35, 0.08 × max(a, b))`. 8 % is wide against the 25 % heading factor and tight against a 9 pt caption beside 10 pt body (10 %). |
-| **neighbour** (A above B) | same size class; across-extents overlap by ≥ 30 % of the narrower line (same column); `B.lo − A.hi ≤ 1.0 × max(h_A, h_B)` (next line starts within one line height; single, 1.5 and double leading and paragraph spacing all pass); `B.lo ≥ A.lo + 0.5 × h_A` (B is below A, not a cell beside it). Off-axis lines (`CleanBlock.off_axis`) never take part. |
+| **neighbour** (A above B) | same size class; across-extents overlap by ≥ 30 % of the narrower line (same column); `B.lo − A.hi ≤ 1.0 × max(h_A, h_B)` (next line starts within one line height; single and 1.5 leading and paragraph spacing pass; Word "Double" spacing (2.3× pitch) does not (review r1 F5: such body classifies as in v3)); `B.lo ≥ A.lo + 0.5 × h_A` (B is below A, not a cell beside it). Off-axis lines (`CleanBlock.off_axis`) never take part. |
 | **run**, `run_len` | connected component of the neighbour relation on one page; `run_len` = its line count (1 = isolated). |
 | **running text** (reference candidates) | on-axis lines with `run_len ≥ 2` whose along-extent ≥ 0.20 × page extent along. Excludes cells, ticks, legend entries, source lines (short), and isolated lines of any size (a heading, a pull quote of one line, a big number). |
 | **page reference** | cluster running-text characters by size class (1-D clustering with the same tolerance); if the page has < 200 running-text characters → none; else the **largest** cluster holding ≥ 30 % of those characters (fallback: the heaviest cluster). |
@@ -290,3 +290,18 @@ Implemented as specified, with the measurement knobs dropped. Deviations, each r
 Open until v4 lands: this branch is based on `main` (v3). Merging v4 needs `PARSE_PIPELINE_VERSION = 5` kept, v4's
 caps/numbered predicates placed after `_is_heading_by_size` in `_is_heading_block`, and the corpus re-run with
 `--old-ref <v4 commit>`.
+
+## 12. Review round 1 (2026-10-11)
+
+Fresh-context review (`.collab/reviews/2026-10-11-parse-heading-body-size-review-r1.md`), response with evidence in
+`…-review-r1-response.md`. Changes to the spec above:
+
+- **Floors (§3 "reference for page p")**: no longer `max(document line median, …)`. A line must clear 1.25× its page
+  body (own or inherited) AND 1.25× the document median line in at least one unit — span mean or dominant size.
+- **Running text (§3)**: a run of ≤ 3 lines counts only when the page has another run of its size.
+- **Document reference (§3)**: share measured over ALL pages; with no class at ≥ 25% of pages, pages without their own
+  body size use the floors only. The char-weighted fallback over running text is removed.
+- **Shape guard (§3 last row)**: CJK/kana/hangul count 2 letters, combining marks 1; extractor titles
+  (`BlockInfo.extractor_title`, set by `parse_worker`) skip the shape guards.
+- **Sweep (§4.3)**: one sweep per chain of same-size sizes; overlap tested first.
+- Corpus after the round: 47 PDFs, paragraph characters fell in 0; the targets unchanged (chicagofed 66.8% → 6.6%).

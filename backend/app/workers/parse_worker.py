@@ -16,6 +16,8 @@ from app.services.conversion_service import CONVERTIBLE_TYPES, convert_to_pdf
 from app.services.embedding_service import embedding_service
 from app.services.parse_service import (
     PARSE_PIPELINE_VERSION,
+    BlockInfo,
+    PageInfo,
     ParseService,
     detect_low_quality_text,
     detect_script_osd,
@@ -195,6 +197,42 @@ def _set_timeout_error(document_id: str, message: str) -> None:
         _set_doc_error(doc, "PARSE_TIMEOUT", message)
         db.add(doc)
         db.commit()
+
+
+def _extracted_pages_to_page_infos(extracted) -> List[PageInfo]:
+    """Wrap a non-PDF extractor's pages for the shared chunking pipeline: the
+    section title as an 18pt line over one 12pt block of the page's text."""
+    pages = []
+    for ep in extracted:
+        blocks = []
+        if ep.section_title:
+            blocks.append(
+                BlockInfo(
+                    page=ep.page_number,
+                    text=ep.section_title,
+                    bbox=(0.0, 0.0, 1.0, 0.08),
+                    font_size=18.0,
+                    extractor_title=True,
+                )
+            )
+        blocks.append(
+            BlockInfo(
+                page=ep.page_number,
+                text=ep.text,
+                bbox=(0.0, 0.1 if ep.section_title else 0.0, 1.0, 1.0),
+                font_size=12.0,
+            )
+        )
+        pages.append(
+            PageInfo(
+                page_number=ep.page_number,
+                width_pt=ep.width_pt or 612.0,
+                height_pt=ep.height_pt or 792.0,
+                rotation=0,
+                blocks=blocks,
+            )
+        )
+    return pages
 
 
 def _queue_document_brief(document_id: str) -> None:
@@ -481,37 +519,7 @@ def parse_document(self, document_id: str, locale: str | None = None) -> None:
                     extracted_content_map[ep.page_number] = ep.text
 
                 # Convert to PageInfo for the shared chunking pipeline
-                from app.services.parse_service import BlockInfo, PageInfo
-
-                pages = []
-                for ep in extracted:
-                    blocks = []
-                    if ep.section_title:
-                        blocks.append(
-                            BlockInfo(
-                                page=ep.page_number,
-                                text=ep.section_title,
-                                bbox=(0.0, 0.0, 1.0, 0.08),
-                                font_size=18.0,
-                            )
-                        )
-                    blocks.append(
-                        BlockInfo(
-                            page=ep.page_number,
-                            text=ep.text,
-                            bbox=(0.0, 0.1 if ep.section_title else 0.0, 1.0, 1.0),
-                            font_size=12.0,
-                        )
-                    )
-                    pages.append(
-                        PageInfo(
-                            page_number=ep.page_number,
-                            width_pt=ep.width_pt or 612.0,
-                            height_pt=ep.height_pt or 792.0,
-                            rotation=0,
-                            blocks=blocks,
-                        )
-                    )
+                pages = _extracted_pages_to_page_infos(extracted)
             else:
                 # ---- PDF extraction path (existing logic) ----
                 try:

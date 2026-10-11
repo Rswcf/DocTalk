@@ -939,3 +939,200 @@ class TestHeadingSizeUsesPageBodySize:
             elements = self.svc.extract_elements(self.svc.extract_pages((SEED_DIR / name).read_bytes()))
             assert any(e.element_type == "heading" and e.text == title for e in elements), name
             assert any(e.element_type == "paragraph" and e.text.startswith(body) for e in elements), name
+
+    # ---- review r1 (2026-10-11, .collab/reviews/2026-10-11-parse-heading-body-size-review-r1.md) ----
+
+    def test_wrapped_slide_title_is_not_the_page_body(self):
+        # F1: a 2-line action title over three one-line bullets. The title is a run
+        # of 2 wide lines; as the page's largest size it must not become the body.
+        pages = []
+        for pn in (1, 2, 3):
+            blocks = [
+                BlockInfo(page=pn, text=f"Data center demand remains the largest driver {pn}", bbox=(60, 60, 700, 90), font_size=28),
+                BlockInfo(page=pn, text="of our 2026 revenue and margin outlook", bbox=(60, 94, 600, 124), font_size=28),
+            ]
+            blocks += [
+                BlockInfo(page=pn, text=f"• Signed leases up {18 + b}% year on year across all markets",
+                          bbox=(60, 160 + b * 24, 700, 180 + b * 24), font_size=18)
+                for b in range(3)
+            ]
+            pages.append(_page(pn, blocks, width=960, height=540))
+
+        assert len(self._headings(pages)) == 6
+
+    def test_wrapped_cover_title_is_not_the_page_body(self):
+        # F1: a cover with a 2-line 20pt title over a 2-line 10pt standfirst,
+        # followed by ordinary 10pt pages.
+        cover = [
+            BlockInfo(page=1, text="AI, data centres and the coming surge in", bbox=(50, 200, 560, 224), font_size=20),
+            BlockInfo(page=1, text="US power demand: our 2030 base-case view", bbox=(50, 226, 560, 250), font_size=20),
+            *_body_lines(1, 50, 280, 2, width=500, text="We expect data-centre power demand to grow strongly by 2030"),
+        ]
+        pages = [_page(1, cover)] + [_page(pn, _body_lines(pn, 50, 90, 30, width=500)) for pn in (2, 3)]
+
+        assert self._headings(pages) == {
+            (1, "AI, data centres and the coming surge in"), (1, "US power demand: our 2030 base-case view"),
+        }
+
+    def test_one_text_page_does_not_set_the_body_size_of_a_chart_book(self):
+        # F2: one 12pt intro page and twenty chart pages; the document body size
+        # must be shared by a quarter of ALL pages, else chart pages keep the floor.
+        pages = [_page(1, [BlockInfo(page=1, text="Market outlook", bbox=(40, 40, 400, 64), font_size=20)]
+                       + _body_lines(1, 40, 80, 14, size=12, width=700, text="Introductory text of the chart book"),
+                       width=842, height=595)]
+        for pn in range(2, 22):
+            blocks = [BlockInfo(page=pn, text=f"S&P 500 earnings growth and margins, chart {pn}", bbox=(40, 40, 500, 54), font_size=12)]
+            blocks += [BlockInfo(page=pn, text=f"Legend {i}", bbox=(40 + i * 70, 500, 100 + i * 70, 509), font_size=8)
+                       for i in range(10)]
+            blocks += [BlockInfo(page=pn, text=f"{t}", bbox=(30, 80 + t * 12, 45, 87 + t * 12), font_size=7) for t in range(30)]
+            pages.append(_page(pn, blocks, width=842, height=595))
+
+        headings = self._headings(pages)
+
+        assert (1, "Market outlook") in headings
+        assert all((pn, f"S&P 500 earnings growth and margins, chart {pn}") in headings for pn in range(2, 22))
+
+    def test_small_whitespace_spans_do_not_turn_body_into_headings(self):
+        # F3: every word followed by a 4pt space run: span mean 8pt, dominant 12pt.
+        # Double spacing forms no runs, so only the floors decide, and each size is
+        # compared with the median of its own kind: the body clears neither, the
+        # 14pt section titles (found by v3 through the 8pt span-mean median) stay.
+        pages = []
+        for pn in (1, 2, 3):
+            blocks = [BlockInfo(page=pn, text=f"Section {pn}", bbox=(72, 60, 300, 78), font_size=14, dominant_size=14)]
+            blocks += [
+                BlockInfo(page=pn, text=f"the committee reviewed new evidence on productivity growth {i}",
+                          bbox=(72, 100 + i * 27.6, 540, 113.3 + i * 27.6), font_size=8.0, dominant_size=12.0)
+                for i in range(20)
+            ]
+            pages.append(_page(pn, blocks))
+
+        assert self._headings(pages) == {(1, "Section 1"), (2, "Section 2"), (3, "Section 3")}
+        assert len(self.svc.chunk_document(pages)) > 0
+
+    def test_superscripts_inside_body_lines_do_not_break_the_paragraph_run(self):
+        # Every other line carries a 6pt footnote marker (span mean 8.67pt,
+        # dominant 10pt). Runs and the body size read the dominant size.
+        blocks = [BlockInfo(page=1, text="Heading", bbox=(40, 40, 300, 58), font_size=16, dominant_size=16)]
+        for i in range(10):
+            y = 90 + i * 12.5
+            marked = i % 2 == 1
+            blocks.append(BlockInfo(page=1, text=f"Body line {i} with text{'1' if marked else ''}", bbox=(40, y, 400, y + 11.5),
+                                    font_size=26 / 3 if marked else 10.0, dominant_size=10.0))
+        blocks += _cells(1, 400, 12)
+
+        assert self._headings([_page(1, blocks)]) == {(1, "Heading")}
+
+    def test_ocr_jitter_stays_one_size_class(self):
+        # Body lines alternate 10.0 / 10.5pt (OCR-style jitter) beside small cells.
+        blocks = [BlockInfo(page=1, text="Section heading", bbox=(40, 40, 300, 58), font_size=16)]
+        for i in range(10):
+            y = 90 + i * 12.5
+            blocks.append(BlockInfo(page=1, text=f"Body line {i} of scanned text", bbox=(40, y, 400, y + 11.5),
+                                    font_size=10.5 if i % 2 else 10.0))
+        blocks += _cells(1, 400, 12)
+
+        assert self._headings([_page(1, blocks)]) == {(1, "Section heading")}
+
+    def test_isolated_lines_are_not_running_text(self):
+        # Six one-line 14pt headings over six 3-line 10pt paragraphs: the headings
+        # hold over 30% of the wide text but are not a paragraph run, so 10pt
+        # stays the page body and they stay headings.
+        blocks, y = [], 40
+        for k in range(6):
+            blocks.append(BlockInfo(page=1, text=f"Heading number {k} that spans a wide line of text", bbox=(40, y, 500, y + 16),
+                                    font_size=14))
+            y += 30
+            blocks += _body_lines(1, 40, y, 3, width=400, text=f"Para {k} body")
+            y += 60
+
+        assert len(self._headings([_page(1, blocks)])) == 6
+
+    def test_extractor_titles_skip_the_pdf_shape_guards(self):
+        from types import SimpleNamespace
+
+        from app.workers.parse_worker import _extracted_pages_to_page_infos
+
+        extracted = [
+            SimpleNamespace(page_number=pn, text=f"Changes in release {pn}. " * 20, width_pt=None, height_pt=None,
+                            section_title=title)
+            for pn, title in ((1, None), (2, None), (3, "v2.0.0 (2024-05-01)"), (4, None), (5, "Release 2024.10.11"))
+        ]
+        pages = _extracted_pages_to_page_infos(extracted)
+
+        assert self._headings(pages) == {(3, "v2.0.0 (2024-05-01)"), (5, "Release 2024.10.11")}
+
+    def test_size_rule_counts_cjk_characters_as_words(self):
+        def by_size(text: str) -> bool:
+            block = CleanBlock(page=1, text=text, bbox=(40, 60, 200, 90), font_size=14, rule_size=14)
+            return self.svc._is_heading_by_size(block, 10.0)
+
+        for text in ("3、2026年展望", "2026年3月期決算", "2026년 전망", "长鑫科技（688825） 电子", "2025Q3业绩点评"):
+            assert by_size(text), text
+        for text in ("1503.10亿元", "2026年", "AB 12"):
+            assert not by_size(text), text
+
+    def test_extract_line_blocks_dominant_size_ignores_whitespace_and_prefers_larger(self):
+        lines = [
+            {"bbox": (50, 50, 300, 66), "spans": [{"text": "A", "size": 12.0}, {"text": "     ", "size": 8.0}]},
+            {"bbox": (50, 70, 300, 86), "spans": [{"text": "ab", "size": 10.0}, {"text": "cd", "size": 14.0}]},
+        ]
+
+        blocks = self.svc._extract_line_blocks(1, lines)
+
+        assert [b.dominant_size for b in blocks] == [12.0, 14.0]
+
+    def test_run_gap_and_overlap_thresholds(self):
+        h = 11.5
+        blocks = [
+            CleanBlock(page=1, text="close a", bbox=(40, 100, 280, 100 + h), font_size=10),
+            CleanBlock(page=1, text="close b", bbox=(40, 100 + h + 0.8 * h, 280, 100 + 2.8 * h), font_size=10),
+            CleanBlock(page=1, text="far a", bbox=(40, 300, 280, 300 + h), font_size=10),
+            CleanBlock(page=1, text="far b", bbox=(40, 300 + h + 1.2 * h, 280, 300 + 3.2 * h), font_size=10),
+            # Stacked but only 10% of the narrower line overlapping: another column.
+            CleanBlock(page=1, text="col a", bbox=(40, 500, 240, 500 + h), font_size=10),
+            CleanBlock(page=1, text="col b", bbox=(220, 500 + 1.1 * h, 420, 500 + 2.1 * h), font_size=10),
+        ]
+
+        self.svc._annotate_runs(blocks)
+
+        assert [b.run_len for b in blocks] == [2, 2, 1, 1, 1, 1]
+
+    def test_size_rule_counts_combining_marks_as_letters(self):
+        block = CleanBlock(page=1, text="विकास २०२६", bbox=(40, 60, 200, 90), font_size=14, rule_size=14)
+
+        assert self.svc._is_heading_by_size(block, 10.0)  # 3 letters + 2 matras vs 4 digits
+
+    def test_floor_gate_compares_each_size_with_its_own_median(self):
+        line = CleanBlock(page=1, text="Section heading", bbox=(40, 60, 200, 72), font_size=12, rule_size=12)
+
+        # Clears 1.25x the span-mean median (8pt) though not the dominant one (12pt).
+        assert self.svc._is_heading_by_size(line, 0.0, floors=(8.0, 12.0))
+        assert not self.svc._is_heading_by_size(line, 0.0, floors=(12.0, 12.0))
+        # A span mean pulled down (8pt) does not count against the dominant median.
+        pulled = CleanBlock(page=1, text="Body text line", bbox=(40, 60, 200, 72), font_size=8, rule_size=12)
+        assert not self.svc._is_heading_by_size(pulled, 0.0, floors=(8.0, 12.0))
+
+    def test_minor_size_class_is_not_the_page_body(self):
+        # Two 2-line 14pt callouts hold under 30% of the running text: the 10pt body
+        # stays the reference and the 16pt heading clears it.
+        blocks = [BlockInfo(page=1, text="Sixteen point heading", bbox=(40, 40, 400, 60), font_size=16)]
+        blocks += _body_lines(1, 40, 80, 24, width=420)
+        for k, y in enumerate((420, 480)):
+            blocks += [BlockInfo(page=1, text=f"Callout {k} line {i} set larger", bbox=(40, y + i * 17, 300, y + 15 + i * 17),
+                                 font_size=14) for i in range(2)]
+
+        assert (1, "Sixteen point heading") in self._headings([_page(1, blocks)])
+
+    def test_runs_are_swept_per_size_class(self):
+        # 450 tiny cells start between two body lines. Swept together they would
+        # push the first line out of the capped active list before the second
+        # arrives; each size class is swept on its own.
+        blocks = [CleanBlock(page=1, text="first body line", bbox=(40, 100, 500, 111.5), font_size=10)]
+        blocks += [CleanBlock(page=1, text=".", bbox=(40 + (i % 225) * 2.4, 101 + (i // 225) * 4, 41 + (i % 225) * 2.4, 103 + (i // 225) * 4),
+                              font_size=2) for i in range(450)]
+        blocks.append(CleanBlock(page=1, text="second body line", bbox=(40, 112.5, 500, 124), font_size=10))
+
+        self.svc._annotate_runs(blocks)
+
+        assert blocks[0].run_len == blocks[-1].run_len == 2
