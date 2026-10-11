@@ -498,6 +498,12 @@ export function locateTextEvidence(
 
   let emphasis: Hit[] = [];
   const quote = focus ? canonicalize(focus).text : '';
+  // The rule for a focus without a region: unique in the document, on the
+  // cited pages, a whole word at each lettered edge.
+  const alone = (): Hit[] => {
+    const { hits } = locatePiece(focus!, focusSearch);
+    return hits.length && hits.every(marked) && standsAlone(hits, search.pages) ? hits : [];
+  };
   if (quote.length >= minPiece(quote)) {
     if (region.length) {
       const direct = findAll(focusSearch.scope, quote, Infinity).filter(hit => inside(hit, region));
@@ -505,11 +511,16 @@ export function locateTextEvidence(
       else if (!direct.length) {
         const split = splitAtPageStart(quote, focusSearch);
         if (split && split.every(hit => inside(hit, region))) emphasis = split;
+        // A focus the region does not hold, because its sentence was not
+        // located (a Quote Finder quote glued to the chunk's first heading),
+        // follows the rule without a region; it must also be the chunk's own
+        // text and touch no region span.
+        else if (canonicalize(chunkText!).text.includes(quote)) {
+          const hits = alone();
+          if (!hits.some(hit => region.some(span => span.page === hit.page && hit.start < span.end && span.start < hit.end))) emphasis = hits;
+        }
       }
-    } else {
-      const { hits } = locatePiece(focus!, focusSearch);
-      if (hits.length && hits.every(marked) && standsAlone(hits, search.pages)) emphasis = hits;
-    }
+    } else emphasis = alone();
   }
 
   if (!region.length && !emphasis.length) return NO_EVIDENCE;
@@ -527,6 +538,8 @@ export function locateTextEvidence(
       }
       if (cursor < span.end) ranges.push(toRaw(page, cursor, span.end, false));
     }
+    for (const hit of emphasis) if (!inside(hit, region)) ranges.push(toRaw(byNumber.get(hit.page)!, hit.start, hit.end, true));
+    ranges.sort((a, b) => a.page - b.page || a.start - b.start);
   }
   // Raw pieces never start or end on whitespace (canonical spaces map to it).
   const trimmed = ranges.map(range => {

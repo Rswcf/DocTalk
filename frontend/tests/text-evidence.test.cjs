@@ -458,6 +458,42 @@ test('Browser P2-2: without a chunk range, a chunk cited on a page that does not
   assert.ok(!card.ranges.some(r => r.page === 2 && r.emphasis));
 });
 
+test('Browser P2-2: a Quote Finder quote glued to the chunk\'s first heading is exact beside the region', () => {
+  // The chunk opens with "Purpose and scope" glued onto the quoted sentence,
+  // so that sentence is not in the region (Codex r1 #2); the server-verified
+  // quote is still unique on the page and in the chunk.
+  const pages = depotPages();
+  const quote = 'This manual describes how the Harbor Street depot receives, stores and dispatches medical supplies.';
+  const card = locateTextEvidence(pages, { page: 1, pageEnd: 1, focusSnippet: quote }, depotChunk);
+  assert.equal(card.kind, 'exact');
+  const text = marked(pages, card);
+  assert.deepEqual(text.filter(r => r.emphasis).map(r => r.text), [quote]);
+  assert.ok(text.some(r => !r.emphasis && r.text.startsWith('It applies to all forty-two staff')), 'the region is kept');
+  assert.deepEqual(card.anchor, { page: 1, start: 0 });
+  assert.ok(!text.some(r => r.text.includes('Purpose and scope')));
+});
+
+test('Browser P2-2: a focus outside the region is not emphasised when it overlaps the region, is not in the chunk, or repeats', () => {
+  const pages = depotPages();
+  const first = 'This manual describes how the Harbor Street depot receives, stores and dispatches medical supplies.';
+  const second = 'It applies to all forty-two staff members who work the morning, evening and night shifts.';
+  // Overlaps the region: the second sentence is located.
+  const overlap = locateTextEvidence(pages, { page: 1, pageEnd: 1, focusSnippet: `${first}\n${second}` }, depotChunk);
+  assert.equal(overlap.kind, 'region');
+  assert.ok(overlap.ranges.every(r => !r.emphasis));
+  // Not in the chunk: verbatim and unique on the page, but the chunk does not hold it.
+  const without = chunkOf(['Purpose and scope', ...bodyUnits(DEPOT[0]).slice(1), 'Receiving goods', ...bodyUnits(DEPOT[1])]);
+  assert.ok(!without.includes(first));
+  const stray = locateTextEvidence(pages, { page: 1, pageEnd: 1, focusSnippet: first }, without);
+  assert.equal(stray.kind, 'region');
+  assert.ok(stray.ranges.every(r => !r.emphasis));
+  // Twice inside the region: no emphasis, never the standalone rule.
+  const twice = 'Pallets are logged at the gate, and the gate log is checked hourly. Each shift lead signs the log.\nPallets are logged at the gate, and the gate log is checked hourly. Exceptions go to the depot manager.';
+  const twicePages = [{ page_number: 1, text: twice }];
+  const repeated = locateTextEvidence(twicePages, { page: 1, pageEnd: 1, focusSnippet: 'Pallets are logged at the gate, and the gate log is checked hourly.' }, chunkOf(bodyUnits(twice)));
+  assert.ok(repeated.ranges.every(r => !r.emphasis));
+});
+
 test('Codex r1 #1: a chunk sentence repeated on another page is not marked on the cited page', () => {
   const sentence = 'This exact warning appears in both sections of the policy.';
   const pages = [
