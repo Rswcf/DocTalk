@@ -1,5 +1,5 @@
 import { SKIP, visit } from 'unist-util-visit';
-import type { ElementContent, Root } from 'hast';
+import type { Element, ElementContent, Parents, Root, Text } from 'hast';
 import { canonicalize } from './pdfEvidence';
 
 /**
@@ -12,8 +12,11 @@ import { canonicalize } from './pdfEvidence';
  * A node whose value is not its source slice (escapes, entities, stripped
  * indentation, inline-code backticks) is aligned character by character;
  * failing that, the range text is searched in the value; failing that, the
- * whole node is marked as a region. Syntax characters are never marked, and
- * fenced code (no position) is left alone.
+ * whole node is marked as a region. Syntax characters are never marked.
+ * Code-block text has no position of its own: it maps through its `code`
+ * element after the opening fence line, and is left unmarked (never marked
+ * whole) when it cannot be aligned. When the anchor range itself renders no
+ * mark, the first mark of the tree carries the anchor.
  */
 
 export type MarkKind = 'exact' | 'region';
@@ -49,7 +52,27 @@ function searchCanonical(value: string, needle: string): [number, number] | null
   return [haystack.offsets[index].start, haystack.offsets[index + query.length - 1].end];
 }
 
-function piecesFor(value: string, nodeStart: number, nodeEnd: number, ranges: readonly MarkRange[], source: string): Piece[] {
+interface Span { start: number; end: number; code: boolean }
+
+const FENCE_LINE = /^[ \t]*(?:`{3,}|~{3,})[^\n]*\n?/;
+
+/** Source span of a text node. Fenced and indented code text carries no
+ *  position; its `code` element spans the whole block, fences included. */
+function textSpan(node: Text, parent: Parents, source: string): Span | null {
+  const start = node.position?.start.offset;
+  const end = node.position?.end.offset;
+  if (start != null && end != null) return end > start ? { start, end, code: false } : null;
+  if (parent.type !== 'element' || parent.tagName !== 'code' || parent.children.length !== 1) return null;
+  const blockStart = parent.position?.start.offset;
+  const blockEnd = parent.position?.end.offset;
+  if (blockStart == null || blockEnd == null || blockEnd <= blockStart) return null;
+  const fence = FENCE_LINE.exec(source.slice(blockStart, blockEnd));
+  const contentStart = blockStart + (fence ? fence[0].length : 0);
+  return contentStart < blockEnd ? { start: contentStart, end: blockEnd, code: true } : null;
+}
+
+function piecesFor(value: string, span: Span, ranges: readonly MarkRange[], source: string): Piece[] {
+  const { start: nodeStart, end: nodeEnd } = span;
   const slice = source.slice(nodeStart, nodeEnd);
   const map = slice === value ? null : align(value, slice);
   const pieces: Piece[] = [];
@@ -67,7 +90,11 @@ function piecesFor(value: string, nodeStart: number, nodeEnd: number, ranges: re
       if (from < 0 || to <= from) continue;
     } else {
       const found = searchCanonical(value, slice.slice(start, end));
-      if (!found) return [{ from: 0, to: value.length, kind: 'region', anchor: ranges.some(r => r.anchor) }];
+      if (!found) {
+        // A code block can be long; marking all of it would overstate the passage.
+        if (span.code) continue;
+        return [{ from: 0, to: value.length, kind: 'region', anchor: ranges.some(r => r.anchor) }];
+      }
       [from, to] = found;
     }
     const last = pieces.at(-1);
@@ -82,14 +109,14 @@ export function rehypeMarkRanges(options: MarkRangesOptions) {
   return (tree: Root) => {
     if (!ranges.length) return;
     let anchored = false;
+    const marks: Element[] = [];
     visit(tree, 'text', (node, index, parent) => {
       if (!parent || index === undefined) return;
-      const start = node.position?.start.offset;
-      const end = node.position?.end.offset;
-      if (start == null || end == null || end <= start) return;
-      const hits = ranges.filter(range => range.start < end && range.end > start);
+      const span = textSpan(node, parent, options.source);
+      if (!span) return;
+      const hits = ranges.filter(range => range.start < span.end && range.end > span.start);
       if (!hits.length) return;
-      const pieces = piecesFor(node.value, start, end, hits, options.source);
+      const pieces = piecesFor(node.value, span, hits, options.source);
       if (!pieces.length) return;
       const children: ElementContent[] = [];
       let cursor = 0;
@@ -97,17 +124,22 @@ export function rehypeMarkRanges(options: MarkRangesOptions) {
         if (piece.from > cursor) children.push({ type: 'text', value: node.value.slice(cursor, piece.from) });
         const anchor = piece.anchor && !anchored;
         if (anchor) anchored = true;
-        children.push({
+        const mark: Element = {
           type: 'element',
           tagName: 'mark',
           properties: anchor ? { dataDtEvidence: piece.kind, dataDtEvidenceAnchor: 'true' } : { dataDtEvidence: piece.kind },
           children: [{ type: 'text', value: node.value.slice(piece.from, piece.to) }],
-        });
+        };
+        marks.push(mark);
+        children.push(mark);
         cursor = piece.to;
       }
       if (cursor < node.value.length) children.push({ type: 'text', value: node.value.slice(cursor) });
       parent.children.splice(index, 1, ...children);
       return [SKIP, index + children.length];
     });
+    if (!anchored && marks.length && ranges.some(range => range.anchor)) {
+      marks[0].properties.dataDtEvidenceAnchor = 'true';
+    }
   };
 }

@@ -87,11 +87,34 @@ test('escapes, entities and indented continuation lines map onto rendered text',
   assert.deepEqual(marks(partial).map(m => m.text), ['fees *apply*']);
 });
 
-test('inline code keeps its backticks out of the mark; fenced code is left alone', () => {
+test('inline code keeps its backticks out of the mark; fenced code maps after its fence line', () => {
   const source = 'Run `npm test` before you push.\n\n```\nnpm run build\n```';
   const html = render(source, [{ start: 0, end: source.length, kind: 'region' }]);
   assert.match(html, /<code><mark data-dt-evidence="region">npm test<\/mark><\/code>/);
-  assert.match(html, /<pre><code>npm run build\n<\/code><\/pre>/);
+  assert.match(html, /<pre><code><mark data-dt-evidence="region">npm run build\n<\/mark><\/code><\/pre>/);
+  // Only the covered lines of a block, never the fence or the info string.
+  const block = 'Intro.\n\n```mermaid\nsequenceDiagram\n  A->>B: first call\n  B-->>A: reply\n```';
+  const partial = render(block, [span(block, 'A->>B: first call', 'exact', true)]);
+  assert.deepEqual(marks(partial), [{ kind: 'exact', anchor: true, text: 'A-&gt;&gt;B: first call' }]);
+  assert.doesNotMatch(partial, /<mark[^>]*>[^<]*mermaid/);
+});
+
+test('a code block is marked only where the range covers it', () => {
+  const source = '```\nalpha beta gamma\n```';
+  assert.deepEqual(marks(render(source, [span(source, 'beta')])).map(m => m.text), ['beta']);
+  const indented = '- item\n\n  ```\n  one two\n  three four\n  ```';
+  assert.deepEqual(marks(render(indented, [span(indented, 'three four')])).map(m => m.text), ['three four']);
+  const fenceOnly = render('```\nalpha\n```\n\nZeta.', [{ start: 0, end: 3, kind: 'region' }]);
+  assert.deepEqual(marks(fenceOnly), [], 'the fence line alone marks nothing');
+});
+
+test('the anchor moves to the first mark when its own range renders none', () => {
+  const source = 'Kept paragraph text here.\n\n<div>raw html is dropped</div>';
+  const html = render(source, [
+    span(source, 'Kept paragraph text here.'),
+    span(source, 'raw html is dropped', 'exact', true),
+  ]);
+  assert.deepEqual(marks(html), [{ kind: 'region', anchor: true, text: 'Kept paragraph text here.' }]);
 });
 
 test('exact emphasis splits a region into flat marks; only one anchor is emitted', () => {
