@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     default: 'DocTalk — AI Document Chat with Cited Answers',
     template: '%s | DocTalk',
   },
-  description: 'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
+  description: 'Upload any document and chat with AI. Get instant answers with source citations that link back to your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
   alternates: {
     canonical: '/',
   },

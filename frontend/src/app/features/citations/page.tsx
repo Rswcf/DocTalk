@@ -13,7 +13,7 @@ export const metadata: Metadata = buildMarketingMetadata({
   openGraph: {
     title: 'AI Answers with Source Citations | DocTalk',
     description:
-      'Every AI answer includes numbered citations. Click any citation to jump to the exact source text, highlighted in your document. Verify every answer.',
+      'Every AI answer includes numbered citations. Click any citation to jump to the exact source text, highlighted in PDF and .txt files. Verify every answer.',
   },
 });
 

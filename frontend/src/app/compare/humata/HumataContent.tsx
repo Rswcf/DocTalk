@@ -21,7 +21,7 @@ export default async function HumataContent({ locale }: { locale: string }) {
 
   const features = [
     { name: t('compareHumata.featureSupportedFormats'), doctalk: t('compareHumata.featureSupportedFormatsDocTalk'), competitor: t('compareHumata.featureSupportedFormatsCompetitor') },
-    { name: t('compareHumata.featureCitationHighlighting'), doctalk: true, competitor: true },
+    { name: t('compareHumata.featureCitationHighlighting'), doctalk: true, competitor: 'partial' },
     { name: t('compareHumata.featureVideoSupport'), doctalk: false, competitor: t('comparison.notVerified') },
     { name: t('compareHumata.featureTeamCollaboration'), doctalk: false, competitor: true },
     { name: t('compareHumata.featureInterfaceLanguages'), doctalk: t('compareHumata.featureInterfaceLanguagesDocTalk'), competitor: t('compareHumata.featureInterfaceLanguagesCompetitor') },

@@ -2,7 +2,7 @@
 title: "Why Citation Highlighting Matters in AI Document Analysis"
 description: "AI tools that generate answers without source citations are a liability. Learn why citation highlighting is essential for trust, accuracy, and professional use of AI document analysis."
 date: "2026-03-18"
-updated: "2026-10-10"
+updated: "2026-10-11"
 author: "DocTalk Team"
 category: "ai-insights"
 tags: ["citations", "hallucination", "trust", "rag", "verification", "ai insights"]
@@ -65,7 +65,7 @@ The AI includes a snippet of the quoted text alongside the page reference. Bette
 
 ### Level 4: Click-to-Navigate Citation Highlighting
 
-This is what DocTalk provides through its [citation highlighting feature](/features/citations). Each numbered citation in the AI's answer is a clickable link. When you click it, the document viewer scrolls to the exact page and highlights the specific passage in the original document. You see the cited text in its full context — the surrounding paragraphs, the section heading, the neighboring content that might qualify or contradict the AI's interpretation.
+This is what DocTalk provides through its [citation highlighting feature](/features/citations). Each numbered citation in the AI's answer is a clickable link. When you click it, the document viewer scrolls to the exact page and, in PDF and plain-text (.txt) files, highlights the specific passage in the original document. You see the cited text in its full context — the surrounding paragraphs, the section heading, the neighboring content that might qualify or contradict the AI's interpretation.
 
 The difference between Level 2 and Level 4 is the difference between "the information exists somewhere on page 14" and "here is the exact sentence, highlighted in context, that the AI based its answer on." The verification effort drops from minutes to seconds.
 
@@ -117,7 +117,7 @@ A compliance officer asks about a policy document: "What are the reporting deadl
 
 | Tool | Citation Type | Verification Effort | Can You See Context? |
 |---|---|---|---|
-| **DocTalk** | Click-to-navigate highlighting, with the page on each citation | Seconds per citation | Yes — highlighted in the original document |
+| **DocTalk** | Click-to-navigate citations with the page on each; the passage is highlighted in PDF and plain-text (.txt) files | Seconds per citation | Yes — jumps to the cited location; highlighted in PDF and plain-text (.txt) files |
 | ChatDOC | Page number on each answer; click it to jump | Low | Yes — jumps to the section |
 | Adobe Acrobat AI Assistant | Highlights where it found the answer; page number in PDF Spaces | Low | Yes — highlighted in the document |
 | ChatPDF | Clickable citations that scroll to the source | Low | Yes — jumps to the source passage |
@@ -151,7 +151,7 @@ Citations appear as numbered references [1], [2], [3] inline with the answer tex
 
 ### Single-Click Navigation
 
-Clicking a citation number immediately scrolls the document viewer to the relevant page and highlights the passage. No secondary modal, no separate search step, no "see page X" instructions. One click, one destination.
+Clicking a citation number immediately scrolls the document viewer to the relevant page and, in PDF and plain-text (.txt) files, highlights the passage. No secondary modal, no separate search step, no "see page X" instructions. One click, one destination.
 
 ### Context Preservation
 
@@ -185,6 +185,6 @@ Most answers include 2-5 citations, depending on the complexity of the question 
 
 ## Get Started
 
-Try the citation highlighting experience yourself. Upload any document to [DocTalk](/) and ask a question. Click the numbered citations in the answer to see the source passages highlighted in the original document.
+Try the citation highlighting experience yourself. Upload a PDF to [DocTalk](/) and ask a question. Click the numbered citations in the answer to see the source passages highlighted in the original document.
 
 The [free demo](/demo) works without signing up — you can see how citations look and feel with sample documents in about 30 seconds. For a complete walkthrough of the document chat experience, see our guide on [how to chat with a PDF](/blog/how-to-chat-with-pdf-ai).

@@ -2,12 +2,12 @@
 title: "How to Chat with a PowerPoint Presentation Using AI"
 description: "Learn how to analyze and ask questions about PowerPoint (PPTX) files using AI. Step-by-step guide covering slide extraction, use cases for sales decks and lectures, and tips for best results."
 date: "2026-03-18"
-updated: "2026-03-18"
+updated: "2026-10-11"
 author: "DocTalk Team"
 category: "guides"
 tags: ["powerpoint", "pptx", "ai chat", "tutorial", "multi-format", "presentation"]
 image: "/blog/images/placeholder.png"
-imageAlt: "A PowerPoint presentation being analyzed by AI with highlighted citations from specific slides"
+imageAlt: "A PowerPoint presentation being analyzed by AI with citations from specific slides"
 keywords: ["chat with powerpoint ai", "ai pptx analysis", "ask ai about presentation", "powerpoint ai tool", "chat with slides ai", "ai presentation analysis"]
 ---
 
@@ -82,7 +82,7 @@ Once processing completes, the chat interface appears alongside the document vie
 
 ### 4. Review Citations and Verify
 
-The AI responds with numbered citations. Click any citation to jump to the corresponding slide in the document viewer, with the relevant text highlighted. This lets you confirm that the AI's answer accurately reflects what the presentation actually says.
+The AI responds with numbered citations. Click any citation to jump to the corresponding slide in the document viewer. This lets you confirm that the AI's answer accurately reflects what the presentation actually says.
 
 ### 5. Dig Deeper with Follow-Ups
 
@@ -127,7 +127,7 @@ University lecture slides are notoriously dense. Upload a semester's worth of pr
 
 ### Due Diligence on Investor Decks
 
-When evaluating startup pitch decks, you can quickly extract key metrics: "What is the stated ARR?" or "What assumptions underlie the growth projections?" The citation highlighting lets you verify the numbers directly, which matters when the stakes are high.
+When evaluating startup pitch decks, you can quickly extract key metrics: "What is the stated ARR?" or "What assumptions underlie the growth projections?" The citations let you verify the numbers directly, which matters when the stakes are high.
 
 ### Comparing Multiple Presentations
 
@@ -193,10 +193,10 @@ Yes. Upload both versions separately and create individual chat sessions. DocTal
 
 ### Is this better than using Microsoft Copilot in PowerPoint?
 
-They solve different problems. Copilot is built into PowerPoint and is best for editing and creating slides. DocTalk is designed for analyzing and querying presentation content, with citation-highlighted answers that let you verify every claim. If you need to understand what a presentation says and verify the details, DocTalk is the more focused tool.
+They solve different problems. Copilot is built into PowerPoint and is best for editing and creating slides. DocTalk is designed for analyzing and querying presentation content, with cited answers that let you verify every claim. If you need to understand what a presentation says and verify the details, DocTalk is the more focused tool.
 
 ## Get Started
 
-Upload a PPTX file to [DocTalk](/) and ask your first question. You will see cited answers with highlighted source passages within seconds.
+Upload a PPTX file to [DocTalk](/) and ask your first question. You will see cited answers within seconds.
 
 If you want to explore without signing up, the [free demo](/demo) shows how the citation and chat experience works. For guides on other supported formats, see [how to chat with PDFs](/blog/how-to-chat-with-pdf-ai), [how to chat with Word documents](/blog/how-to-chat-with-docx-ai), or learn about DocTalk's full [multi-format support](/features/multi-format).

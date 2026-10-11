@@ -2,7 +2,7 @@
 title: "How to Chat with a PDF Using AI"
 description: "Learn how to chat with any PDF using AI. Step-by-step guide covering RAG technology, citation highlighting, and tips for getting the best answers."
 date: "2026-02-18"
-updated: "2026-02-18"
+updated: "2026-10-11"
 author: "DocTalk Team"
 category: "guides"
 tags: ["pdf", "ai chat", "rag", "tutorial", "getting started"]
@@ -146,7 +146,7 @@ DocTalk is not limited to PDFs. You can also chat with:
 - **TXT and Markdown** — plain text and formatted documents
 - **Web URLs** — paste a link and chat with the webpage content
 
-All formats support the same citation highlighting and navigation features.
+All formats support the same citation navigation; the passage highlight works in PDF and plain-text (.txt) files.
 
 ## AI PDF Chat vs. Manual Reading
 

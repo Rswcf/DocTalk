@@ -7,7 +7,7 @@ import { buildMarketingMetadata } from '../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: { absolute: 'DocTalk — AI Document Chat with Cited Answers' },
   description:
-    'Upload any document and chat with AI. Get instant answers with source citations that highlight in your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
+    'Upload any document and chat with AI. Get instant answers with source citations that link back to your document. Supports PDF, DOCX, PPTX, XLSX, and more.',
   path: '/',
   localized: true,
   keywords: [

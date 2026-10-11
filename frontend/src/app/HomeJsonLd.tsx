@@ -18,7 +18,7 @@ import { FAQ_ITEMS, HOW_IT_WORKS_STEPS } from '../components/landing/landingSche
 
 /** Bumped by hand when the product description materially changes. A live
  *  `new Date()` here made the markup differ on every build for no reader benefit. */
-const DATE_MODIFIED = '2026-09-20';
+const DATE_MODIFIED = '2026-10-11';
 const DATE_PUBLISHED = '2026-01-15';
 
 export default async function HomeJsonLd({ locale }: { locale: string }) {

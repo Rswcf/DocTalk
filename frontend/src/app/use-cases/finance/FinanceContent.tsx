@@ -183,7 +183,7 @@ export default async function FinanceContent({ locale }: { locale: string }) {
               The practical advantage is not just speed. A generic chatbot may produce a plausible summary with no audit trail. DocTalk
               keeps each answer tied to the original note, table, or paragraph through{' '}
               <Link href={href('/features/citations')} className="ed-inline">
-                citation highlighting
+                clickable citations
               </Link>
               , so the analyst can inspect the source before relying on the output.
             </p>
