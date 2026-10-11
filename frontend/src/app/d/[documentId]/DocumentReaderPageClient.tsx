@@ -28,6 +28,7 @@ import { trackEvent } from '../../../lib/analytics';
 import { layoutTranslationTargetLabel, proxiedArtifactUrl } from '../../../lib/layoutTranslation';
 import { useDocumentBrief } from '../../../lib/useDocumentBrief';
 import { citationPassage } from '../../../lib/citationText';
+import { readerView, type ReaderView, type ReaderViewChoice } from '../../../lib/readerView';
 
 function useDesktopReaderLayout() {
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -48,7 +49,8 @@ export default function DocumentReaderPageClient() {
   const params = useParams<{ documentId: string }>();
   const documentId = params?.documentId as string;
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<'slide' | 'text'>('slide');
+  // The slide/text toggle's choice, kept for the document it was made on.
+  const [viewChoice, setViewChoice] = useState<ReaderViewChoice | null>(null);
   const [mobileTab, setMobileTab] = useState<'chat' | 'document'>('chat');
   const isDesktopLayout = useDesktopReaderLayout();
   const { t, tOr, locale } = useLocale();
@@ -112,6 +114,9 @@ export default function DocumentReaderPageClient() {
     customInstructions,
     setCustomInstructions,
   } = useDocumentLoader(documentId);
+  // DOCX opens in the text view, PPTX in the slide view (lib/readerView.ts).
+  const viewMode = readerView(viewChoice, documentId, fileType);
+  const setViewMode = (view: ReaderView) => setViewChoice({ documentId, view });
   const { brief: documentBrief, polling: briefPolling } = useDocumentBrief(
     documentStatus === 'ready' && !isDemo ? documentId : undefined,
   );

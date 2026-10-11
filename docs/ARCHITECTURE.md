@@ -972,7 +972,9 @@ actually rendered (a located range in raw HTML, for example, renders none), neve
 more than was located. The DOCX/PPTX slide view shows
 the LibreOffice PDF, whose page N is not a DOCX extractor page N (a heading section
 or a 3,000-character split): there a text-layer candidate is kept only when it
-occurs once in the whole converted document, on the cited page.
+occurs once in the whole converted document, on the cited page. A DOCX therefore
+opens in the text view; a PPTX opens in the slide view; the toggle still switches
+(`lib/readerView.ts`).
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 
