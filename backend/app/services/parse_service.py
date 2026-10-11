@@ -7,6 +7,7 @@ import re
 import subprocess
 import tempfile
 import unicodedata
+from bisect import bisect_left, bisect_right
 from collections import Counter
 from dataclasses import dataclass
 from statistics import median
@@ -20,8 +21,10 @@ logger = logging.getLogger(__name__)
 # finder can tell which documents predate a fix (R2b). v2 = Unicode-aware quality OCR
 # trigger + OSD-narrowed OCR language set. v3 = off-axis text is never a heading, and
 # off-axis text or an arXiv stamp in the page margin is dropped from chunks (vertical
-# writing mode excepted).
-PARSE_PIPELINE_VERSION = 3
+# writing mode excepted). v4 = an all-caps heading needs four capital letters and must
+# not sit in a table row; a numbered line ("3 Model Architecture", its number set as a
+# separate line or not) at 1.1x the median font size is a heading.
+PARSE_PIPELINE_VERSION = 4
 
 # A line that starts with an arXiv identifier is a submission stamp or a wrapped
 # reference, never a section title; inside the page margin band it is the stamp and is
@@ -30,6 +33,15 @@ PARSE_PIPELINE_VERSION = 3
 _ARXIV_ID_LINE_RE = re.compile(
     r"^arXiv:\s*(?:\d{4}\.\d{4,5}|[A-Za-z][A-Za-z\-]*(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?\b"
 )
+
+# Section numbers: one or two digits per level ("3", "4.2", "4."), so a year ("2025
+# Revenue") or an amount never reads as one. LaTeX sets the number of a \section as a
+# separate line on the title's baseline (_SECTION_NUMBER_RE); other producers keep
+# number and title on one line (_NUMBERED_HEADING_RE, group 1 = the title). A report
+# date ("06 February 2026", "8. Januar 2026") has the same shape and is not a heading.
+_SECTION_NUMBER_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?$")
+_NUMBERED_HEADING_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?\s+(\S.*)$")
+_DATE_LINE_RE = re.compile(r"^\d{1,2}\.?\s+\S+\s+\d{4}$")
 
 # OCR language resolution (Phase 2 C4 + R2b). Scanned / non-Latin PDFs need the matching
 # Tesseract traineddata; eng+chi_sim alone produced garbage for Urdu/Arabic (U13/U40).
@@ -267,6 +279,15 @@ class CleanBlock:
 
 
 @dataclass
+class _PageRows:
+    """One page's on-axis lines sorted by top edge, for same-row lookups."""
+
+    width: float  # unrotated page width: line bboxes are in unrotated space
+    lines: List[CleanBlock]
+    tops: List[float]
+
+
+@dataclass
 class ChunkInfo:
     text: str
     chunk_index: int
@@ -302,6 +323,24 @@ class ParseService:
     # margin artifact such as the vertical arXiv stamp, not document content.
     MARGIN_BAND_RATIO = 0.10
     OFF_AXIS_TOLERANCE_DEG = 15.0
+
+    HEADING_SIZE_RATIO = 1.25  # any short line this much above the median size
+    NUMBERED_HEADING_SIZE_RATIO = 1.1  # LaTeX \section: 12pt on a 10pt body
+    HEADING_MAX_WORDS = 12
+    # A lone line beside a numbered label, narrower than this share of the page, is a
+    # table cell when it holds a figure ("$100m", "12.5%") or shares the label's font
+    # size; the opposite column of a two-column page is wider, and its last paragraph
+    # line ("therefore.") is body text, smaller than a heading.
+    COLUMN_MIN_WIDTH_RATIO = 0.3
+    VALUE_CELL_MAX_LETTERS = 4  # "US$1.2bn"
+    # A row neighbour is at most this many times the line's own height: cells in one
+    # table row share a size. It also bounds the row lookup's scan window.
+    ROW_NEIGHBOUR_MAX_HEIGHT_RATIO = 3.0
+    # "V", "O(1)", "100K", "<EOS>" and "TTM" are formula and table tokens, not titles.
+    # Every letter must be a capital: in "MCP 集成：支持外部 MCP 服务器" the Chinese
+    # letters have no case, so the caps signal says nothing. Caseless scripts reach
+    # headings through the size rule or a section number.
+    CAPS_HEADING_MIN_CAPITALS = 4
 
     TARGET_MIN_TOKENS = 150
     TARGET_MAX_TOKENS = 300
@@ -499,7 +538,7 @@ class ParseService:
         Steps:
         1) Identify repeated header/footer texts across pages
         2) Clean blocks per page (remove header/footer, fix hyphenations)
-        3) Detect headings via font size threshold (size > median × 1.3)
+        3) Detect headings (see _classify_headings / _is_heading_block)
         4) Split into sentence-level units, then assemble chunks sized 300–500 tokens
            with 50-token overlap
         5) Normalize bbox coordinates to [0,1] using page dims (top-left origin)
@@ -511,8 +550,10 @@ class ParseService:
         # 2) Clean and collect blocks, also gather font sizes for median
         all_clean_blocks: List[CleanBlock] = []
         page_dims: dict[int, Tuple[float, float]] = {}
+        page_widths: dict[int, float] = {}
         for p in pages:
             page_dims[p.page_number] = (p.width_pt, p.height_pt)
+            page_widths[p.page_number] = self._band_dims(p.width_pt, p.height_pt, p.rotation)[0]
             cleaned = self.clean_text_blocks(
                 p.blocks,
                 p.width_pt,
@@ -535,8 +576,8 @@ class ParseService:
         # (text, page, bbox, section_title)
         sentences: List[tuple[str, int, Tuple[float, float, float, float], Optional[str]]] = []
 
-        for cb in all_clean_blocks:
-            if self._is_heading_block(cb, median_size):
+        for cb, is_heading in self._classify_headings(all_clean_blocks, median_size, page_widths):
+            if is_heading:
                 # Heading: update current section title; do not include in content
                 title = cb.text.strip()
                 # Avoid overly long titles
@@ -684,8 +725,10 @@ class ParseService:
 
         all_clean_blocks: List[CleanBlock] = []
         page_dims: dict[int, Tuple[float, float]] = {}
+        page_widths: dict[int, float] = {}
         for p in pages:
             page_dims[p.page_number] = (p.width_pt, p.height_pt)
+            page_widths[p.page_number] = self._band_dims(p.width_pt, p.height_pt, p.rotation)[0]
             cleaned = self.clean_text_blocks(
                 p.blocks,
                 p.width_pt,
@@ -707,7 +750,7 @@ class ParseService:
         current_section_title: Optional[str] = None
         current_heading_order: Optional[int] = None
         page_block_orders: dict[int, int] = {}
-        for block in all_clean_blocks:
+        for block, is_heading in self._classify_headings(all_clean_blocks, median_size, page_widths):
             text = block.text.strip().replace("\x00", "")
             if not text:
                 continue
@@ -716,7 +759,6 @@ class ParseService:
             reading_order = block.page * 10000 + page_block_order
             page_width, page_height = page_dims.get(block.page, (1.0, 1.0))
             bbox = self._normalize_bbox(block.page, block.bbox, page_width, page_height)
-            is_heading = self._is_heading_block(block, median_size)
             metadata: dict[str, Any] = {
                 "font_size": round(float(block.font_size or 0.0), 2),
             }
@@ -812,7 +854,94 @@ class ParseService:
         result.extend(order_column_band(trailing_band))
         return result
 
-    def _is_heading_block(self, block: CleanBlock, median_size: float) -> bool:
+    def _classify_headings(
+        self,
+        blocks: Sequence[CleanBlock],
+        median_size: float,
+        page_widths: dict[int, float],
+    ) -> List[Tuple[CleanBlock, bool]]:
+        """Pair each reading-order block with its heading decision.
+
+        A section number set as its own line is first joined to the title on its
+        baseline, so the pair is one heading ("3 Model Architecture") and neither
+        half is left in the chunk text.
+        """
+        joined = self._attach_section_numbers(blocks, median_size, self._page_rows(blocks, page_widths))
+        rows = self._page_rows(joined, page_widths)
+        return [
+            (
+                b,
+                self._is_heading_block(
+                    b,
+                    median_size,
+                    rows.get(b.page),
+                    joined[i - 1] if i else None,
+                    joined[i + 1] if i + 1 < len(joined) else None,
+                ),
+            )
+            for i, b in enumerate(joined)
+        ]
+
+    def _attach_section_numbers(
+        self, blocks: Sequence[CleanBlock], median_size: float, rows: dict[int, _PageRows]
+    ) -> List[CleanBlock]:
+        """Join "3" + "Model Architecture" (adjacent in reading order, same baseline and
+        size, number on the left within two font sizes) when the result is a numbered
+        heading in its context (see _is_numbered_heading_in_context). Every other
+        block, including a pair that fails, passes through unchanged."""
+        out: List[CleanBlock] = []
+        i = 0
+        while i < len(blocks):
+            if i + 1 < len(blocks):
+                pair = sorted(blocks[i:i + 2], key=lambda cb: cb.bbox[0])
+                number, title = pair
+                gap = title.bbox[0] - number.bbox[2]
+                if (
+                    number.page == title.page
+                    and not number.off_axis
+                    and not title.off_axis
+                    and _SECTION_NUMBER_RE.match(number.text)
+                    and not _SECTION_NUMBER_RE.match(title.text)
+                    and abs(number.font_size - title.font_size) <= 0.5
+                    and -1.0 <= gap <= 2.0 * title.font_size
+                    and self._shares_row(number, title)
+                ):
+                    joined = CleanBlock(
+                        page=title.page,
+                        text=f"{number.text} {title.text}",
+                        bbox=(
+                            min(number.bbox[0], title.bbox[0]),
+                            min(number.bbox[1], title.bbox[1]),
+                            max(number.bbox[2], title.bbox[2]),
+                            max(number.bbox[3], title.bbox[3]),
+                        ),
+                        font_size=title.font_size,
+                    )
+                    # The original page lines: number and title lie inside the joined
+                    # bbox, so the row check only sees the other cells of the row.
+                    if self._is_numbered_heading_in_context(
+                        joined,
+                        median_size,
+                        rows.get(joined.page),
+                        out[-1] if out else None,
+                        blocks[i + 2] if i + 2 < len(blocks) else None,
+                    ):
+                        out.append(joined)
+                        i += 2
+                        continue
+            out.append(blocks[i])
+            i += 1
+        return out
+
+    def _is_heading_block(
+        self,
+        block: CleanBlock,
+        median_size: float,
+        rows: Optional[_PageRows] = None,
+        prev: Optional[CleanBlock] = None,
+        nxt: Optional[CleanBlock] = None,
+    ) -> bool:
+        """`prev`/`nxt` are the neighbours in reading order; `rows` indexes the page."""
         text = block.text.strip()
         if not text or len(text) > 220:
             return False
@@ -822,14 +951,146 @@ class ParseService:
             return False
         if not any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" for ch in text):
             return False
-        if block.font_size > (median_size * 1.25):
+        if block.font_size > (median_size * self.HEADING_SIZE_RATIO):
             return True
-        words = text.split()
-        if 1 <= len(words) <= 12 and len(text) <= 90 and text[-1:] not in self.SENTENCE_DELIMS:
-            alpha = "".join(ch for ch in text if ch.isalpha())
-            if alpha and alpha.isupper():
+        if self._is_numbered_heading_in_context(block, median_size, rows, prev, nxt):
+            return True
+        return self._is_caps_heading(text) and not self._in_table_row(block, rows)
+
+    def _is_numbered_heading_in_context(
+        self,
+        block: CleanBlock,
+        median_size: float,
+        rows: Optional[_PageRows],
+        prev: Optional[CleanBlock],
+        nxt: Optional[CleanBlock],
+    ) -> bool:
+        """A numbered line that is not part of a same-size paragraph or list and not a
+        label in a table row. The 1.1x size test alone is weak: chart and table text
+        can pull the median below the body size, and body list items then pass it."""
+        return (
+            self._is_numbered_heading(block, median_size)
+            and not self._continues_run(block, prev)
+            and not self._continues_run(block, nxt)
+            and not self._in_table_row(block, rows, narrow_is_cell=True)
+        )
+
+    def _is_numbered_heading(self, block: CleanBlock, median_size: float) -> bool:
+        text = block.text.strip()
+        m = _NUMBERED_HEADING_RE.match(text)
+        if not m or _DATE_LINE_RE.match(text):
+            return False
+        title = m.group(1)
+        first = title[0]
+        if not first.isalpha() or first.islower():
+            return False
+        # Cased titles need three letters ("20 US$" is a chart axis label); caseless
+        # scripts write real headings in two ("2 引言").
+        min_letters = 3 if first.isupper() else 2
+        return (
+            sum(1 for ch in title if ch.isalpha()) >= min_letters
+            and block.font_size >= median_size * self.NUMBERED_HEADING_SIZE_RATIO
+            and len(text.split()) <= self.HEADING_MAX_WORDS
+            and text[-1:] not in self.SENTENCE_DELIMS
+        )
+
+    def _is_caps_heading(self, text: str) -> bool:
+        if not (1 <= len(text.split()) <= self.HEADING_MAX_WORDS and len(text) <= 90):
+            return False
+        if text[-1:] in self.SENTENCE_DELIMS:
+            return False
+        # Ordinal indicators ("Nº", "1ª") and modifier letters are neither capitals nor
+        # body letters; str.islower() is true for "º".
+        letters = [
+            ch for ch in text if ch.isalpha() and ch not in "ªº" and unicodedata.category(ch) != "Lm"
+        ]
+        return len(letters) >= self.CAPS_HEADING_MIN_CAPITALS and all(ch.isupper() for ch in letters)
+
+    @staticmethod
+    def _continues_run(block: CleanBlock, other: Optional[CleanBlock]) -> bool:
+        """`other` is the line above or below `block` in one paragraph or list: same
+        page and size, overlapping columns, at most one font size apart. A heading
+        directly over its subheading in one size ("2 Methods" / "2.1 Data") has
+        section spacing between them; without it, the pair is a nested list."""
+        if other is None or other.page != block.page or abs(other.font_size - block.font_size) > 0.3:
+            return False
+        if other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]:
+            return False
+        gap = max(other.bbox[1] - block.bbox[3], block.bbox[1] - other.bbox[3])
+        return gap <= block.font_size
+
+    @staticmethod
+    def _shares_row(a: CleanBlock, b: CleanBlock) -> bool:
+        """Vertical overlap of at least half the shorter line."""
+        overlap = min(a.bbox[3], b.bbox[3]) - max(a.bbox[1], b.bbox[1])
+        shorter = min(a.bbox[3] - a.bbox[1], b.bbox[3] - b.bbox[1])
+        return shorter > 0 and overlap >= 0.5 * shorter
+
+    @staticmethod
+    def _page_rows(blocks: Sequence[CleanBlock], page_widths: dict[int, float]) -> dict[int, _PageRows]:
+        by_page: dict[int, List[CleanBlock]] = {}
+        for b in blocks:
+            if not b.off_axis:
+                by_page.setdefault(b.page, []).append(b)
+        rows: dict[int, _PageRows] = {}
+        for page, lines in by_page.items():
+            lines.sort(key=lambda b: b.bbox[1])
+            rows[page] = _PageRows(
+                width=page_widths.get(page, 0.0),
+                lines=lines,
+                tops=[b.bbox[1] for b in lines],
+            )
+        return rows
+
+    def _row_neighbours(self, block: CleanBlock, rows: _PageRows, limit: int) -> List[CleanBlock]:
+        """Up to `limit` lines beside `block` on its row: horizontally disjoint, see
+        _shares_row, and at most ROW_NEIGHBOUR_MAX_HEIGHT_RATIO times its height. A
+        line that short can overlap the block only if its top lies within that
+        height above the block, so the scan is bounded to that window."""
+        reach = self.ROW_NEIGHBOUR_MAX_HEIGHT_RATIO * (block.bbox[3] - block.bbox[1])
+        lo = bisect_left(rows.tops, block.bbox[1] - reach)
+        hi = bisect_right(rows.tops, block.bbox[3])
+        found: List[CleanBlock] = []
+        for other in rows.lines[lo:hi]:
+            if other is block or other.bbox[3] - other.bbox[1] > reach:
+                continue
+            if not (other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]):
+                continue
+            if self._shares_row(block, other):
+                found.append(other)
+                if len(found) == limit:
+                    break
+        return found
+
+    def _in_table_row(
+        self, block: CleanBlock, rows: Optional[_PageRows], narrow_is_cell: bool = False
+    ) -> bool:
+        """True when the line shares its row with table cells: two other lines beside
+        it, or one in the same half of the page. One line in the other half is the
+        opposite column of a two-column page, so a heading there stays a heading;
+        with `narrow_is_cell`, unless that line is narrower than a column and holds a
+        figure or shares the block's font size (a cell beside a numbered row label)."""
+        if rows is None:
+            return False
+        cells = self._row_neighbours(block, rows, limit=2)
+        if len(cells) >= 2:
+            return True
+        if len(cells) == 1 and rows.width > 0:
+            other = cells[0]
+            mid = rows.width / 2.0
+            if (block.bbox[2] <= mid and other.bbox[2] <= mid) or (
+                block.bbox[0] >= mid and other.bbox[0] >= mid
+            ):
                 return True
+            return (
+                narrow_is_cell
+                and (other.bbox[2] - other.bbox[0]) < rows.width * self.COLUMN_MIN_WIDTH_RATIO
+                and (abs(other.font_size - block.font_size) <= 0.5 or self._is_value_cell(other.text))
+            )
         return False
+
+    def _is_value_cell(self, text: str) -> bool:
+        return any(ch.isdigit() for ch in text) and sum(ch.isalpha() for ch in text) <= self.VALUE_CELL_MAX_LETTERS
 
     @staticmethod
     def _line_angle(direction: Tuple[float, float]) -> float:
