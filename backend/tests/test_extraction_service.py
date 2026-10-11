@@ -192,7 +192,7 @@ def test_citation_from_chunk_retains_full_range_despite_majority_boxes() -> None
     assert citation["ref_index"] == 7
     assert citation["page"] == 4
     assert citation["confidence_score"] == 0.912
-    assert citation["text_snippet"].startswith("Risk Factors:")
+    assert citation["text_snippet"] == "This is the cited passage."
     assert citation["page_end"] == 5
     assert [bbox["page"] for bbox in citation["bboxes"]] == [4, 5, 5]
 

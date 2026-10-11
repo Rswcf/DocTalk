@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState, useRef, useMemo, useCallback } fr
 import remarkGfm from 'remark-gfm';
 import { Search, ChevronLeft, ChevronRight, X, ExternalLink, Globe2, ListTree } from 'lucide-react';
 import { PROXY_BASE } from '../../lib/api';
+import { findSnippetInPage } from '../../lib/snippetMatch';
 import { useLocale } from '../../i18n';
 import { Spinner } from '../spell';
 
@@ -76,43 +77,6 @@ function leadingMarkdownHeading(text: string): string | null {
     const match = trimmed.match(/^#{1,6}\s+(.+)$/);
     return match ? match[1].trim() : null;
   }
-  return null;
-}
-
-/**
- * Find the best matching substring of `snippet` within `pageText`.
- * Returns [startIndex, matchLength] or null if no match found.
- *
- * Strategy: try progressively shorter prefixes of the snippet
- * (since backend truncates at 100 chars). Also strips section title
- * prefix ("Title — ...") if present.
- */
-function findSnippetInPage(pageText: string, snippet: string): [number, number] | null {
-  if (!snippet || !pageText) return null;
-
-  const pageLower = pageText.toLowerCase();
-
-  // Try matching with and without section title prefix
-  const candidates = [snippet];
-  const dashIdx = snippet.indexOf(' — ');
-  if (dashIdx !== -1 && dashIdx < snippet.length - 4) {
-    candidates.push(snippet.slice(dashIdx + 3));
-  }
-
-  for (const candidate of candidates) {
-    const searchText = candidate.toLowerCase().trim();
-    if (searchText.length < 10) continue;
-
-    // Try full text first, then progressively shorter prefixes
-    for (let len = searchText.length; len >= Math.min(30, searchText.length); len -= 5) {
-      const prefix = searchText.slice(0, len);
-      const idx = pageLower.indexOf(prefix);
-      if (idx !== -1) {
-        return [idx, len];
-      }
-    }
-  }
-
   return null;
 }
 

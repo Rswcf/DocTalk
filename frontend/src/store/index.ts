@@ -212,7 +212,8 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
       highlights: bboxes.filter(box => box.page! >= citation.page && box.page! <= (citation.pageEnd || citation.page)),
       // Chunk snippet stays the reliable fallback (converted-PDF/TextViewer
       // paths depend on it). The focus sentence is layered ON TOP as emphasis.
-      highlightSnippet: citation.textSnippet || null,
+      // A map-reduce summary's snippet is coverage text, not page text.
+      highlightSnippet: citation.retrievalModality === 'summary' ? null : citation.textSnippet || null,
       highlightFocus: citation.focusSnippet || null,
       scrollNonce: state.scrollNonce + 1,
     }));
