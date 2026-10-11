@@ -12,7 +12,7 @@ import { locateTextEvidence, type TextEvidence } from '../../lib/textEvidence';
 import { articleEvidence, articlePage, bodyRanges, leadingMarkdownHeading } from '../../lib/articleEvidence';
 import { NO_RENDERED_MARKS, shownEvidenceStatus, type EvidenceStatus, type RenderedMarks } from '../../lib/evidenceStatus';
 import { rehypeMarkRanges, type MarkRange } from '../../lib/rehypeMarkRanges';
-import { anchorScrolls, bodiesReady as allBodiesMounted, jumpTarget } from '../../lib/textJump';
+import { anchorScrolls, armJump, bodiesReady as allBodiesMounted, jumpApplies, jumpTarget, type JumpToken } from '../../lib/textJump';
 import { plainEvidenceSegments, type PlainPart } from '../../lib/plainEvidence';
 import type { Citation } from '../../types';
 
@@ -196,6 +196,9 @@ const scrollBehavior = () =>
 
 export default function TextViewer({ documentId, fileType, targetPage, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer }: Props) {
   const [pages, setPages] = useState<TextPage[]>([]);
+  // The document whose pages `pages` holds: after a switch the previous
+  // document's pages stay until the new ones arrive.
+  const [pagesFor, setPagesFor] = useState<string | null>(null);
   const [sourceMeta, setSourceMeta] = useState<SourceMeta>({
     isUrlSource: fileType === 'url',
   });
@@ -232,10 +235,8 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const pendingAnchor = useRef<Citation | null>(null);
   // The jump waiting for every page body to mount (lib/textJump.ts), and the
   // anchor mark that mounted last, with the citation it belongs to.
-  const pendingJump = useRef<{ page: number; citation: Citation | null } | null>(null);
+  const pendingJump = useRef<JumpToken<Citation> | null>(null);
   const mountedAnchor = useRef<{ citation: Citation; element: HTMLElement } | null>(null);
-  const citationRef = useRef(citation);
-  citationRef.current = citation;
   const evidenceCitation = usesEvidence ? citation ?? null : null;
 
   // Search state
@@ -310,6 +311,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       .then(data => {
         if (!cancelled) {
           setPages(data.pages || []);
+          setPagesFor(documentId);
           setSourceMeta({
             title: data.title,
             sourceUrl: data.source_url,
@@ -334,15 +336,24 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   // is reset on every document switch, so no earlier target is replayed. A
   // page-only link (`?page=N`, no nonce) is honoured once per document.
   // The jump is armed here and runs below once every page body has mounted.
-  const bodiesReady = allBodiesMounted(pages.length, renderedMarks.bodies, isMarkdown);
+  // It carries its document, click and citation, and scrolls only while the
+  // current state would arm the same jump (Codex r4 #2): a document switch or
+  // a new citation while the bodies are mounting drops it. A state that arms
+  // nothing (no pages of this document yet, no target) clears every pending
+  // scroll.
+  const bodiesReady = pagesFor === documentId && allBodiesMounted(pages.length, renderedMarks.bodies, isMarkdown);
+  const armed = armJump({
+    documentId, pagesFor, pages: pages.length, targetPage, nonce: scrollNonce,
+    openingApplied: initialPageApplied.current, citation: citation ?? null, evidence: usesEvidence,
+  });
+  const armedRef = useRef(armed);
+  armedRef.current = armed;
   useEffect(() => {
-    if (!targetPage || pages.length === 0) return;
-    const openingPage = !initialPageApplied.current && targetPage > 1;
-    if (!scrollNonce && !openingPage) return;
-    const active = scrollNonce && usesEvidence ? citationRef.current ?? null : null;
-    pendingAnchor.current = active;
-    pendingJump.current = { page: targetPage, citation: active };
-  }, [targetPage, scrollNonce, pages, usesEvidence]);
+    const jump = armedRef.current;
+    pendingJump.current = jump;
+    pendingAnchor.current = jump ? jump.citation : null;
+    if (!jump) mountedAnchor.current = null;
+  }, [documentId, pagesFor, targetPage, scrollNonce, pages, usesEvidence]);
   useEffect(() => {
     if (!pendingJump.current || !bodiesReady) return;
     // Use requestAnimationFrame to wait for highlight render
@@ -350,6 +361,10 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       const jump = pendingJump.current;
       if (!jump) return;
       pendingJump.current = null;
+      if (!jumpApplies(jump, armedRef.current)) {
+        pendingAnchor.current = null;
+        return;
+      }
       initialPageApplied.current = true;
       const mounted = mountedAnchor.current?.element.isConnected ? mountedAnchor.current : null;
       const target = jumpTarget({
@@ -370,7 +385,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
       }
     });
     return () => cancelAnimationFrame(frame);
-  }, [targetPage, scrollNonce, pages, usesEvidence, bodiesReady]);
+  }, [documentId, pagesFor, targetPage, scrollNonce, pages, usesEvidence, bodiesReady]);
 
   // Locate the cited chunk in the Markdown page text. Chat citations carry
   // the chunk (cut at 900 characters) in context_text; anything shorter than

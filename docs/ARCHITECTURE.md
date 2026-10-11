@@ -976,8 +976,10 @@ occurs once in the whole converted document, on the cited page. A DOCX therefore
 opens in the text view; a PPTX opens in the slide view; the toggle still switches
 (`lib/readerView.ts`). A text-view jump (citation, `?highlight=`, `?page=N`) waits
 until every lazily rendered page body has mounted before it scrolls
-(`lib/textJump.ts`), so it is measured against the final layout. TXT pages take
-the same path but render as plain text (`lib/plainEvidence.ts`): Markdown and HTML
+(`lib/textJump.ts`), so it is measured against the final layout. A pending jump
+belongs to its document, click and citation: a document switch, or a citation
+that changes while the bodies mount, drops it, so it never scrolls another
+target. TXT pages take the same path but render as plain text (`lib/plainEvidence.ts`): Markdown and HTML
 characters stay literal, and the marks sit on the stored text one to one. Only a
 PDF whose stored file is missing still uses the old snippet prefix match.
 

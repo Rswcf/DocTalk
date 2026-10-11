@@ -420,13 +420,13 @@ test('Browser P2-3: a jump waits until every lazy page body has mounted', () => 
 
 test('Browser P2-3: TextViewer arms a jump at once and scrolls only once the bodies are ready', () => {
   const code = stripComments(read(VIEWER));
-  assert.match(code, /const bodiesReady = allBodiesMounted\(pages\.length, renderedMarks\.bodies, isMarkdown\);/);
-  const arm = code.slice(code.indexOf('pendingAnchor.current = active;'), code.indexOf('}, [targetPage, scrollNonce, pages, usesEvidence]);'));
+  assert.match(code, /const bodiesReady = pagesFor === documentId && allBodiesMounted\(pages\.length, renderedMarks\.bodies, isMarkdown\);/);
+  const arm = code.slice(code.indexOf('const jump = armedRef.current;'), code.indexOf('}, [documentId, pagesFor, targetPage, scrollNonce, pages, usesEvidence]);'));
   assert.ok(arm.length > 0, 'the arming effect is found');
-  assert.match(arm, /pendingJump\.current = \{ page: targetPage, citation: active \};/);
+  assert.match(arm, /pendingJump\.current = jump;/);
   assert.doesNotMatch(arm, /scrollIntoView|requestAnimationFrame/, 'arming never scrolls');
   assert.match(code, /if \(!pendingJump\.current \|\| !bodiesReady\) return;/);
-  assert.match(code, /\}, \[targetPage, scrollNonce, pages, usesEvidence, bodiesReady\]\);/);
+  assert.match(code, /\}, \[documentId, pagesFor, targetPage, scrollNonce, pages, usesEvidence, bodiesReady\]\);/);
   // The anchor records itself, and scrolls only when the jump would.
   assert.match(code, /mountedAnchor\.current = \{ citation: currentEvidence\.citation, element \};/);
   assert.match(code, /if \(!anchorScrolls\(\{ ready: bodiesReady, citation: currentEvidence\.citation, pendingAnchor: pendingAnchor\.current \}\)\) return;/);
@@ -437,6 +437,61 @@ test('Browser P2-3: TextViewer arms a jump at once and scrolls only once the bod
     assert.match(code, new RegExp(`${handler}=\\{cancelPendingAnchor\\}`), `${handler} cancels a late scroll`);
   }
   assert.match(code, /mark: EvidenceMark/);
+});
+
+// Codex r4 #2: a jump armed in document A while its page bodies were still
+// mounting scrolled document B to A's page once B's bodies had mounted.
+test('Codex r4 #2: a pending jump is dropped on a document switch, a citation change, or before the pages arrive', () => {
+  const cA = {};
+  const cB = {};
+  const inA = { documentId: 'A', pagesFor: 'A', pages: 5, targetPage: 4, nonce: 3, openingApplied: false, citation: cA, evidence: true };
+  const jump = textJump.armJump(inA);
+  assert.deepEqual(jump, { documentId: 'A', nonce: 3, page: 4, citation: cA });
+  assert.equal(textJump.bodiesReady(5, 2, true), false, "A's bodies are still mounting");
+  assert.equal(textJump.jumpApplies(jump, textJump.armJump(inA)), true, 'nothing changed: it still scrolls');
+  // Switch to B: the first render still has A's pages, target and nonce,
+  // then the store resets the target, then B's own pages arrive.
+  const switched = { ...inA, documentId: 'B' };
+  const reset = { ...switched, targetPage: 1, nonce: 0, citation: null };
+  const loaded = { ...reset, pagesFor: 'B', pages: 2 };
+  for (const state of [switched, reset, loaded]) {
+    assert.equal(textJump.armJump(state), null, 'arms nothing, so the pending jump is cleared');
+    assert.equal(textJump.jumpApplies(jump, textJump.armJump(state)), false);
+  }
+  // B's own citation with the same click count and page is still not A's jump.
+  const sameShape = { ...loaded, targetPage: 4, nonce: 3, citation: cB };
+  assert.equal(textJump.jumpApplies(jump, textJump.armJump(sameShape)), false);
+  // A citation change while waiting: a new click replaces the jump; a
+  // citation cleared without a click drops it.
+  const next = { ...inA, nonce: 4, citation: cB };
+  assert.equal(textJump.jumpApplies(jump, textJump.armJump(next)), false);
+  assert.deepEqual(textJump.armJump(next), { documentId: 'A', nonce: 4, page: 4, citation: cB });
+  assert.equal(textJump.jumpApplies(jump, textJump.armJump({ ...inA, citation: null })), false);
+  // No pages yet, a zero-page document, or a body that never mounts: nothing
+  // is armed, or nothing fires; a jump never waits into another document.
+  assert.equal(textJump.armJump({ ...inA, pagesFor: null, pages: 0 }), null);
+  assert.equal(textJump.armJump({ ...inA, pages: 0 }), null);
+  assert.equal(textJump.bodiesReady(0, 0, true), false);
+  // A `?page=N` opening page carries no citation and is applied once.
+  const opening = { ...inA, nonce: 0, citation: cA };
+  assert.deepEqual(textJump.armJump(opening), { documentId: 'A', nonce: 0, page: 4, citation: null });
+  assert.equal(textJump.jumpApplies(textJump.armJump(opening), textJump.armJump({ ...opening, citation: null })), true);
+  assert.equal(textJump.armJump({ ...opening, openingApplied: true }), null);
+  assert.equal(textJump.armJump({ ...opening, targetPage: 1 }), null);
+});
+
+test('Codex r4 #2: TextViewer stamps each jump, clears it when nothing is armed, and checks it before scrolling', () => {
+  const code = stripComments(read(VIEWER));
+  assert.match(code, /setPages\(data\.pages \|\| \[\]\);\s*setPagesFor\(documentId\);/, 'pages are stamped with their document');
+  assert.match(code, /const armed = armJump\(\{\s*documentId, pagesFor, pages: pages\.length, targetPage, nonce: scrollNonce,\s*openingApplied: initialPageApplied\.current, citation: citation \?\? null, evidence: usesEvidence,\s*\}\);/);
+  assert.match(code, /armedRef\.current = armed;/);
+  const arm = code.slice(code.indexOf('const jump = armedRef.current;'), code.indexOf('}, [documentId, pagesFor, targetPage, scrollNonce, pages, usesEvidence]);'));
+  assert.match(arm, /pendingJump\.current = jump;\s*pendingAnchor\.current = jump \? jump\.citation : null;\s*if \(!jump\) mountedAnchor\.current = null;/);
+  const fire = code.slice(code.indexOf('const frame = requestAnimationFrame'), code.indexOf('return () => cancelAnimationFrame(frame);'));
+  const check = fire.indexOf('if (!jumpApplies(jump, armedRef.current)) {');
+  assert.ok(check > 0 && check < fire.indexOf('scrollIntoView'), 'the check runs before any scroll');
+  assert.ok(check < fire.indexOf('initialPageApplied.current = true;'), 'a dropped jump does not use up the opening page');
+  assert.doesNotMatch(code, /citationRef/);
 });
 
 test('a late chunk fetch for an earlier citation is dropped', () => {
