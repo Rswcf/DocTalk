@@ -417,6 +417,47 @@ test('uniqueness is checked over the chunk range, not only the narrowed page', (
   assert.equal(locateTextEvidence(pages, { page: 2, pageEnd: 2 }, null, sentence).kind, 'page');
 });
 
+// Browser acceptance 2026-10-11, P2-2: a Quote Finder card and a
+// ?page=N&highlight=<chunk> link carry no context_text, and /api/chunks serves
+// no page_end, so the chunk's own page range is unknown.
+const CROSSING = [
+  'The survey covered every reading room in the east wing during the spring term.\nStaff counted visitors at the doors each hour from opening until the evening bell.\nThe busiest room was the map library, which drew twice the traffic of the others.',
+  'Late opening on Thursdays added a fifth of the weekly visits without new staff.\nThe annex roof was repaired in the summer and the stacks reopened in September.',
+  'Funding for the next survey depends on the council budget vote in March.',
+];
+const crossingPages = () => CROSSING.map((text, i) => ({ page_number: i + 1, text }));
+const crossingChunk = chunkOf([...bodyUnits(CROSSING[0]), ...bodyUnits(CROSSING[1]).slice(0, 1)]);
+const lateOpening = 'Late opening on Thursdays added a fifth of the weekly visits without new staff.';
+
+test('Browser P2-2: a Quote Finder card on a chunk that starts on the page before is exact', () => {
+  const pages = crossingPages();
+  assert.ok(lateOpening.length < 0.3 * crossingChunk.length, 'the cited page alone holds under 30% of the chunk');
+  const card = locateTextEvidence(pages, { page: 2, pageEnd: 2, focusSnippet: lateOpening }, crossingChunk);
+  assert.equal(card.kind, 'exact');
+  assert.deepEqual(marked(pages, card), [{ page: 2, emphasis: true, text: lateOpening }]);
+});
+
+test('Browser P2-2: a ?highlight= link to a multi-page chunk marks the chunk on the linked page only', () => {
+  const pages = crossingPages();
+  const link = locateTextEvidence(pages, { page: 2 }, crossingChunk, null);
+  assert.equal(link.kind, 'region');
+  assert.deepEqual(marked(pages, link), [{ page: 2, emphasis: false, text: lateOpening }]);
+  const first = locateTextEvidence(pages, { page: 1 }, crossingChunk, null);
+  assert.deepEqual(marked(pages, first).map(r => r.page), [1]);
+  assert.equal(marked(pages, first)[0].text, CROSSING[0]);
+});
+
+test('Browser P2-2: without a chunk range, a chunk cited on a page that does not hold it still marks nothing', () => {
+  const pages = crossingPages();
+  const moved = locateTextEvidence(pages, { page: 3, pageEnd: 3, focusSnippet: lateOpening }, crossingChunk);
+  assert.equal(moved.kind, 'page');
+  assert.deepEqual(moved.ranges, []);
+  // A repeated chunk sentence is still not unique, whatever the scope.
+  const repeated = [...pages.slice(0, 2), { page_number: 3, text: `${lateOpening}\n${CROSSING[2]}` }];
+  const card = locateTextEvidence(repeated, { page: 2, pageEnd: 2, focusSnippet: lateOpening }, crossingChunk);
+  assert.ok(!card.ranges.some(r => r.page === 2 && r.emphasis));
+});
+
 test('Codex r1 #1: a chunk sentence repeated on another page is not marked on the cited page', () => {
   const sentence = 'This exact warning appears in both sections of the policy.';
   const pages = [

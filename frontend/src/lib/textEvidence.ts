@@ -63,8 +63,9 @@ interface PageIndex {
 /** Canonical offsets within one page. */
 interface Hit { page: number; start: number; end: number }
 /** `all`: every page of the document, for uniqueness (`pages` holds them by
- * number). `scope`: the pages the chunk may sit on, for page-start/page-end
- * structure and chunk coverage. */
+ * number). `scope`: the pages the chunk may sit on (the whole document
+ * when its range is unknown), for page-start/page-end structure and chunk
+ * coverage. */
 interface Search { all: PageIndex[]; scope: PageIndex[]; inScope: Set<number>; pages: Map<number, PageIndex> }
 
 // Canonical page text, kept per page object: the reader passes the same page
@@ -293,15 +294,16 @@ function gluedTitle(text: string): boolean {
  * end of the page before (`afterEnd`), else the split is refused. Unverified
  * text with no located page end in front of it (the chunk's first piece, "The
  * court rejected" + a page's claim) is never dropped. A tail shorter than
- * minRemainder needs a page end peeled in front of it. A page before the
- * tail's page is in scope only when the chunk runs through its end (chunks
- * are contiguous), so a unique match there is the chunk's own text. */
+ * minRemainder needs a page end peeled in front of it. Every match is
+ * unique in the whole document, so a match on a page before the tail's page
+ * is the chunk's own text. */
 function splitAtPageStart(piece: string, search: Search, options: PieceOptions = FOCUS_PIECE): Hit[] | null {
   const pages = search.scope;
+  const last = piece.length - minPiece(piece);
   for (let p = 0; p < pages.length; p++) {
     const page = pages[p];
     if (!page.canon) continue;
-    for (let k = 1; k <= piece.length - minPiece(piece); k++) {
+    for (let k = 1; k <= last; k++) {
       if (piece[k] !== page.canon[0] || !cutsAt(piece, k)) continue;
       const tail = piece.slice(k);
       if (!page.canon.startsWith(tail) || !boundaryOk(page.canon, 0, tail)) continue;
@@ -458,10 +460,20 @@ export function locateTextEvidence(
     .filter(page => page.text)
     .sort((a, b) => a.page_number - b.page_number)
     .map(indexPage);
-  const scope = all.filter(page => page.number >= scopeStart && page.number <= scopeEnd);
-  if (!scope.length) return NO_EVIDENCE;
-  const search: Search = { all, scope, inScope: new Set(scope.map(page => page.number)), pages: new Map(all.map(page => [page.number, page])) };
-  const byNumber = new Map(scope.map(page => [page.number, page]));
+  const cited = all.filter(page => page.number >= scopeStart && page.number <= scopeEnd);
+  if (!cited.length) return NO_EVIDENCE;
+  // Without the chunk's own page range (Quote Finder cards and ?highlight=
+  // links carry no context_text, and /api/chunks serves no page_end) the chunk
+  // may run onto the pages around the cited one, so the whole document is its
+  // scope and the coverage check counts all of it. Uniqueness is
+  // document-wide either way, so a unique match on a cited page is still the
+  // chunk's own text; marks stay on the cited pages. The focus keeps the
+  // cited scope.
+  const pageMap = new Map(all.map(page => [page.number, page]));
+  const searchOf = (scope: PageIndex[]): Search => ({ all, scope, inScope: new Set(scope.map(page => page.number)), pages: pageMap });
+  const focusSearch = searchOf(cited);
+  const search = chunkRange ? focusSearch : searchOf(all);
+  const byNumber = new Map(search.scope.map(page => [page.number, page]));
   const marked = (hit: Hit) => hit.page >= markStart && hit.page <= markEnd;
 
   let region: Hit[] = [];
@@ -488,14 +500,14 @@ export function locateTextEvidence(
   const quote = focus ? canonicalize(focus).text : '';
   if (quote.length >= minPiece(quote)) {
     if (region.length) {
-      const direct = findAll(scope, quote, Infinity).filter(hit => inside(hit, region));
+      const direct = findAll(focusSearch.scope, quote, Infinity).filter(hit => inside(hit, region));
       if (direct.length === 1) emphasis = direct;
       else if (!direct.length) {
-        const split = splitAtPageStart(quote, search);
+        const split = splitAtPageStart(quote, focusSearch);
         if (split && split.every(hit => inside(hit, region))) emphasis = split;
       }
     } else {
-      const { hits } = locatePiece(focus!, search);
+      const { hits } = locatePiece(focus!, focusSearch);
       if (hits.length && hits.every(marked) && standsAlone(hits, search.pages)) emphasis = hits;
     }
   }
