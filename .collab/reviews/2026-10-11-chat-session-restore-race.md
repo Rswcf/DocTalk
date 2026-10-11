@@ -1,7 +1,11 @@
 # Reader chat: answer streamed into the user bubble — fix and Codex review record
 
-Date: 2026-10-11. Branch: `fix/chat-session-restore-race` (base `main` 572c6e1a). Not pushed, not deployed.
-Reviewer: Codex `gpt-5.5`, adversarial, read-only instructions, 3 rounds. Final verdict: **SHIP-WITH-FIXES** in every round; the one r3 regression is fixed in efde1f1c, which Codex has not re-reviewed.
+Date: 2026-10-11. Branch: `fix/chat-session-restore-race` (base `main` 572c6e1a); the pre-merge rounds
+r4–r6 and the browser re-run are on `verify/chat-session-restore` (head 2dd068b7 plus this record),
+which contains the whole branch. Not pushed, not deployed.
+Reviewer: Codex `gpt-5.5`, adversarial, read-only instructions, 6 rounds (plus one round on the stream
+guard, see `2026-10-11-session-menu-stream-guard.md`). r1–r5: SHIP-WITH-FIXES, all fixed.
+Final verdict r6: **SHIP**, no findings.
 
 ## Problem
 
@@ -101,23 +105,61 @@ the adopted session.
   a follow-up.
 
 Stopped after r3 by plan: r3 was the last fix round. Its single regression is fixed; its other item is
-pre-existing.
+pre-existing (fixed later in eb95c412, see the stream-guard record).
 
-## Verification at efde1f1c
+**r4 (pre-merge, on efde1f1c and the whole branch) — SHIP-WITH-FIXES.**
+- MINOR: `deleteSessionById` had no post-await document check. With one latch per document, a delete
+  started on document A could resolve while the menu was open on document B and close B's menu.
+  Fix 1d93875c: clear A's demo pointer, then return if the live document changed.
+- MINOR: the tests caught a global latch but not a dropped `documentId` check. Fix 1d93875c: new test
+  "a menu action that resolves after a document switch leaves the next document untouched" (switch,
+  New Chat success and error, delete other and current). Mutation-checked: removing each of the four
+  document checks makes it fail.
 
-- `npm run test:unit`: 246/246 (`tests/chat-session-restore.test.cjs`: 18 tests).
+**r5 — SHIP-WITH-FIXES.** MINOR: deleting the open conversation awaits twice; a document switch during
+the replacement load let the final `setOpen(false)` close B's menu. Fix 2dd068b7: check the document
+again after the replacement load; test case "delete current, replacement pending" (red before the fix).
+
+**r6 — SHIP.** No findings. Codex confirmed that no post-await write in `runMenuAction`, `startNewChat`,
+`openSession` or `deleteSessionById` can touch the live store or menu after a document switch.
+
+## Verification at 2dd068b7
+
+- `npm run test:unit`: 249/249 (`tests/chat-session-restore.test.cjs`: 21 tests).
 - `npx tsc --noEmit`: clean. `npm run lint`: no warnings or errors, i18n checks passed.
-- `npm run build`: passed.
-- The browser checks above ran on 1f36ba8b–6ad43c3a. efde1f1c changes only the menu latch key and was
-  not re-run in a browser.
+- `npm run build`: passed (no dev server running).
+- Browser re-run on 1d93875c–2dd068b7: the dev server reloaded each commit. The two anonymous rows ran
+  before 2dd068b7, every other row after it.
+  Local isolated stack: scratch DB `doctalk_verify` (migrated to head 20260913_0046), MinIO bucket
+  `doctalk-verify`, Qdrant collection `doctalk_verify`, Redis db 10, backend 0.35.0 on :8011, Celery
+  worker (`--pool=solo`), `next dev` on :3010, per-run `AUTH_SECRET`/`ADAPTER_SECRET`. Signed-in = a
+  local Auth.js session minted for a fixture Pro user. The dev CSP lists only :8000/:8001 for the API,
+  both busy, so `next.config.mjs` got a temporary :8011 entry for the run (reverted, not committed).
+  Torn down afterwards.
 
-## Behaviour change for the owner
+| Scenario | Result |
+|---|---|
+| Anonymous, demo doc, `?question=` | auto-submitted once; answer in the assistant bubble, BLEU 28.4, SOURCES: 2; counter 4/5 |
+| Anonymous, reload of the same URL | session re-adopted; no resend; counter still 4/5; input empty |
+| Signed-in, no session, `?question=` | auto-submitted once; user bubble = the question only; DB: one session, user + assistant |
+| Signed-in, existing conversation, new `?question=`, full page load | no send, no prefill; previous exchange restored (owner decision: keep) |
+| Session menu: New Chat, send, switch back, delete the open conversation | new chat empty and usable; send streams normally; switch shows the old exchange; delete loads the replacement, no stuck "initializing chat" |
+| Golden path: upload a synthetic 2-page PDF, ask "How much did the lamp assembly cost?", click citation 1 | answer "31,200 euros", SOURCES: 4 (all page 2); viewer page 1 → 2, banner "Citation 1 · Page 2 · Exact passage"; evidence kind `exact`, the anchor rectangle sits on "The lamp assembly cost 31,200 euros, …" (DOM geometry) |
+
+Not re-run in a browser: the delayed-GET interleavings (the unit tests cover them; the first browser run
+above reproduced them with a 1.2 s delay).
+
+Observation, not caused by this branch: on the demo answer, the live stream showed SOURCES: 2 and the
+restored transcript SOURCES: 1. The stored row has 5 citations, all on page 7. The difference is between
+the streamed and the persisted citations, a code path this branch does not touch.
+
+## Behaviour change for the owner — decided: keep (2026-10-11)
 
 A `?question=` link on a document where the visitor already has a non-empty conversation no longer
 sends anything, and does not prefill the input. This is the gate `ChatPanel` has had since d4983c2e,
 and anonymous visitors already behaved this way. Signed-in users only "got" the send through this race.
-Options: keep it; prefill the input; or send after the transcript loads (then decide what stops a
-reload of the same URL from sending it again).
+Options were: keep it; prefill the input; or send after the transcript loads. **The owner chose to keep
+it.** Prefill can come later as a separate improvement.
 
 ## Follow-ups (not in this branch)
 
@@ -136,3 +178,6 @@ reload of the same URL from sending it again).
   request settles.
 - "New Chat" after a `?question=` link that did not fire sends the question into the new chat
   (behaviour on `main`, unchanged).
+- Live vs restored citation count on the same answer (see Verification).
+- Backend, pre-existing (stream-guard record): a Free Domain Mode send during a pending delete of the
+  open conversation can consume a trial slot.
