@@ -408,6 +408,30 @@ test('CJK: sentences without spaces match, and a glued title is split off', () =
   assert.ok(!marked(pages, result).some(r => r.text.includes('研究概述')));
 });
 
+test('Codex r1 #4: a short CJK focus inside a longer run is not marked on its own', () => {
+  const pages = [{ page_number: 1, text: '本合同有效期限届满后自动续约，除非双方提前书面终止。' }];
+  const result = locateTextEvidence(pages, cite(1), null, '合同有效期限');
+  assert.equal(result.kind, 'page');
+  assert.deepEqual(result.ranges, []);
+  // A saved quote is its own chunk text: the same fragment is still refused.
+  assert.equal(locateTextEvidence(pages, cite(1), '合同有效期限', '合同有效期限').kind, 'page');
+  // Thai is written without spaces between words as well.
+  const thai = [{ page_number: 1, text: 'สัญญานี้มีผลบังคับใช้ทันที หลังจากลงนามแล้ว' }];
+  assert.equal(locateTextEvidence(thai, cite(1), null, 'ญญานี้มีผลบังคับ').kind, 'page');
+});
+
+test('a CJK focus bounded by punctuation or a page edge is exact on its own', () => {
+  const text = '第一条　总则。\n本合同有效期限届满后自动续约，除非双方提前书面终止。\n第二条　费用';
+  const pages = [{ page_number: 1, text }];
+  for (const focus of ['本合同有效期限届满后自动续约，', '除非双方提前书面终止。', '第二条　费用']) {
+    const result = locateTextEvidence(pages, cite(1), null, focus);
+    assert.equal(result.kind, 'exact', focus);
+    assert.deepEqual(marked(pages, result).map(r => r.text), [focus]);
+  }
+  const thai = [{ page_number: 1, text: 'สัญญานี้มีผลบังคับใช้ทันที หลังจากลงนามแล้ว' }];
+  assert.equal(locateTextEvidence(thai, cite(1), null, 'หลังจากลงนามแล้ว').kind, 'exact');
+});
+
 test('Arabic: right-to-left text matches as stored', () => {
   const text = 'يتكون النموذج من ست طبقات متطابقة. تم تدريب النموذج لمدة ثلاثة أيام ونصف.';
   const pages = [{ page_number: 1, text }];

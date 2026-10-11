@@ -338,6 +338,24 @@ function mergeAdjacent(hits: Hit[], pages: Map<number, PageIndex>): Hit[] {
   return merged;
 }
 
+/** The unspaced-script exemption in boundaryOk lets a match begin or end
+ * beside a letter, because chunk sentences are rejoined without spaces there.
+ * Inside a located chunk region that is harmless: the region confines it. A
+ * focus located on its own has nothing to confine it, and a short Han/Kana/
+ * Thai fragment can sit inside a longer, unrelated run ("合同有效期限" in
+ * "本合同有效期限届满后…"). So where its first or last character is unspaced,
+ * the page must have a non-letter there (punctuation, a space, a line or
+ * page edge): the boundary rule of the PDF text-layer matcher
+ * (pdfEvidence.findEvidenceRange). */
+function standsAlone(hits: Hit[], pages: Map<number, PageIndex>): boolean {
+  const first = hits[0];
+  const last = hits[hits.length - 1];
+  const opening = pages.get(first.page)!.canon;
+  const closing = pages.get(last.page)!.canon;
+  return !(UNSPACED.test(charAt(opening, first.start)) && WORD.test(charBefore(opening, first.start)))
+    && !(UNSPACED.test(charBefore(closing, last.end)) && WORD.test(charAt(closing, last.end)));
+}
+
 function inside(hit: Hit, spans: Hit[]): boolean {
   return spans.some(span => span.page === hit.page && span.start <= hit.start && hit.end <= span.end);
 }
@@ -412,7 +430,7 @@ export function locateTextEvidence(
       }
     } else {
       const hits = locatePiece(focus!, search, false);
-      if (hits.length && hits.every(marked)) emphasis = hits;
+      if (hits.length && hits.every(marked) && standsAlone(hits, search.pages)) emphasis = hits;
     }
   }
 
