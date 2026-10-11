@@ -141,9 +141,19 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
         setSessions(sessionsData.sessions);
         if (sessionsData.sessions.length > 0) {
           const latest = sessionsData.sessions[0];
-          setSessionId(latest.session_id);
+          // Fetch the transcript BEFORE publishing the session id, as the
+          // adoption branch above does. The reader mounts ChatPanel as soon
+          // as sessionId is set, and ChatPanel reads an empty transcript as
+          // a fresh session: a demo `?question=` link auto-submits into it.
+          // A transcript that lands after that send replaces the local
+          // question/answer pair, and every streamed token is then appended
+          // to whatever message is last — the question the backend has
+          // already committed (2026-10-10: the answer rendered inside the
+          // user bubble), or the previous answer.
           const msgsData = await getMessages(latest.session_id);
-          if (!cancelled) setMessages(msgsData.messages);
+          if (cancelled) return;
+          setSessionId(latest.session_id);
+          setMessages(msgsData.messages);
           sessionReady = true;
         }
       } catch (e) {

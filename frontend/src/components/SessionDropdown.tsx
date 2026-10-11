@@ -38,6 +38,7 @@ export default function SessionDropdown() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
+  const switchRequestRef = useRef(0);
 
   useEffect(() => {
     setSessionErrorCopy(null);
@@ -125,9 +126,23 @@ export default function SessionDropdown() {
   const onSwitchSession = async (id: string) => {
     if (isStreaming) return;
     setSessionErrorCopy(null);
-    setMessages([]);
-    setSessionId(id);
+    // Fetch the transcript BEFORE publishing the new session id, and publish
+    // both in one synchronous run (same rule as useChatSession). ChatPanel
+    // reads "session id set, empty transcript" as a fresh session, so a demo
+    // `?question=` link auto-submits into it, and a transcript that lands
+    // after that send replaces the local question/answer pair: the streamed
+    // answer is then appended to whatever message is last (2026-10-10).
+    // Until the fetch resolves, the previous conversation stays on screen
+    // under its own id.
+    const switchRequest = ++switchRequestRef.current;
     const msgs = await getMessages(id);
+    const live = useDocTalkStore.getState();
+    // A later click, a document change, or a send on the conversation still
+    // on screen supersedes this switch. Publishing over a running stream
+    // would orphan it: its writes stop at the session-id check and nothing
+    // clears isStreaming.
+    if (switchRequest !== switchRequestRef.current || live.documentId !== documentId || live.isStreaming) return;
+    setSessionId(id);
     setMessages(msgs.messages);
     // Same restore contract as useChatSession's reuse branch: switching to a
     // session with a real transcript must reset the baseline to what THIS
