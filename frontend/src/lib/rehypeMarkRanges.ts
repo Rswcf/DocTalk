@@ -13,9 +13,11 @@ import { canonicalize } from './pdfEvidence';
  * A node whose value is not its source slice (escapes, entities, stripped
  * indentation, inline-code backticks) is aligned character by character;
  * failing that, the range text, decoded the way micromark decoded the node
- * (backslash escapes and character references; code text is not decoded), is
- * searched in the value and must occur there once; failing that, the range
- * renders no mark in that node. A node is never marked wider than its range:
+ * (backslash escapes and character references; code text, inline or block,
+ * is not decoded), is searched in the value and must occur there once;
+ * failing that, the range renders no mark in that node. A range that starts
+ * or ends inside a reference or escape renders no mark in that node either,
+ * on both paths. A node is never marked wider than its range:
  * a mark is a claim that its text is the cited passage. Syntax characters are
  * never marked. Code-block text has no position of its own: it maps through
  * its `code` element after the opening fence line. When the anchor range
@@ -68,6 +70,8 @@ function cutsReference(slice: string, at: number): boolean {
   return false;
 }
 
+/** `code`: text of a `code` element (inline or block), where references and
+ *  escapes are literal. */
 interface Span { start: number; end: number; code: boolean }
 
 const FENCE_LINE = /^[ \t]*(?:`{3,}|~{3,})[^\n]*\n?/;
@@ -77,8 +81,9 @@ const FENCE_LINE = /^[ \t]*(?:`{3,}|~{3,})[^\n]*\n?/;
 function textSpan(node: Text, parent: Parents, source: string): Span | null {
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
-  if (start != null && end != null) return end > start ? { start, end, code: false } : null;
-  if (parent.type !== 'element' || parent.tagName !== 'code' || parent.children.length !== 1) return null;
+  const code = parent.type === 'element' && parent.tagName === 'code';
+  if (start != null && end != null) return end > start ? { start, end, code } : null;
+  if (!code || parent.children.length !== 1) return null;
   const blockStart = parent.position?.start.offset;
   const blockEnd = parent.position?.end.offset;
   if (blockStart == null || blockEnd == null || blockEnd <= blockStart) return null;
@@ -96,6 +101,9 @@ function piecesFor(value: string, span: Span, ranges: readonly MarkRange[], sour
     const start = Math.max(range.start, nodeStart) - nodeStart;
     const end = Math.min(range.end, nodeEnd) - nodeStart;
     if (end <= start) continue;
+    // A cut inside &amp; or \* has no rendered counterpart: aligned, it would
+    // still mark the whole decoded character.
+    if (slice !== value && !span.code && (cutsReference(slice, start) || cutsReference(slice, end))) continue;
     let from: number;
     let to: number;
     if (slice === value) {
@@ -107,7 +115,6 @@ function piecesFor(value: string, span: Span, ranges: readonly MarkRange[], sour
     } else {
       // A long reference (&CounterClockwiseContourIntegral; renders as one
       // character) defeats the alignment; search the rendered form instead.
-      if (!span.code && (cutsReference(slice, start) || cutsReference(slice, end))) continue;
       const source = slice.slice(start, end);
       const found = searchCanonical(value, span.code ? source : decodeString(source));
       if (!found) continue;

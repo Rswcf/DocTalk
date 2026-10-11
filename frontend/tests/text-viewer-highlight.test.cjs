@@ -142,6 +142,27 @@ test('an unalignable range that is ambiguous, or cut inside a reference, renders
   assert.deepEqual(marks(render(cut, [span(cut, 'then ContourIntegral;', 'exact')])).map(m => m.text), ['then ContourIntegral;']);
 });
 
+test('Codex r2 #2: a range cut inside a reference or escape renders no mark, even when the node aligns', () => {
+  const entity = 'Prices &amp; fees apply.';
+  const at = entity.indexOf('&amp;');
+  assert.deepEqual(marks(render(entity, [{ start: at, end: at + 2, kind: 'exact' }])), [], 'the range ends inside &amp;');
+  assert.deepEqual(marks(render(entity, [{ start: at + 1, end: at + 10, kind: 'exact' }])), [], 'the range starts inside &amp;');
+  assert.deepEqual(marks(render(entity, [{ start: at, end: at + 5, kind: 'exact' }])).map(m => m.text), ['&amp;']);
+  const escape = 'Prices \\*apply\\* now.';
+  const slash = escape.indexOf('\\*');
+  assert.deepEqual(marks(render(escape, [{ start: slash + 1, end: slash + 2, kind: 'exact' }])), [], 'the range starts inside \\*');
+  assert.deepEqual(marks(render(escape, [{ start: slash + 1, end: slash + 7, kind: 'exact' }])), [], 'the range starts inside \\*');
+  assert.deepEqual(marks(render(escape, [{ start: slash, end: slash + 2, kind: 'exact' }])).map(m => m.text), ['*']);
+});
+
+test('code text is never decoded: a reference inside inline code is searched as written', () => {
+  // Fourteen backticks defeat the alignment, so the range is searched.
+  const fence = '`'.repeat(14);
+  const source = `${fence} x &lt; < ${fence}`;
+  const html = render(source, [span(source, '&lt;', 'exact')]);
+  assert.deepEqual(marks(html).map(m => m.text), ['&amp;lt;'], 'the literal &lt;, not the later <');
+});
+
 test('inline code keeps its backticks out of the mark; fenced code maps after its fence line', () => {
   const source = 'Run `npm test` before you push.\n\n```\nnpm run build\n```';
   const html = render(source, [{ start: 0, end: source.length, kind: 'region' }]);
