@@ -974,7 +974,9 @@ the LibreOffice PDF, whose page N is not a DOCX extractor page N (a heading sect
 or a 3,000-character split): there a text-layer candidate is kept only when it
 occurs once in the whole converted document, on the cited page. A DOCX therefore
 opens in the text view; a PPTX opens in the slide view; the toggle still switches
-(`lib/readerView.ts`).
+(`lib/readerView.ts`). A text-view jump (citation, `?highlight=`, `?page=N`) waits
+until every lazily rendered page body has mounted before it scrolls
+(`lib/textJump.ts`), so it is measured against the final layout.
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 

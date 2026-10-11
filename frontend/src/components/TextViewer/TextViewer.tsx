@@ -12,6 +12,7 @@ import { locateTextEvidence, type TextEvidence } from '../../lib/textEvidence';
 import { articleEvidence, articlePage, bodyRanges, leadingMarkdownHeading } from '../../lib/articleEvidence';
 import { NO_RENDERED_MARKS, shownEvidenceStatus, type EvidenceStatus, type RenderedMarks } from '../../lib/evidenceStatus';
 import { rehypeMarkRanges, type MarkRange } from '../../lib/rehypeMarkRanges';
+import { anchorScrolls, bodiesReady as allBodiesMounted, jumpTarget } from '../../lib/textJump';
 import type { Citation } from '../../types';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
@@ -223,6 +224,10 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   // The citation whose anchor should scroll into view when it mounts; cleared
   // once it has, or when the reader scrolls first.
   const pendingAnchor = useRef<Citation | null>(null);
+  // The jump waiting for every page body to mount (lib/textJump.ts), and the
+  // anchor mark that mounted last, with the citation it belongs to.
+  const pendingJump = useRef<{ page: number; citation: Citation | null } | null>(null);
+  const mountedAnchor = useRef<{ citation: Citation; element: HTMLElement } | null>(null);
   const citationRef = useRef(citation);
   citationRef.current = citation;
   const markdownCitation = isMarkdown ? citation ?? null : null;
@@ -322,29 +327,44 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   // link, or a click during the fetch) is applied once it renders; the nonce
   // is reset on every document switch, so no earlier target is replayed. A
   // page-only link (`?page=N`, no nonce) is honoured once per document.
+  // The jump is armed here and runs below once every page body has mounted.
+  const bodiesReady = allBodiesMounted(pages.length, renderedMarks.bodies, isMarkdown);
   useEffect(() => {
     if (!targetPage || pages.length === 0) return;
     const openingPage = !initialPageApplied.current && targetPage > 1;
     if (!scrollNonce && !openingPage) return;
     const active = scrollNonce && isMarkdown ? citationRef.current ?? null : null;
     pendingAnchor.current = active;
+    pendingJump.current = { page: targetPage, citation: active };
+  }, [targetPage, scrollNonce, pages, isMarkdown]);
+  useEffect(() => {
+    if (!pendingJump.current || !bodiesReady) return;
     // Use requestAnimationFrame to wait for highlight render
     const frame = requestAnimationFrame(() => {
+      const jump = pendingJump.current;
+      if (!jump) return;
+      pendingJump.current = null;
       initialPageApplied.current = true;
-      // The cited passage's anchor already scrolled itself into view.
-      if (active && pendingAnchor.current !== active) return;
-      if (highlightRef.current) {
-        highlightRef.current.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
-      } else {
+      const mounted = mountedAnchor.current?.element.isConnected ? mountedAnchor.current : null;
+      const target = jumpTarget({
+        ready: true,
+        citation: jump.citation,
+        pendingAnchor: pendingAnchor.current,
+        mountedAnchorFor: mounted?.citation ?? null,
+        caption: Boolean(highlightRef.current),
+      });
+      if (target === 'anchor') {
+        pendingAnchor.current = null;
+        mounted!.element.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+      } else if (target === 'caption') {
+        highlightRef.current!.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+      } else if (target === 'page') {
         // Page start is the immediate fallback; a late anchor still scrolls.
-        const el = pageRefs.current.get(targetPage);
-        if (el) {
-          el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
-        }
+        pageRefs.current.get(jump.page)?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
       }
     });
     return () => cancelAnimationFrame(frame);
-  }, [targetPage, scrollNonce, pages, isMarkdown]);
+  }, [targetPage, scrollNonce, pages, isMarkdown, bodiesReady]);
 
   // Locate the cited chunk in the Markdown page text. Chat citations carry
   // the chunk (cut at 900 characters) in context_text; anything shorter than
@@ -387,14 +407,18 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const evidenceStatus = shownEvidenceStatus(locatedStatus, renderedMarks);
   const captionPage = markdownCitation && evidenceStatus === 'page' ? markdownCitation.page : null;
 
-  // A new evidence state gets a new callback, so React re-attaches it to the
-  // anchor mark even when the element itself is reused.
+  // A new evidence state (or the bodies becoming ready) gets a new callback,
+  // so React re-attaches it to the anchor mark even when the element itself
+  // is reused. An anchor that mounts before every body has is only recorded;
+  // the pending jump scrolls to it once they have.
   const onAnchor = useCallback((element: HTMLElement | null) => {
-    if (!element || !currentEvidence || pendingAnchor.current !== currentEvidence.citation) return;
+    if (!element || !currentEvidence) return;
+    mountedAnchor.current = { citation: currentEvidence.citation, element };
+    if (!anchorScrolls({ ready: bodiesReady, citation: currentEvidence.citation, pendingAnchor: pendingAnchor.current })) return;
     pendingAnchor.current = null;
     element.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
-  }, [currentEvidence]);
-  const cancelPendingAnchor = useCallback(() => { pendingAnchor.current = null; }, []);
+  }, [currentEvidence, bodiesReady]);
+  const cancelPendingAnchor = useCallback(() => { pendingAnchor.current = null; pendingJump.current = null; }, []);
 
   // Compute which page has a highlight match
   // Plain text (TXT, missing-file PDFs) keeps matching the backend snippet.

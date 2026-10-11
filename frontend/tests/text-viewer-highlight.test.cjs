@@ -393,11 +393,46 @@ test('the page caption is the fallback only when no passage was located', () => 
   assert.match(code, /if \(isMarkdown \|\| !highlightSnippet \|\| !targetPage\) return null;/);
 });
 
-test('the anchor mark scrolls once per navigation; the page start stays the immediate fallback', () => {
+// Browser acceptance P2-3 (next start): a ?highlight= link marked the passage
+// but left the pane at scrollTop 78 with the mark below the window, and
+// ?page=5 never showed page 5. react-markdown is lazy and page bodies mount in
+// different commits; the scroll ran while the pages above were still spinners.
+const textJump = require(path.resolve(__dirname, '../src/lib/textJump.ts'));
+
+test('Browser P2-3: a jump waits until every lazy page body has mounted', () => {
+  assert.equal(textJump.bodiesReady(5, 4, true), false, 'one page still shows its spinner');
+  assert.equal(textJump.bodiesReady(5, 5, true), true);
+  assert.equal(textJump.bodiesReady(0, 0, true), false, 'no pages yet');
+  assert.equal(textJump.bodiesReady(3, 0, false), true, 'plain text renders at once');
+  const citation = {};
+  const state = { ready: true, citation, pendingAnchor: citation, mountedAnchorFor: null, caption: false };
+  assert.equal(textJump.jumpTarget({ ...state, ready: false }), 'wait');
+  assert.equal(textJump.jumpTarget(state), 'page', '?page=N, or a citation whose anchor has not mounted yet');
+  assert.equal(textJump.jumpTarget({ ...state, caption: true }), 'caption');
+  assert.equal(textJump.jumpTarget({ ...state, mountedAnchorFor: citation }), 'anchor', 'the anchor mounted before the bodies were ready');
+  assert.equal(textJump.jumpTarget({ ...state, mountedAnchorFor: {} }), 'page', 'an anchor of another citation is never the target');
+  assert.equal(textJump.jumpTarget({ ...state, pendingAnchor: null, mountedAnchorFor: citation }), 'done', 'the anchor already scrolled itself');
+  assert.equal(textJump.jumpTarget({ ...state, citation: null, pendingAnchor: null }), 'page');
+  assert.equal(textJump.anchorScrolls({ ready: false, citation, pendingAnchor: citation }), false, 'a mark that mounts early only records itself');
+  assert.equal(textJump.anchorScrolls({ ready: true, citation, pendingAnchor: citation }), true);
+  assert.equal(textJump.anchorScrolls({ ready: true, citation, pendingAnchor: {} }), false);
+});
+
+test('Browser P2-3: TextViewer arms a jump at once and scrolls only once the bodies are ready', () => {
   const code = stripComments(read(VIEWER));
-  assert.match(code, /pendingAnchor\.current = active;/);
-  assert.match(code, /if \(active && pendingAnchor\.current !== active\) return;/);
-  assert.match(code, /if \(!element \|\| !currentEvidence \|\| pendingAnchor\.current !== currentEvidence\.citation\) return;/);
+  assert.match(code, /const bodiesReady = allBodiesMounted\(pages\.length, renderedMarks\.bodies, isMarkdown\);/);
+  const arm = code.slice(code.indexOf('pendingAnchor.current = active;'), code.indexOf('}, [targetPage, scrollNonce, pages, isMarkdown]);'));
+  assert.ok(arm.length > 0, 'the arming effect is found');
+  assert.match(arm, /pendingJump\.current = \{ page: targetPage, citation: active \};/);
+  assert.doesNotMatch(arm, /scrollIntoView|requestAnimationFrame/, 'arming never scrolls');
+  assert.match(code, /if \(!pendingJump\.current \|\| !bodiesReady\) return;/);
+  assert.match(code, /\}, \[targetPage, scrollNonce, pages, isMarkdown, bodiesReady\]\);/);
+  // The anchor records itself, and scrolls only when the jump would.
+  assert.match(code, /mountedAnchor\.current = \{ citation: currentEvidence\.citation, element \};/);
+  assert.match(code, /if \(!anchorScrolls\(\{ ready: bodiesReady, citation: currentEvidence\.citation, pendingAnchor: pendingAnchor\.current \}\)\) return;/);
+  assert.match(code, /\}, \[currentEvidence, bodiesReady\]\);/);
+  // The reader scrolling first cancels both.
+  assert.match(code, /const cancelPendingAnchor = useCallback\(\(\) => \{ pendingAnchor\.current = null; pendingJump\.current = null; \}, \[\]\);/);
   for (const handler of ['onWheelCapture', 'onPointerDownCapture', 'onKeyDownCapture']) {
     assert.match(code, new RegExp(`${handler}=\\{cancelPendingAnchor\\}`), `${handler} cancels a late scroll`);
   }
