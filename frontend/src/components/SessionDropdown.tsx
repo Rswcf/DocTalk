@@ -208,7 +208,6 @@ export default function SessionDropdown() {
     setSessionErrorCopy(null);
     setConfirmDeleteId(null);
     await deleteSession(targetId);
-    removeSession(targetId);
     // Clear the stored anon-demo pointer IMMEDIATELY on confirmed delete, if
     // it named this session — before any replacement GET below. Otherwise a
     // transient failure in onSwitchSession/onNewChat would leave the
@@ -219,6 +218,11 @@ export default function SessionDropdown() {
     if (documentId && readDemoSession(documentId) === targetId) {
       clearDemoSession(documentId);
     }
+    // The pointer above belongs to the deleted row's document. Everything
+    // below acts on the live store and menu, which may belong to another
+    // document by now (the latch is per document): leave them alone.
+    if (useDocTalkStore.getState().documentId !== documentId) return;
+    removeSession(targetId);
     const live = useDocTalkStore.getState();
     const remaining = live.sessions;
     if (live.sessionId === targetId) {

@@ -332,7 +332,9 @@ function dropdownHarness({ getMessages, createSession, deleteSession, isDemo = f
     assert.ok(target, `Missing ${label} in row ${id}`);
     return target.props.onClick({ stopPropagation() {} });
   };
-  return { store, calls, switchTo, click, rowButton };
+  const isOpen = () => nodes(render()).some((node) => node.props?.role === 'menu');
+  const alertShown = () => nodes(render()).some((node) => node.props?.role === 'alert');
+  return { store, calls, switchTo, click, rowButton, isOpen, alertShown };
 }
 
 const olderTranscript = [
@@ -669,5 +671,52 @@ test('a send during the delete of the open conversation never leaves the reader 
     assert.equal(state.sessionId, branch === 'replacement' ? 'older' : 'fresh', branch);
     assert.deepEqual(state.messages, branch === 'replacement' ? olderTranscript : [],
       `${branch}: the deleted conversation's stream wrote into the replacement`);
+  }
+});
+
+// Codex r4: with one latch per document, a menu request from document A can
+// resolve while the menu is open on document B. Every action must then leave
+// B alone: its session, transcript, list, demo accounting and pointer, the
+// menu's error copy and its open state.
+test('a menu action that resolves after a document switch leaves the next document untouched', async () => {
+  const secondTranscript = [{ id: 'd2-u', role: 'user', text: 'Second document question', createdAt: 7 }];
+  const cases = {
+    switch: (pending) => ({ getMessages: () => pending.promise, act: (h) => h.switchTo('older'), settle: (p) => p.resolve({ messages: olderTranscript, demo_messages_used: 2 }) }),
+    'new chat': (pending) => ({ createSession: () => pending.promise, act: (h) => h.click('session.newChat'), settle: (p) => p.resolve({ session_id: 'fresh', created_at: '2026-10-11', demo_messages_used: 2 }) }),
+    'new chat error': (pending) => ({ createSession: () => pending.promise, act: (h) => h.click('session.newChat'), settle: (p) => p.reject(new Error('limit')) }),
+    'delete other': (pending) => ({ deleteSession: () => pending.promise, act: (h) => { h.rowButton('older', 'session.deleteChat'); return h.rowButton('older', 'common.yes'); }, settle: (p) => p.resolve() }),
+    'delete current': (pending) => ({ deleteSession: () => pending.promise, act: (h) => { h.click('session.deleteChat'); return h.click('common.yes'); }, settle: (p) => p.resolve() }),
+  };
+  for (const [name, make] of Object.entries(cases)) {
+    const pending = deferred();
+    const spec = make(pending);
+    const h = dropdownHarness({
+      isDemo: true,
+      getMessages: spec.getMessages || (async () => ({ messages: olderTranscript })),
+      createSession: spec.createSession,
+      deleteSession: spec.deleteSession,
+    });
+    const running = spec.act(h);
+    await settle();
+    const state = h.store.getState();
+    state.setDocument('doc-2');
+    state.setDocumentStatus('ready');
+    state.setSessions([row('d2-current', 1)]);
+    state.setSessionId('d2-current');
+    state.setMessages(secondTranscript);
+    assert.ok(h.isOpen(), `${name}: the menu is open on the second document`);
+    const callsBefore = { accounting: h.calls.accounting.length, pointers: h.calls.pointers.length };
+    spec.settle(pending);
+    await running;
+    await settle();
+
+    const after = h.store.getState();
+    assert.equal(after.sessionId, 'd2-current', name);
+    assert.deepEqual(after.messages, secondTranscript, name);
+    assert.deepEqual(after.sessions.map((s) => s.session_id), ['d2-current'], name);
+    assert.equal(h.calls.accounting.length, callsBefore.accounting, `${name}: demo accounting written on the second document`);
+    assert.equal(h.calls.pointers.length, callsBefore.pointers, `${name}: demo pointer moved on the second document`);
+    assert.equal(h.alertShown(), false, `${name}: the first document's error shows on the second`);
+    assert.ok(h.isOpen(), `${name}: the first document's action closed the menu on the second`);
   }
 });
