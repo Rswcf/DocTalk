@@ -910,3 +910,81 @@ class TestHeadingDetection:
 
         assert not any(is_heading for _block, is_heading in pairs)
         assert len(counted) < 20 * len(cleaned)
+
+    def test_one_tall_line_does_not_widen_every_row_lookup(self):
+        # Codex r2: the scan window used the page's tallest line, so one 1,600pt
+        # line made every lookup scan the whole page (1.6M calls for 2,000 cells).
+        cells = [
+            BlockInfo(page=1, text="ABCD", bbox=(72 + 90 * (i % 5), 10 + 0.7 * (i // 5),
+                                                 120 + 90 * (i % 5), 10.6 + 0.7 * (i // 5)), font_size=0.6)
+            for i in range(2000)
+        ]
+        tall = BlockInfo(page=1, text="ABCD", bbox=(560, 0, 600, 1600), font_size=0.6)
+        page = PageInfo(page_number=1, width_pt=612, height_pt=1600, rotation=0, blocks=[*cells, tall])
+        cleaned = self.svc.clean_text_blocks(page.blocks, page.width_pt, page.height_pt)
+        assert any(b.bbox[3] - b.bbox[1] > 1000 for b in cleaned)
+        counted = []
+        real_shares_row = ParseService._shares_row
+
+        def counting_shares_row(a, b):
+            counted.append(1)
+            return real_shares_row(a, b)
+
+        with patch.object(ParseService, "_shares_row", staticmethod(counting_shares_row)):
+            self.svc._classify_headings(cleaned, 0.6, {1: 612.0})
+
+        assert len(counted) < 20 * len(cleaned)
+
+    def test_caps_rule_needs_every_letter_capitalised(self):
+        # A Chinese body line with Latin acronyms has no lowercase letter, so
+        # str.isupper() is true for it. The caps signal only means something in a
+        # cased script; numbered headings are the route for caseless scripts.
+        cjk_line = "MCP 集成：支持外部 MCP 服务器的工具发现与调用"
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text=cjk_line, bbox=(72, 80, 300, 90), font_size=10),
+            self._body(100),
+            BlockInfo(page=1, text="PART II — 2026 RESULTS", bbox=(72, 120, 240, 130), font_size=10),
+            self._body(140),
+        )
+
+        chunks = self.svc.chunk_document([page])
+        headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert headings == ["PART II — 2026 RESULTS"]
+        assert cjk_line in " ".join(c.text for c in chunks)
+
+    def test_numbered_heading_directly_above_its_subheading(self):
+        # Codex r2: "2 Methods" and "2.1 Data" share a size and column. Two numbers
+        # of different depth are a heading and its subheading, not a list.
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="2 Methods", bbox=(72, 100, 150, 112), font_size=12),
+            BlockInfo(page=1, text="2.1 Data", bbox=(72, 116, 140, 128), font_size=12),
+            self._body(140),
+            self._body(152),
+            BlockInfo(page=1, text="3", bbox=(72, 180, 78, 192), font_size=12),
+            BlockInfo(page=1, text="Results", bbox=(90, 180, 150, 192), font_size=12),
+            BlockInfo(page=1, text="3.1", bbox=(72, 196, 90, 208), font_size=12),
+            BlockInfo(page=1, text="Accuracy", bbox=(102, 196, 170, 208), font_size=12),
+            *(self._body(220 + 12 * i) for i in range(5)),
+        )
+
+        headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert headings == ["2 Methods", "2.1 Data", "3 Results", "3.1 Accuracy"]
+
+    def test_numbered_heading_beside_a_short_line_in_the_other_column(self):
+        # Codex r2: the right column's last paragraph line ("therefore.") is narrow,
+        # but it is body text, smaller than the heading. A value cell in a table
+        # row shares the label's size.
+        page = self._page(
+            self._body(60),
+            BlockInfo(page=1, text="2 Background", bbox=(72, 100, 160, 112), font_size=12),
+            BlockInfo(page=1, text="therefore.", bbox=(320, 101, 382, 111), font_size=10),
+            *(self._body(130 + 14 * i) for i in range(5)),
+        )
+
+        headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
+
+        assert headings == ["2 Background"]

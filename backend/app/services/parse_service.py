@@ -37,10 +37,11 @@ _ARXIV_ID_LINE_RE = re.compile(
 # Section numbers: one or two digits per level ("3", "4.2", "4."), so a year ("2025
 # Revenue") or an amount never reads as one. LaTeX sets the number of a \section as a
 # separate line on the title's baseline (_SECTION_NUMBER_RE); other producers keep
-# number and title on one line (_NUMBERED_HEADING_RE, group 1 = the title). A report
+# number and title on one line (_NUMBERED_HEADING_RE: group 1 = the number, group 2 =
+# the title). A report
 # date ("06 February 2026", "8. Januar 2026") has the same shape and is not a heading.
 _SECTION_NUMBER_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?$")
-_NUMBERED_HEADING_RE = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,3}\.?\s+(\S.*)$")
+_NUMBERED_HEADING_RE = re.compile(r"^(\d{1,2}(?:\.\d{1,2}){0,3})\.?\s+(\S.*)$")
 _DATE_LINE_RE = re.compile(r"^\d{1,2}\.?\s+\S+\s+\d{4}$")
 
 # OCR language resolution (Phase 2 C4 + R2b). Scanned / non-Latin PDFs need the matching
@@ -285,7 +286,6 @@ class _PageRows:
     width: float  # unrotated page width: line bboxes are in unrotated space
     lines: List[CleanBlock]
     tops: List[float]
-    max_height: float
 
 
 @dataclass
@@ -328,10 +328,17 @@ class ParseService:
     HEADING_SIZE_RATIO = 1.25  # any short line this much above the median size
     NUMBERED_HEADING_SIZE_RATIO = 1.1  # LaTeX \section: 12pt on a 10pt body
     HEADING_MAX_WORDS = 12
-    # A lone line beside a numbered label, narrower than this share of the page, is a
-    # table cell; the opposite column of a two-column page is wider.
+    # A lone line beside a numbered label, narrower than this share of the page and in
+    # the label's font size, is a table cell; the opposite column of a two-column page
+    # is wider, and its last paragraph line is body text, smaller than a heading.
     COLUMN_MIN_WIDTH_RATIO = 0.3
+    # A row neighbour is at most this many times the line's own height: cells in one
+    # table row share a size. It also bounds the row lookup's scan window.
+    ROW_NEIGHBOUR_MAX_HEIGHT_RATIO = 3.0
     # "V", "O(1)", "100K", "<EOS>" and "TTM" are formula and table tokens, not titles.
+    # Every letter must be a capital: in "MCP 集成：支持外部 MCP 服务器" the Chinese
+    # letters have no case, so the caps signal says nothing. Caseless scripts reach
+    # headings through the size rule or a section number.
     CAPS_HEADING_MIN_CAPITALS = 4
 
     TARGET_MIN_TOKENS = 150
@@ -915,7 +922,7 @@ class ParseService:
                         joined,
                         median_size,
                         rows.get(joined.page),
-                        blocks[i - 1] if i else None,
+                        out[-1] if out else None,
                         blocks[i + 2] if i + 2 < len(blocks) else None,
                     ):
                         out.append(joined)
@@ -972,7 +979,7 @@ class ParseService:
         m = _NUMBERED_HEADING_RE.match(text)
         if not m or _DATE_LINE_RE.match(text):
             return False
-        title = m.group(1)
+        title = m.group(2)
         first = title[0]
         if not first.isalpha() or first.islower():
             return False
@@ -991,20 +998,32 @@ class ParseService:
             return False
         if text[-1:] in self.SENTENCE_DELIMS:
             return False
-        alpha = "".join(ch for ch in text if ch.isalpha())
-        capitals = sum(1 for ch in alpha if ch.isupper())
-        return bool(alpha) and alpha.isupper() and capitals >= self.CAPS_HEADING_MIN_CAPITALS
+        alpha = [ch for ch in text if ch.isalpha()]
+        return len(alpha) >= self.CAPS_HEADING_MIN_CAPITALS and all(ch.isupper() for ch in alpha)
 
     @staticmethod
     def _continues_run(block: CleanBlock, other: Optional[CleanBlock]) -> bool:
         """`other` is the line above or below `block` in one paragraph or list: same
-        page and size, overlapping columns, at most one font size apart."""
+        page and size, overlapping columns, at most one font size apart. Section
+        numbers of different depth ("2 Methods" over "2.1 Data") are a heading and
+        its subheading, not a run."""
         if other is None or other.page != block.page or abs(other.font_size - block.font_size) > 0.3:
             return False
         if other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]:
             return False
         gap = max(other.bbox[1] - block.bbox[3], block.bbox[1] - other.bbox[3])
-        return gap <= block.font_size
+        if gap > block.font_size:
+            return False
+        depths = (ParseService._section_depth(block.text), ParseService._section_depth(other.text))
+        return None in depths or depths[0] == depths[1]
+
+    @staticmethod
+    def _section_depth(text: str) -> Optional[int]:
+        """2 for "2.1 Data" or a bare "2.1"; None when the line has no section number."""
+        text = text.strip()
+        m = _NUMBERED_HEADING_RE.match(text)
+        number = m.group(1) if m else (text.rstrip(".") if _SECTION_NUMBER_RE.match(text) else None)
+        return None if number is None else number.count(".") + 1
 
     @staticmethod
     def _shares_row(a: CleanBlock, b: CleanBlock) -> bool:
@@ -1026,19 +1045,22 @@ class ParseService:
                 width=page_widths.get(page, 0.0),
                 lines=lines,
                 tops=[b.bbox[1] for b in lines],
-                max_height=max(b.bbox[3] - b.bbox[1] for b in lines),
             )
         return rows
 
     def _row_neighbours(self, block: CleanBlock, rows: _PageRows, limit: int) -> List[CleanBlock]:
-        """Up to `limit` lines beside `block` on its row (horizontally disjoint, see
-        _shares_row). Only a line whose top is at most one line height above the
-        block can overlap it, so the scan is bounded to that window."""
-        lo = bisect_left(rows.tops, block.bbox[1] - rows.max_height)
+        """Up to `limit` lines beside `block` on its row: horizontally disjoint, see
+        _shares_row, and at most ROW_NEIGHBOUR_MAX_HEIGHT_RATIO times its height. A
+        line that short can overlap the block only if its top lies within that
+        height above the block, so the scan is bounded to that window."""
+        reach = self.ROW_NEIGHBOUR_MAX_HEIGHT_RATIO * (block.bbox[3] - block.bbox[1])
+        lo = bisect_left(rows.tops, block.bbox[1] - reach)
         hi = bisect_right(rows.tops, block.bbox[3])
         found: List[CleanBlock] = []
         for other in rows.lines[lo:hi]:
-            if other is block or not (other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]):
+            if other is block or other.bbox[3] - other.bbox[1] > reach:
+                continue
+            if not (other.bbox[0] >= block.bbox[2] or other.bbox[2] <= block.bbox[0]):
                 continue
             if self._shares_row(block, other):
                 found.append(other)
@@ -1052,8 +1074,8 @@ class ParseService:
         """True when the line shares its row with table cells: two other lines beside
         it, or one in the same half of the page. One line in the other half is the
         opposite column of a two-column page, so a heading there stays a heading;
-        with `narrow_is_cell`, only when that line is at least a column wide (a value
-        cell beside a numbered row label is not)."""
+        with `narrow_is_cell`, unless that line is narrower than a column and in the
+        block's font size (a value cell beside a numbered row label)."""
         if rows is None:
             return False
         cells = self._row_neighbours(block, rows, limit=2)
@@ -1066,7 +1088,11 @@ class ParseService:
                 block.bbox[0] >= mid and other.bbox[0] >= mid
             ):
                 return True
-            return narrow_is_cell and (other.bbox[2] - other.bbox[0]) < rows.width * self.COLUMN_MIN_WIDTH_RATIO
+            return (
+                narrow_is_cell
+                and abs(other.font_size - block.font_size) <= 0.5
+                and (other.bbox[2] - other.bbox[0]) < rows.width * self.COLUMN_MIN_WIDTH_RATIO
+            )
         return False
 
     @staticmethod
