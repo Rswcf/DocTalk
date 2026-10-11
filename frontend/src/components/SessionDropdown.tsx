@@ -247,6 +247,8 @@ export default function SessionDropdown() {
       } else {
         await startNewChat();
       }
+      // The replacement load is a second await: same check as above.
+      if (useDocTalkStore.getState().documentId !== documentId) return;
     }
     setOpen(false);
   };

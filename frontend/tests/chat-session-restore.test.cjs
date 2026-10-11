@@ -686,6 +686,9 @@ test('a menu action that resolves after a document switch leaves the next docume
     'new chat error': (pending) => ({ createSession: () => pending.promise, act: (h) => h.click('session.newChat'), settle: (p) => p.reject(new Error('limit')) }),
     'delete other': (pending) => ({ deleteSession: () => pending.promise, act: (h) => { h.rowButton('older', 'session.deleteChat'); return h.rowButton('older', 'common.yes'); }, settle: (p) => p.resolve() }),
     'delete current': (pending) => ({ deleteSession: () => pending.promise, act: (h) => { h.click('session.deleteChat'); return h.click('common.yes'); }, settle: (p) => p.resolve() }),
+    // Codex r5: the delete itself returned on A; its replacement load is the
+    // await that resolves on B.
+    'delete current, replacement pending': (pending) => ({ getMessages: () => pending.promise, act: (h) => { h.click('session.deleteChat'); return h.click('common.yes'); }, settle: (p) => p.resolve({ messages: olderTranscript, demo_messages_used: 2 }) }),
   };
   for (const [name, make] of Object.entries(cases)) {
     const pending = deferred();
