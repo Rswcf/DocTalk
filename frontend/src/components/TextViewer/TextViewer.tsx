@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { Suspense, createContext, useContext, useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react';
 import remarkGfm from 'remark-gfm';
 import type { Options as MarkdownOptions } from 'react-markdown';
 import { Search, ChevronLeft, ChevronRight, X, ExternalLink, Globe2, ListTree, Eye, EyeOff } from 'lucide-react';
@@ -10,6 +10,7 @@ import { Spinner } from '../spell';
 import { citationChunkText, citationPageRange, dropTrailingFragment } from '../../lib/citationText';
 import { locateTextEvidence, type TextEvidence } from '../../lib/textEvidence';
 import { articleEvidence, articlePage, bodyRanges, leadingMarkdownHeading } from '../../lib/articleEvidence';
+import { NO_RENDERED_MARKS, shownEvidenceStatus, type EvidenceStatus, type RenderedMarks } from '../../lib/evidenceStatus';
 import { rehypeMarkRanges, type MarkRange } from '../../lib/rehypeMarkRanges';
 import type { Citation } from '../../types';
 
@@ -24,19 +25,35 @@ const NO_REHYPE_PLUGINS: PluggableList = [];
 const NO_MARKS: MarkRange[] = [];
 const NO_MARKS_BY_PAGE = new Map<number, MarkRange[]>();
 
-type EvidenceStatus = TextEvidence['kind'] | 'loading' | 'unavailable';
 interface EvidenceState { citation: Citation; status: EvidenceStatus; byPage: Map<number, MarkRange[]> }
 
 // The anchor mark scrolls the cited passage into view once it mounts: marks
 // render inside <Suspense> and may wait for the full chunk text.
 const EvidenceAnchorContext = createContext<((element: HTMLElement | null) => void) | null>(null);
 
+// Every mounted mark and Markdown body reports itself (and un-reports on
+// unmount), so the status line names what rendered, not what was located.
+// Layout effects: the label is corrected before the frame is painted.
+type ReportRendered = (key: keyof RenderedMarks) => () => void;
+const RenderedMarksContext = createContext<ReportRendered | null>(null);
+
 function EvidenceMark(props: React.ComponentPropsWithoutRef<'mark'> & { node?: unknown }) {
   const { node, ...rest } = props;
   void node;
   const onAnchor = useContext(EvidenceAnchorContext);
-  const isAnchor = (rest as Record<string, unknown>)['data-dt-evidence-anchor'] === 'true';
+  const report = useContext(RenderedMarksContext);
+  const attributes = rest as Record<string, unknown>;
+  const isAnchor = attributes['data-dt-evidence-anchor'] === 'true';
+  const kind = attributes['data-dt-evidence'] === 'exact' ? 'exact' : 'region';
+  useLayoutEffect(() => report?.(kind), [report, kind]);
   return <mark {...rest} ref={isAnchor && onAnchor ? onAnchor : undefined} />;
+}
+
+/** Mounts with the Markdown it follows, i.e. once react-markdown has loaded. */
+function MarkdownBodyMounted() {
+  const report = useContext(RenderedMarksContext);
+  useLayoutEffect(() => report?.('bodies'), [report]);
+  return null;
 }
 
 const MARKDOWN_COMPONENTS = { mark: EvidenceMark };
@@ -192,6 +209,17 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   const isMarkdown = isUrlSource || shouldRenderMarkdown(fileType);
   const [evidence, setEvidence] = useState<EvidenceState | null>(null);
   const [hiddenEvidence, setHiddenEvidence] = useState(false);
+  const renderedCounts = useRef<RenderedMarks>({ ...NO_RENDERED_MARKS });
+  const [renderedMarks, setRenderedMarks] = useState<RenderedMarks>(NO_RENDERED_MARKS);
+  const reportRendered = useCallback<ReportRendered>((key) => {
+    const counts = renderedCounts.current;
+    const publish = () => setRenderedMarks((previous) => (
+      previous.exact === counts.exact && previous.region === counts.region && previous.bodies === counts.bodies
+        ? previous : { ...counts }));
+    counts[key] += 1;
+    publish();
+    return () => { counts[key] -= 1; publish(); };
+  }, []);
   // The citation whose anchor should scroll into view when it mounts; cleared
   // once it has, or when the reader scrolls first.
   const pendingAnchor = useRef<Citation | null>(null);
@@ -352,8 +380,11 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
   useEffect(() => { setHiddenEvidence(false); }, [citation]);
 
   const currentEvidence = evidence && evidence.citation === markdownCitation ? evidence : null;
-  const evidenceStatus: EvidenceStatus = currentEvidence?.status ?? 'loading';
+  const locatedStatus: EvidenceStatus = currentEvidence?.status ?? 'loading';
   const evidenceByPage = currentEvidence?.byPage ?? NO_MARKS_BY_PAGE;
+  // A located range may render no mark (raw HTML, a cut reference, an
+  // ambiguous alignment): the status follows the marks that rendered.
+  const evidenceStatus = shownEvidenceStatus(locatedStatus, renderedMarks);
   const captionPage = markdownCitation && evidenceStatus === 'page' ? markdownCitation.page : null;
 
   // A new evidence state gets a new callback, so React re-attaches it to the
@@ -408,10 +439,11 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
     );
   }
 
-  const hasMarks = evidenceByPage.size > 0;
+  const hasMarks = renderedMarks.exact + renderedMarks.region > 0;
 
   return (
     <EvidenceAnchorContext.Provider value={onAnchor}>
+    <RenderedMarksContext.Provider value={reportRendered}>
     <div
       ref={containerRef}
       className="h-full flex flex-col"
@@ -554,6 +586,7 @@ export default function TextViewer({ documentId, fileType, targetPage, scrollNon
         </div>
       )}
     </div>
+    </RenderedMarksContext.Provider>
     </EvidenceAnchorContext.Provider>
   );
 }
@@ -898,6 +931,7 @@ const MarkdownContent = React.memo(function MarkdownContent({
       )}
       <Suspense fallback={markdownFallback}>
         <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={rehypePlugins} components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
+        <MarkdownBodyMounted />
       </Suspense>
     </div>
   );

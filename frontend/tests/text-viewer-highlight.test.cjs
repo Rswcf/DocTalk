@@ -239,13 +239,76 @@ test('TextViewer passes URL evidence through articleEvidence before it sets the 
   assert.doesNotMatch(code, /page\.text\.indexOf\(body\)/);
 });
 
-test('the anchor moves to the first mark when its own range renders none', () => {
+const { shownEvidenceStatus } = require(path.join(SRC, 'lib/evidenceStatus.ts'));
+
+/** The marks a page renders, and the status the evidence bar shows for them:
+ *  each rendered <mark> is one EvidenceMark, which reports its kind. */
+function shownFor(source, ranges, located) {
+  const rendered = marks(render(source, ranges));
+  const count = (kind) => rendered.filter(m => m.kind === kind).length;
+  return { status: shownEvidenceStatus(located, { exact: count('exact'), region: count('region'), bodies: 1 }), rendered };
+}
+
+test('the anchor moves to the first mark when its own range renders none; the status says region', () => {
   const source = 'Kept paragraph text here.\n\n<div>raw html is dropped</div>';
-  const html = render(source, [
+  const ranges = [
     span(source, 'Kept paragraph text here.'),
     span(source, 'raw html is dropped', 'exact', true),
-  ]);
-  assert.deepEqual(marks(html), [{ kind: 'region', anchor: true, text: 'Kept paragraph text here.' }]);
+  ];
+  assert.deepEqual(marks(render(source, ranges)), [{ kind: 'region', anchor: true, text: 'Kept paragraph text here.' }]);
+  const shown = shownFor(source, ranges, 'exact');
+  assert.equal(shown.status, 'region', 'the exact range rendered no mark');
+  assertStatusMatchesMarks(shown, 'anchor moved');
+});
+
+test('status: an exact range inside raw HTML renders no mark, so the status is page', () => {
+  const source = 'Intro paragraph here.\n\n<div>raw html is dropped</div>';
+  const shown = shownFor(source, [span(source, 'raw html is dropped', 'exact', true)], 'exact');
+  assert.deepEqual(shown, { status: 'page', rendered: [] });
+});
+
+test('status: a range dropped by the reference cut guard leaves page', () => {
+  const source = 'Prices &amp; fees apply.';
+  const at = source.indexOf('&amp;');
+  const shown = shownFor(source, [{ start: at, end: at + 2, kind: 'exact', anchor: true }], 'exact');
+  assert.deepEqual(shown, { status: 'page', rendered: [] });
+});
+
+test('status: a range dropped by an ambiguous alignment leaves page', () => {
+  const source = `aaa bbb ${LONG_REF} aaa bbb`;
+  const second = source.lastIndexOf('aaa bbb');
+  const shown = shownFor(source, [{ start: second, end: second + 7, kind: 'region', anchor: true }], 'region');
+  assert.deepEqual(shown, { status: 'page', rendered: [] });
+});
+
+test('status: a rendered exact mark still reads exact', () => {
+  const source = 'First sentence here. The key claim is this one. Last sentence there.';
+  const shown = shownFor(source, [
+    span(source, 'First sentence here.'),
+    span(source, 'The key claim is this one.', 'exact', true),
+    span(source, 'Last sentence there.'),
+  ], 'exact');
+  assert.equal(shown.status, 'exact');
+  assertStatusMatchesMarks(shown, 'normal exact');
+});
+
+test('status: never more than was located, loading until a Markdown body mounts', () => {
+  assert.equal(shownEvidenceStatus('region', { exact: 1, region: 0, bodies: 1 }), 'region');
+  assert.equal(shownEvidenceStatus('exact', { exact: 0, region: 0, bodies: 0 }), 'loading');
+  for (const located of ['page', 'loading', 'unavailable']) {
+    assert.equal(shownEvidenceStatus(located, { exact: 2, region: 2, bodies: 1 }), located);
+  }
+});
+
+test('TextViewer derives the status line from the marks that mounted', () => {
+  const code = stripComments(read(VIEWER));
+  assert.match(code, /const kind = attributes\['data-dt-evidence'\] === 'exact' \? 'exact' : 'region';\s*useLayoutEffect\(\(\) => report\?\.\(kind\), \[report, kind\]\);/);
+  assert.match(code, /<\/ReactMarkdown>\s*<MarkdownBodyMounted \/>\s*<\/Suspense>/);
+  assert.match(code, /const evidenceStatus = shownEvidenceStatus\(locatedStatus, renderedMarks\);/);
+  assert.match(code, /const hasMarks = renderedMarks\.exact \+ renderedMarks\.region > 0;/);
+  assert.match(code, /<RenderedMarksContext\.Provider value=\{reportRendered\}>/);
+  // The label and the caption read the shown status, never the located one.
+  assert.doesNotMatch(code, /evidence\.\$\{locatedStatus\}|locatedStatus === 'page'/);
 });
 
 test('exact emphasis splits a region into flat marks; only one anchor is emitted', () => {
@@ -343,7 +406,9 @@ test('the anchor mark scrolls once per navigation; the page start stays the imme
 
 test('a late chunk fetch for an earlier citation is dropped', () => {
   const code = stripComments(read(VIEWER));
-  const effect = code.slice(code.indexOf('const settle = (chunkText'), code.indexOf('}, [markdownCitation, highlightFocus, pages]);'));
+  const end = code.indexOf('}, [markdownCitation, highlightFocus, pages, isUrlSource]);');
+  assert.ok(end > 0, 'the evidence effect ends where the test expects');
+  const effect = code.slice(code.indexOf('const settle = (chunkText'), end);
   assert.match(effect, /let cancelled = false;/);
   assert.match(effect, /if \(cancelled\) return;/);
   assert.match(effect, /return \(\) => \{ cancelled = true; \};/);
