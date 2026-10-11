@@ -47,6 +47,40 @@ test('synthetic boxes reach the page as no region and a text-layer candidate', (
   assert.match(candidate, /: highlightFocus \|\| \(highlights\.some\(box => box\.x === 0 && box\.y === 0 && box\.w === 1 && box\.h === 1\) \? highlightSnippet : null\)/);
 });
 
+// ---- Converted DOCX/PPTX: page N is LibreOffice's, not the extractor's -----
+const { convertedPageIndex, uniqueInPageRange } = require(path.join(SRC, 'lib/convertedEvidence.ts'));
+
+test('a converted-PDF candidate is kept only when unique in the whole document and on the cited page', () => {
+  const sentence = 'All analyses followed the intention-to-treat principle.';
+  const index = convertedPageIndex([
+    `study design the trial enrolled 412 adults. ${sentence.toLowerCase()}`,
+    'site enrolled completed northfield 88 81',
+    `outcomes the primary outcome was blood pressure. ${sentence.toLowerCase()}`,
+  ]);
+  // Repeated in two sections: never trusted, whichever page is cited.
+  assert.equal(uniqueInPageRange(index, 3, 3, sentence), false);
+  assert.equal(uniqueInPageRange(index, 1, 1, sentence), false);
+  // Unique, but on another page than the cited one (DOCX section 2 is not PDF page 2).
+  assert.equal(uniqueInPageRange(index, 2, 2, 'The primary outcome was blood pressure.'), false);
+  assert.equal(uniqueInPageRange(index, 3, 3, 'The primary outcome was blood pressure.'), true);
+  assert.equal(uniqueInPageRange(index, 2, 3, 'The primary outcome was blood pressure.'), true);
+  // A word the text layer splits ("enrol led") still counts once; nothing counts twice.
+  assert.equal(uniqueInPageRange(convertedPageIndex(['the trial enrol led 412 adults']), 1, 1, 'The trial enrolled 412 adults'), true);
+  assert.equal(uniqueInPageRange(index, 1, 3, null), false);
+  assert.equal(uniqueInPageRange(index, 1, 3, '   '), false);
+});
+
+test('the converted viewer filters its text candidates; the native PDF viewer passes them through', () => {
+  const viewer = stripComments(read('components/PdfViewer/PdfViewer.tsx'));
+  assert.match(viewer, /if \(!syntheticBoxes\) return \{ highlightSnippet: snippetProp, highlightFocus: focusProp \};/);
+  assert.match(viewer, /uniqueInPageRange\(convertedIndex, citation\.page, citation\.pageEnd \|\| citation\.page, text\)/);
+  // The guard lives outside every effect body: the per-page props read the filtered names.
+  assert.match(viewer, /\? highlightSnippet : null\}/);
+  assert.match(viewer, /\? highlightFocus : null\}/);
+  const memo = viewer.indexOf('const { highlightSnippet, highlightFocus } = useMemo(');
+  assert.ok(memo > 0 && memo < viewer.indexOf('useEffect(() => {\n    if (!numPages'), 'declared before the navigation effects');
+});
+
 // ---- rehypeMarkRanges through the real react-markdown pipeline -------------
 const { rehypeMarkRanges } = require(path.join(SRC, 'lib/rehypeMarkRanges.ts'));
 const { locateTextEvidence } = require(path.join(SRC, 'lib/textEvidence.ts'));
