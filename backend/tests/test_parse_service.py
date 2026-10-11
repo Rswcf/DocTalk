@@ -10,7 +10,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.services.parse_service import BlockInfo, PageInfo, ParseService  # noqa: E402
+from app.services.parse_service import (  # noqa: E402
+    BlockInfo,
+    CleanBlock,
+    PageInfo,
+    ParseService,
+)
 
 
 class TestDetectScanned:
@@ -639,3 +644,298 @@ class TestMarginStampIsNotContent:
         chunks = self.svc.chunk_document([page])
 
         assert {c.section_title for c in chunks} == {"Introduction"}
+
+
+SEED_DIR = BACKEND_DIR / "seed_data"
+
+
+def _page(number: int, blocks: list[BlockInfo], width: float = 612, height: float = 792) -> PageInfo:
+    return PageInfo(page_number=number, width_pt=width, height_pt=height, rotation=0, blocks=blocks)
+
+
+def _body_lines(
+    page: int, x: float, y0: float, n: int, size: float = 10.0, width: float = 330,
+    text: str = "Body line of running text that wraps",
+) -> list[BlockInfo]:
+    """n stacked lines of one paragraph at 1.25x leading."""
+    return [
+        BlockInfo(page=page, text=f"{text} {i}", bbox=(x, y0 + i * size * 1.25, x + width, y0 + i * size * 1.25 + size * 1.15),
+                  font_size=size)
+        for i in range(n)
+    ]
+
+
+def _cells(page: int, y0: float, rows: int, cols: int = 6, size: float = 6.5) -> list[BlockInfo]:
+    """A table or chart: short small-type lines side by side."""
+    return [
+        BlockInfo(page=page, text=f"{r}.{c}", bbox=(40 + c * 60, y0 + r * 9, 70 + c * 60, y0 + r * 9 + 7), font_size=size)
+        for r in range(rows)
+        for c in range(cols)
+    ]
+
+
+class TestHeadingSizeUsesPageBodySize:
+    """Parse v5 (2026-10-11, .collab/plans/2026-10-11-parse-heading-body-size.md).
+
+    The size rule compared each line with 1.25 x the median size of ALL lines of the
+    document. Chart labels and table cells are short small-type lines, so in broker
+    research they outnumber body lines and pulled the median under the body (5.47pt
+    against 10pt): every body line became a heading, was dropped from chunk text and
+    became the section title of citation snippets (41-80% of the text of nine
+    research notes). The reference is now the page's body size from running text.
+    """
+
+    def setup_method(self):
+        self.svc = ParseService()
+
+    def _headings(self, pages: list[PageInfo]) -> set[tuple[int, str]]:
+        return {(e.page_start, e.text) for e in self.svc.extract_elements(pages) if e.element_type == "heading"}
+
+    def test_chart_heavy_page_body_is_not_a_heading(self):
+        blocks = [BlockInfo(page=1, text="Section heading", bbox=(40, 60, 300, 76), font_size=14)]
+        blocks += _body_lines(1, 40, 90, 8) + _cells(1, 400, 12)  # line median 6.5pt
+        page = _page(1, blocks)
+
+        assert self._headings([page]) == {(1, "Section heading")}
+        chunk_text = " ".join(c.text for c in self.svc.chunk_document([page]))
+        assert all(f"Body line of running text that wraps {i}" in chunk_text for i in range(8))
+
+    def test_two_body_sizes_keep_main_body_and_find_appendix_headings(self):
+        # 10pt report, then a longer 7pt disclosure appendix: neither the line
+        # median nor a char-weighted median is the body size of both parts.
+        pages = [
+            _page(pn, [BlockInfo(page=pn, text=f"Main heading {pn}", bbox=(40, 60, 300, 76), font_size=14)]
+                  + _body_lines(pn, 40, 90, 20))
+            for pn in (1, 2)
+        ]
+        pages += [
+            _page(pn, [BlockInfo(page=pn, text=f"Appendix heading {pn}", bbox=(40, 60, 300, 72), font_size=10)]
+                  + _body_lines(pn, 40, 90, 60, size=7, width=500, text="Disclosure text"))
+            for pn in (3, 4, 5)
+        ]
+
+        assert self._headings(pages) == {
+            (1, "Main heading 1"), (2, "Main heading 2"),
+            (3, "Appendix heading 3"), (4, "Appendix heading 4"), (5, "Appendix heading 5"),
+        }
+        chunks = self.svc.chunk_document(pages)
+        assert {c.section_title for c in chunks if c.page_start >= 3} <= {
+            "Main heading 2", "Appendix heading 3", "Appendix heading 4", "Appendix heading 5",
+        }
+        assert any(c.section_title == "Appendix heading 5" for c in chunks)
+
+    def test_chart_page_short_comment_uses_document_body_size(self):
+        # A chart page has too little running text for a body size of its own, so
+        # it takes the document's: the largest page body size that at least a
+        # quarter of the pages share (10pt here, not the 7pt of the longer appendix).
+        pages = [
+            _page(pn, [BlockInfo(page=pn, text=f"Heading {pn}", bbox=(40, 60, 300, 76), font_size=14)]
+                  + _body_lines(pn, 40, 90, 20))
+            for pn in (1, 2)
+        ]
+        pages += [_page(pn, _body_lines(pn, 40, 90, 60, size=7, width=500, text="Disclosure text")) for pn in (3, 4, 5)]
+        pages.append(_page(6, _cells(6, 100, 30) + _body_lines(6, 40, 500, 2, text="Short comment on the chart")))
+
+        assert self._headings(pages) == {(1, "Heading 1"), (2, "Heading 2")}
+
+    def test_page_body_size_is_the_largest_substantial_size(self):
+        # 12pt body set as two-line paragraphs beside a longer 9pt footnote block:
+        # both hold 30%+ of the page's running text and the larger one is the body.
+        blocks, y = [], 60
+        for i in range(6):
+            blocks += _body_lines(1, 40, y, 2, size=12, width=480, text=f"Short paragraph {i} of the main text")
+            y += 50
+        blocks += _body_lines(1, 40, 400, 20, size=9, width=480, text="Footnote text in a smaller size")
+
+        assert self._headings([_page(1, blocks)]) == set()
+
+    def test_slides_wrapped_bullets_are_body(self):
+        pages = []
+        for pn in (1, 2, 3):
+            blocks = [BlockInfo(page=pn, text=f"Slide title {pn}", bbox=(50, 60, 500, 92), font_size=28)]
+            y = 120
+            for b in range(3):
+                for ln in range(2):
+                    blocks.append(BlockInfo(page=pn, text=f"Bullet {b} line {ln} of wrapped slide text",
+                                            bbox=(70, y, 600, y + 20), font_size=18))
+                    y += 23
+                blocks.append(BlockInfo(page=pn, text=f"Sub bullet {b} with more detail", bbox=(100, y, 500, y + 16), font_size=14))
+                y += 24
+            pages.append(_page(pn, blocks, width=792, height=612))
+
+        assert self._headings(pages) == {(1, "Slide title 1"), (2, "Slide title 2"), (3, "Slide title 3")}
+
+    def test_superscript_does_not_hide_a_heading(self):
+        # Spans of 14pt "Results and discussion" + an 8pt footnote marker: the
+        # plain span mean is 11pt, the dominant size is 14pt.
+        blocks = [BlockInfo(page=1, text="Results and discussion1", bbox=(40, 60, 300, 76), font_size=11.0, dominant_size=14.0)]
+        blocks += _body_lines(1, 40, 90, 10)
+
+        assert self._headings([_page(1, blocks)]) == {(1, "Results and discussion1")}
+
+    def test_extract_line_blocks_records_dominant_size(self):
+        lines = [{
+            "bbox": (50, 50, 300, 66),
+            "spans": [{"text": "Results", "size": 14.0}, {"text": "1", "size": 8.0}, {"text": " ", "size": 6.0}],
+        }]
+
+        block = self.svc._extract_line_blocks(1, lines)[0]
+
+        assert block.dominant_size == 14.0
+        assert block.font_size == (14.0 + 8.0 + 6.0) / 3  # persisted metadata is unchanged
+
+    def test_dominant_size_does_not_reach_element_metadata(self):
+        blocks = [BlockInfo(page=1, text="Results and discussion1", bbox=(40, 60, 300, 76), font_size=11.0, dominant_size=14.0)]
+        blocks += _body_lines(1, 40, 90, 10)
+
+        heading = next(e for e in self.svc.extract_elements([_page(1, blocks)]) if e.element_type == "heading")
+
+        assert heading.metadata_json["font_size"] == 11.0
+
+    def test_wrapped_heading_up_to_three_lines(self):
+        title = ["Why the memory upcycle has further to run:", "pricing, capacity discipline and", "the HBM transition"]
+        blocks, y = [], 60
+        for line in title:
+            blocks.append(BlockInfo(page=1, text=line, bbox=(50, y, 400, y + 21), font_size=18))
+            y += 23
+        y += 10
+        for i in range(4):  # a 4-line standfirst set larger than the body is a paragraph
+            blocks.append(BlockInfo(page=1, text=f"Standfirst line {i} set larger than the body",
+                                    bbox=(50, y, 400, y + 16), font_size=14))
+            y += 18
+        blocks += _body_lines(1, 50, y + 10, 12)
+
+        assert {text for _p, text in self._headings([_page(1, blocks)])} == set(title)
+
+    def test_one_line_bullets_are_body(self):
+        blocks = [BlockInfo(page=1, text="Heading", bbox=(40, 60, 300, 80), font_size=16)] + _body_lines(1, 40, 90, 10)
+        y = 250
+        for i in range(3):
+            blocks.append(BlockInfo(page=1, text=f"• Key point number {i} stated in one line",
+                                    bbox=(40, y, 330, y + 14), font_size=12))
+            y += 16
+
+        assert self._headings([_page(1, blocks)]) == {(1, "Heading")}
+
+    def test_non_pdf_extractor_path_keeps_section_titles(self):
+        # parse_worker's DOCX/PPTX/XLSX/TXT branch: unit-box bboxes, an 18pt title
+        # line and one 12pt block per page. Never running text -> median fallback.
+        pages = []
+        for pn in range(1, 6):
+            blocks = []
+            if pn in (1, 3):
+                blocks.append(BlockInfo(page=pn, text=f"Section {pn}", bbox=(0.0, 0.0, 1.0, 0.08), font_size=18.0))
+            blocks.append(BlockInfo(page=pn, text=f"Body text of page {pn}. " * 30, bbox=(0.0, 0.1, 1.0, 1.0), font_size=12.0))
+            pages.append(_page(pn, blocks))
+
+        assert self._headings(pages) == {(1, "Section 1"), (3, "Section 3")}
+
+    def test_vertical_writing_runs_follow_the_reading_axis(self):
+        down = (0.0, 1.0)
+        blocks = [BlockInfo(page=1, text="縦書きの見出し", bbox=(500, 60, 516, 200), font_size=14,
+                            direction=down, vertical_writing=True)]
+        for i in range(12):
+            x = 470 - i * 14
+            blocks.append(BlockInfo(page=1, text="本文の行です本文の行です本文の行です本文の行です", bbox=(x, 60, x + 11, 500),
+                                    font_size=10, direction=down, vertical_writing=True))
+
+        assert self._headings([_page(1, blocks)]) == {(1, "縦書きの見出し")}
+
+    def test_vertical_page_runs_stack_along_x(self):
+        # Short 6.5pt vertical labels pull the median line to 6.5pt; the 10pt body
+        # columns are a run only when lines are stacked along x, not y.
+        down = (0.0, 1.0)
+        blocks = [BlockInfo(page=1, text="縦書きの見出し", bbox=(560, 60, 576, 200), font_size=14, direction=down)]
+        for i in range(12):
+            x = 530 - i * 14
+            blocks.append(BlockInfo(page=1, text=f"本文の行です本文の行です本文の行です{i}", bbox=(x, 60, x + 11, 500),
+                                    font_size=10, direction=down))
+        blocks += [
+            BlockInfo(page=1, text="図表", bbox=(40 + i * 12, 600 + (i % 2) * 40, 47 + i * 12, 615 + (i % 2) * 40),
+                      font_size=6.5, direction=down)
+            for i in range(30)
+        ]
+
+        assert self._headings([_page(1, blocks)]) == {(1, "縦書きの見出し")}
+
+    def test_cjk_broker_page(self):
+        blocks = [BlockInfo(page=1, text="石油危机复盘：油价与衰退", bbox=(40, 60, 250, 76), font_size=14)]
+        blocks += _body_lines(1, 40, 90, 10, size=10.5, text="原油价格在供给冲击下大幅上涨全球经济增速放缓")
+        blocks += [
+            BlockInfo(page=1, text="2008年", bbox=(395 + (i % 5) * 34, 100 + (i // 5) * 16, 412 + (i % 5) * 34, 107 + (i // 5) * 16),
+                      font_size=6.5)
+            for i in range(40)
+        ]
+
+        assert self._headings([_page(1, blocks)]) == {(1, "石油危机复盘：油价与衰退")}
+
+    def test_size_rule_rejects_number_callouts_and_addresses(self):
+        def by_size(text: str) -> bool:
+            block = CleanBlock(page=1, text=text, bbox=(40, 60, 200, 90), font_size=28, rule_size=28)
+            return self.svc._is_heading_by_size(block, 10.0)
+
+        for text in ("+12%", "Q3 2025", "2026E", "P", "www.plindia.com", "https://example.com/report", "ir@example.com"):
+            assert not by_size(text), text
+        for text in ("U.S.", "Exhibit 12: Capex", "1. Introduction", "Visit www.example.com for more"):
+            assert by_size(text), text
+
+    def test_annotate_runs(self):
+        blocks = [
+            CleanBlock(page=1, text="Heading", bbox=(40, 40, 300, 58), font_size=16),
+            *[CleanBlock(page=1, text=f"left {i}", bbox=(40, 80 + i * 12.5, 280, 91.5 + i * 12.5), font_size=10)
+              for i in range(5)],
+            *[CleanBlock(page=1, text=f"right {i}", bbox=(320, 80 + i * 12.5, 560, 91.5 + i * 12.5), font_size=10)
+              for i in range(3)],
+            CleanBlock(page=1, text="cell a", bbox=(40, 300, 90, 307), font_size=6.5),
+            CleanBlock(page=1, text="cell b", bbox=(100, 300, 150, 307), font_size=6.5),
+            CleanBlock(page=1, text="far below", bbox=(40, 400, 280, 411.5), font_size=10),
+            CleanBlock(page=1, text="rotated", bbox=(40, 412, 52, 500), font_size=10, off_axis=True),
+            # A line drawn twice a fraction of a point apart (fake bold) is one line, not a run.
+            CleanBlock(page=1, text="Drawn twice", bbox=(40, 600, 200, 616), font_size=14),
+            CleanBlock(page=1, text="Drawn twice", bbox=(40.4, 600.4, 200.4, 616.4), font_size=14),
+        ]
+
+        self.svc._annotate_runs(blocks)
+
+        assert [b.run_len for b in blocks] == [1, 5, 5, 5, 5, 5, 3, 3, 3, 1, 1, 1, 1, 1, 1]
+
+    def test_reference_floor_keeps_chart_legends_body(self):
+        # Chart-deck pages: 12pt title, 9pt legend entries, a 7pt note paragraph.
+        # The only running text is the 7pt note; 9pt > 1.25 x 7pt, but the
+        # reference never drops below the document's median line (9pt here).
+        pages = []
+        for pn in (1, 2, 3):
+            blocks = [BlockInfo(page=pn, text=f"Chart title {pn}", bbox=(40, 40, 400, 56), font_size=12)]
+            blocks += [BlockInfo(page=pn, text=f"Legend series {i}", bbox=(40 + (i % 4) * 130, 400 + (i // 4) * 20,
+                                                                         150 + (i % 4) * 130, 410 + (i // 4) * 20), font_size=9)
+                       for i in range(8)]
+            blocks += _body_lines(pn, 40, 600, 3, size=7, width=500, text=f"Note on chart {pn}: company data and estimates")
+            pages.append(_page(pn, blocks))
+
+        assert self._headings(pages) == {(1, "Chart title 1"), (2, "Chart title 2"), (3, "Chart title 3")}
+
+    def test_chunk_document_and_extract_elements_agree(self):
+        blocks = [BlockInfo(page=1, text="Section heading", bbox=(40, 60, 300, 76), font_size=14)]
+        blocks += _body_lines(1, 40, 90, 8) + _cells(1, 400, 12)
+        page = _page(1, blocks)
+
+        headings = {e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"}
+        chunks = self.svc.chunk_document([page])
+
+        assert headings == {"Section heading"}
+        assert all("Section heading" not in c.text for c in chunks)
+        assert {c.section_title for c in chunks} == {"Section heading"}
+
+    def test_seed_pdfs_keep_titles_and_body(self):
+        cases = {
+            "attention-paper.pdf": ("Attention Is All You Need",
+                                    "The dominant sequence transduction models are based on complex recurrent or"),
+            "alphabet-earnings.pdf": ("Alphabet Announces Fourth Quarter and Fiscal Year 2025 Results",
+                                      "Sundar Pichai, CEO of Alphabet and Google, said:"),
+            "court-filing.pdf": ("REPORT AND RECOMMENDATION",
+                                 "Because Plaintiff failed to comply with four court orders and failed to"),
+        }
+        for name, (title, body) in cases.items():
+            elements = self.svc.extract_elements(self.svc.extract_pages((SEED_DIR / name).read_bytes()))
+            assert any(e.element_type == "heading" and e.text == title for e in elements), name
+            assert any(e.element_type == "paragraph" and e.text.startswith(body) for e in elements), name

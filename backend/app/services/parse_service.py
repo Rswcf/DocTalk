@@ -20,8 +20,11 @@ logger = logging.getLogger(__name__)
 # finder can tell which documents predate a fix (R2b). v2 = Unicode-aware quality OCR
 # trigger + OSD-narrowed OCR language set. v3 = off-axis text is never a heading, and
 # off-axis text or an arXiv stamp in the page margin is dropped from chunks (vertical
-# writing mode excepted).
-PARSE_PIPELINE_VERSION = 3
+# writing mode excepted). v5 = the heading size rule compares a line with its page's body
+# size (paragraph runs of running text, floored at the document line median) instead of
+# one document median that chart labels and table cells pull under the body; a line in a
+# run of 4+ same-size lines, or one made mostly of figures, is never a heading by size.
+PARSE_PIPELINE_VERSION = 5
 
 # A line that starts with an arXiv identifier is a submission stamp or a wrapped
 # reference, never a section title; inside the page margin band it is the stamp and is
@@ -30,6 +33,9 @@ PARSE_PIPELINE_VERSION = 3
 _ARXIV_ID_LINE_RE = re.compile(
     r"^arXiv:\s*(?:\d{4}\.\d{4,5}|[A-Za-z][A-Za-z\-]*(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?\b"
 )
+
+# A line that is only a web address or an e-mail address is never a heading by size.
+_BARE_ADDRESS_RE = re.compile(r"^(?:(?:https?://|www\.)\S+|[\w.+-]+@[\w-]+(?:\.[\w-]+)+)$", re.IGNORECASE)
 
 # OCR language resolution (Phase 2 C4 + R2b). Scanned / non-Latin PDFs need the matching
 # Tesseract traineddata; eng+chi_sim alone produced garbage for Urdu/Arabic (U13/U40).
@@ -238,6 +244,11 @@ class BlockInfo:
     # PyMuPDF line "wmode" == 1: the font itself is in vertical writing mode
     # (tategaki), so the line is body text, never a rotated margin stamp.
     vertical_writing: bool = False
+    # Size of the span size that carries the most characters on the line (0.0 =
+    # unknown: use font_size). font_size is the plain mean over spans, so a 10pt line
+    # with a 6pt superscript reads 8pt there and 10pt here. Read by the heading
+    # classifier only; element metadata keeps font_size.
+    dominant_size: float = 0.0
 
 
 @dataclass
@@ -264,6 +275,14 @@ class CleanBlock:
     font_size: float
     # Runs against the page's dominant direction (rotated label, vertical stamp).
     off_axis: bool = False
+    # Size the heading size rule compares: BlockInfo.dominant_size when known, else
+    # font_size (0.0 on a CleanBlock built directly = use font_size).
+    rule_size: float = 0.0
+    # Lines in this line's paragraph run (same-size neighbours in the same column
+    # within one line height, see _annotate_runs). 1 = isolated.
+    run_len: int = 1
+    # Set once by _prepare_blocks, so chunk_document and extract_elements agree.
+    is_heading: bool = False
 
 
 @dataclass
@@ -302,6 +321,21 @@ class ParseService:
     # margin artifact such as the vertical arXiv stamp, not document content.
     MARGIN_BAND_RATIO = 0.10
     OFF_AXIS_TOLERANCE_DEG = 15.0
+
+    # Heading size rule (v5, .collab/plans/2026-10-11-parse-heading-body-size.md):
+    # a line is a heading by size when it is larger than HEADING_SIZE_FACTOR x its
+    # page's body size. The body size comes from running text: on-axis lines in a
+    # paragraph run that span at least REF_MIN_LINE_EXTENT of the page, so chart
+    # labels, axis ticks and table cells never set it.
+    HEADING_SIZE_FACTOR = 1.25
+    HEADING_MAX_WRAP_LINES = 3  # a run longer than this is a paragraph, not a wrapped heading
+    RUN_GAP_LINE_HEIGHTS = 1.0  # the next line of a run starts within one line height
+    RUN_MIN_OVERLAP = 0.30  # of the narrower line's extent across the column
+    RUN_ACTIVE_CAP = 400  # earlier lines a sweep step compares against, at most
+    REF_MIN_LINE_EXTENT = 0.20
+    REF_MIN_PAGE_CHARS = 200  # less running text than this: the page takes the document's size
+    REF_SUBSTANTIAL_SHARE = 0.30  # the largest size with this share of a page's running text
+    REF_DOC_PAGE_SHARE = 0.25  # the largest page size held by this share of pages
 
     TARGET_MIN_TOKENS = 150
     TARGET_MAX_TOKENS = 300
@@ -488,7 +522,14 @@ class ParseService:
                 continue
 
             cleaned.append(
-                CleanBlock(page=b.page, text=text_norm, bbox=b.bbox, font_size=b.font_size, off_axis=off_axis)
+                CleanBlock(
+                    page=b.page,
+                    text=text_norm,
+                    bbox=b.bbox,
+                    font_size=b.font_size,
+                    off_axis=off_axis,
+                    rule_size=b.dominant_size if b.dominant_size > 0 else b.font_size,
+                )
             )
 
         return cleaned
@@ -497,46 +538,23 @@ class ParseService:
         """Produce ChunkInfo items with normalized bboxes and metadata.
 
         Steps:
-        1) Identify repeated header/footer texts across pages
-        2) Clean blocks per page (remove header/footer, fix hyphenations)
-        3) Detect headings via font size threshold (size > median × 1.3)
-        4) Split into sentence-level units, then assemble chunks sized 300–500 tokens
-           with 50-token overlap
-        5) Normalize bbox coordinates to [0,1] using page dims (top-left origin)
+        1) Clean, order and classify every line (_prepare_blocks: header/footer and
+           margin removal, reading order, headings by the page-level size rule)
+        2) Split the non-heading lines into sentence-level units, then assemble
+           chunks sized 150–300 tokens with 50-token overlap
+        3) Normalize bbox coordinates to [0,1] using page dims (top-left origin)
         """
-        # 1) Header/footer detection
-        header_texts, footer_texts = self._detect_header_footer_texts(pages)
-        document_angle = self._document_line_angle(pages)
-
-        # 2) Clean and collect blocks, also gather font sizes for median
-        all_clean_blocks: List[CleanBlock] = []
-        page_dims: dict[int, Tuple[float, float]] = {}
-        for p in pages:
-            page_dims[p.page_number] = (p.width_pt, p.height_pt)
-            cleaned = self.clean_text_blocks(
-                p.blocks,
-                p.width_pt,
-                p.height_pt,
-                header_texts=header_texts,
-                footer_texts=footer_texts,
-                rotation=p.rotation,
-                fallback_angle=document_angle,
-            )
-            all_clean_blocks.extend(self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt))
-
+        page_dims: dict[int, Tuple[float, float]] = {p.page_number: (p.width_pt, p.height_pt) for p in pages}
+        all_clean_blocks = self._prepare_blocks(pages)
         if not all_clean_blocks:
             return []
 
-        font_sizes = [cb.font_size for cb in all_clean_blocks if cb.font_size > 0]
-        median_size = median(font_sizes) if font_sizes else 12.0
-
-        # 3) Determine headings and build content sentences
         current_section_title: Optional[str] = None
         # (text, page, bbox, section_title)
         sentences: List[tuple[str, int, Tuple[float, float, float, float], Optional[str]]] = []
 
         for cb in all_clean_blocks:
-            if self._is_heading_block(cb, median_size):
+            if cb.is_heading:
                 # Heading: update current section title; do not include in content
                 title = cb.text.strip()
                 # Avoid overly long titles
@@ -679,29 +697,10 @@ class ParseService:
         table-aware retrieval so those workflows do not have to infer document
         structure from arbitrary chunk windows.
         """
-        header_texts, footer_texts = self._detect_header_footer_texts(pages)
-        document_angle = self._document_line_angle(pages)
-
-        all_clean_blocks: List[CleanBlock] = []
-        page_dims: dict[int, Tuple[float, float]] = {}
-        for p in pages:
-            page_dims[p.page_number] = (p.width_pt, p.height_pt)
-            cleaned = self.clean_text_blocks(
-                p.blocks,
-                p.width_pt,
-                p.height_pt,
-                header_texts=header_texts,
-                footer_texts=footer_texts,
-                rotation=p.rotation,
-                fallback_angle=document_angle,
-            )
-            all_clean_blocks.extend(self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt))
-
+        page_dims: dict[int, Tuple[float, float]] = {p.page_number: (p.width_pt, p.height_pt) for p in pages}
+        all_clean_blocks = self._prepare_blocks(pages)
         if not all_clean_blocks:
             return []
-
-        font_sizes = [cb.font_size for cb in all_clean_blocks if cb.font_size > 0]
-        median_size = median(font_sizes) if font_sizes else 12.0
 
         elements: List[ElementInfo] = []
         current_section_title: Optional[str] = None
@@ -716,7 +715,7 @@ class ParseService:
             reading_order = block.page * 10000 + page_block_order
             page_width, page_height = page_dims.get(block.page, (1.0, 1.0))
             bbox = self._normalize_bbox(block.page, block.bbox, page_width, page_height)
-            is_heading = self._is_heading_block(block, median_size)
+            is_heading = block.is_heading
             metadata: dict[str, Any] = {
                 "font_size": round(float(block.font_size or 0.0), 2),
             }
@@ -812,7 +811,216 @@ class ParseService:
         result.extend(order_column_band(trailing_band))
         return result
 
-    def _is_heading_block(self, block: CleanBlock, median_size: float) -> bool:
+    def _prepare_blocks(self, pages: Sequence[PageInfo]) -> List[CleanBlock]:
+        """Clean, order and classify every line once.
+
+        chunk_document and extract_elements both consume this list, so a line is a
+        heading in one iff it is a heading in the other.
+        """
+        header_texts, footer_texts = self._detect_header_footer_texts(pages)
+        document_angle = self._document_line_angle(pages)
+
+        per_page: List[Tuple[PageInfo, bool, List[CleanBlock]]] = []
+        for p in pages:
+            cleaned = self.clean_text_blocks(
+                p.blocks,
+                p.width_pt,
+                p.height_pt,
+                header_texts=header_texts,
+                footer_texts=footer_texts,
+                rotation=p.rotation,
+                fallback_angle=document_angle,
+            )
+            if not cleaned:
+                continue
+            band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
+            # Same page direction clean_text_blocks used to mark off-axis lines.
+            angle = self._dominant_line_angle(p.blocks, band_w, band_h, document_angle)
+            vertical = int(angle) % 180 == 90
+            self._annotate_runs(cleaned, vertical=vertical)
+            per_page.append((p, vertical, self._order_blocks_for_reading(cleaned, p.width_pt, p.height_pt)))
+
+        references = self._reference_sizes(per_page)
+        out: List[CleanBlock] = []
+        for p, _vertical, ordered in per_page:
+            for cb in ordered:
+                cb.is_heading = self._is_heading_block(cb, references[p.page_number])
+                out.append(cb)
+        return out
+
+    @staticmethod
+    def _same_size(a: float, b: float) -> bool:
+        """One size class: within 8% (at least 0.35pt). Wide against the 25% heading
+        factor, tight against a 9pt caption beside 10pt body."""
+        return abs(a - b) <= max(0.35, 0.08 * max(a, b))
+
+    @staticmethod
+    def _rule_size(block: CleanBlock) -> float:
+        return block.rule_size if block.rule_size > 0 else block.font_size
+
+    def _annotate_runs(self, blocks: Sequence[CleanBlock], vertical: bool = False) -> None:
+        """Set CleanBlock.run_len, the number of lines in each line's paragraph run.
+
+        Two on-axis lines are neighbours when they are the same size class, overlap
+        across the reading direction by RUN_MIN_OVERLAP of the narrower one (same
+        column), and the lower one starts below the upper one's middle and within
+        RUN_GAP_LINE_HEIGHTS of its end. A run is a connected component of that
+        relation. Lines stack along y, or along x on a vertical page. One sweep in
+        stacking order keeps only the earlier lines still within reach, so the cost
+        is O(n log n + n*k), k = lines within one line height (one table row).
+        """
+        # (stack lo, stack hi, across lo, across hi) per line
+        ext = [
+            (b.bbox[0], b.bbox[2], b.bbox[1], b.bbox[3]) if vertical else (b.bbox[1], b.bbox[3], b.bbox[0], b.bbox[2])
+            for b in blocks
+        ]
+        on_axis = [i for i, b in enumerate(blocks) if not b.off_axis]
+        if len(on_axis) < 2:
+            return
+        max_h = max(ext[i][1] - ext[i][0] for i in on_axis)
+        parent = list(range(len(blocks)))
+
+        def find(i: int) -> int:
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        active: List[int] = []
+        for i in sorted(on_axis, key=lambda k: (ext[k][0], ext[k][2])):
+            lo, hi, a0, a1 = ext[i]
+            size = self._rule_size(blocks[i])
+            reachable: List[int] = []
+            for j in active:
+                jlo, jhi, ja0, ja1 = ext[j]
+                if lo - jhi > self.RUN_GAP_LINE_HEIGHTS * max_h:
+                    continue  # lines are visited in stacking order: out of reach for good
+                reachable.append(j)
+                if lo - jhi > self.RUN_GAP_LINE_HEIGHTS * max(hi - lo, jhi - jlo):
+                    continue
+                if lo < jlo + 0.5 * (jhi - jlo):
+                    continue  # beside j (a cell in the same table row), not below it
+                if not self._same_size(size, self._rule_size(blocks[j])):
+                    continue
+                overlap = min(a1, ja1) - max(a0, ja0)
+                if overlap <= 0 or overlap < self.RUN_MIN_OVERLAP * min(a1 - a0, ja1 - ja0):
+                    continue
+                root_i, root_j = find(i), find(j)
+                if root_i != root_j:
+                    parent[root_i] = root_j
+            reachable.append(i)
+            active = reachable[-self.RUN_ACTIVE_CAP:]
+
+        sizes = Counter(find(i) for i in on_axis)
+        for i in on_axis:
+            blocks[i].run_len = sizes[find(i)]
+
+    def _cluster_sizes(self, weights: dict[float, float]) -> List[Tuple[float, float]]:
+        """Group sizes into same-size classes: [(weighted mean size, weight)], ascending."""
+        clusters: List[Tuple[float, float]] = []
+        start: Optional[float] = None
+        acc_w = acc_sw = 0.0
+        for size, w in sorted(weights.items()):
+            if start is not None and not self._same_size(start, size):
+                clusters.append((acc_sw / acc_w, acc_w))
+                start, acc_w, acc_sw = None, 0.0, 0.0
+            if start is None:
+                start = size
+            acc_w += w
+            acc_sw += size * w
+        if start is not None and acc_w:
+            clusters.append((acc_sw / acc_w, acc_w))
+        return clusters
+
+    def _running_text_chars(
+        self, blocks: Sequence[CleanBlock], vertical: bool, band_w: float, band_h: float
+    ) -> dict[float, float]:
+        """Characters of running text per size on one page: on-axis lines in a run of
+        2+ that span at least REF_MIN_LINE_EXTENT of the page along the line."""
+        page_extent = band_h if vertical else band_w
+        chars: dict[float, float] = {}
+        for b in blocks:
+            size = self._rule_size(b)
+            if b.off_axis or b.run_len < 2 or size <= 0:
+                continue
+            x0, y0, x1, y1 = b.bbox
+            length = (y1 - y0) if vertical else (x1 - x0)
+            if length < self.REF_MIN_LINE_EXTENT * page_extent:
+                continue
+            chars[size] = chars.get(size, 0.0) + len(b.text)
+        return chars
+
+    def _page_reference(self, chars: dict[float, float]) -> Optional[float]:
+        """A page's body size: the largest size class holding REF_SUBSTANTIAL_SHARE of
+        its running text (18pt slide bullets over 14pt sub-bullets, 12pt body over 9pt
+        footnotes). None when the page has too little running text."""
+        total = sum(chars.values())
+        if total < self.REF_MIN_PAGE_CHARS:
+            return None
+        clusters = self._cluster_sizes(chars)
+        substantial = [s for s, w in clusters if w >= self.REF_SUBSTANTIAL_SHARE * total]
+        return max(substantial) if substantial else max(clusters, key=lambda c: c[1])[0]
+
+    @staticmethod
+    def _weighted_median(weights: dict[float, float], default: float) -> float:
+        total = sum(weights.values())
+        acc = 0.0
+        for size, w in sorted(weights.items()):
+            acc += w
+            if acc >= total / 2:
+                return size
+        return default
+
+    def _reference_sizes(self, per_page: Sequence[Tuple[PageInfo, bool, List[CleanBlock]]]) -> dict[int, float]:
+        """Reference size of the heading size rule for each page.
+
+        Page body size, else the document's (the largest page body size held by
+        REF_DOC_PAGE_SHARE of the pages that have one; with none, the char-weighted
+        median of all running text), floored at the document's median line size. The
+        floor is the reference v1-v4 used everywhere, so the size rule can only drop
+        a heading v4 found, never add one (except where dominant_size exceeds a
+        superscript-lowered font_size). Without it a chart page's 9pt legend entries
+        would clear 1.25x its 7pt footnotes.
+        """
+        font_sizes = [cb.font_size for _p, _v, blocks in per_page for cb in blocks if cb.font_size > 0]
+        floor = median(font_sizes) if font_sizes else 12.0
+
+        page_refs: dict[int, Optional[float]] = {}
+        pooled: dict[float, float] = {}
+        for p, vertical, blocks in per_page:
+            band_w, band_h = self._band_dims(p.width_pt, p.height_pt, p.rotation)
+            chars = self._running_text_chars(blocks, vertical, band_w, band_h)
+            page_refs[p.page_number] = self._page_reference(chars)
+            for size, w in chars.items():
+                pooled[size] = pooled.get(size, 0.0) + w
+
+        known = [r for r in page_refs.values() if r is not None]
+        if known:
+            pages_per_size: dict[float, float] = {}
+            for r in known:
+                pages_per_size[r] = pages_per_size.get(r, 0.0) + 1.0
+            clusters = self._cluster_sizes(pages_per_size)
+            common = [s for s, n in clusters if n >= self.REF_DOC_PAGE_SHARE * len(known)]
+            doc_ref = max(common) if common else max(clusters, key=lambda c: c[1])[0]
+        else:
+            doc_ref = self._weighted_median(pooled, floor)
+        return {pn: max(floor, r if r is not None else doc_ref) for pn, r in page_refs.items()}
+
+    def _is_heading_by_size(self, block: CleanBlock, reference_size: float) -> bool:
+        """The size rule and its guards; the caps rule in _is_heading_block is separate."""
+        if block.run_len > self.HEADING_MAX_WRAP_LINES:
+            return False
+        if self._rule_size(block) <= reference_size * self.HEADING_SIZE_FACTOR:
+            return False
+        text = block.text.strip()
+        if _BARE_ADDRESS_RE.match(text):
+            return False  # a broker's "www.example.com" line, not a title
+        letters = sum(1 for ch in text if ch.isalpha())
+        figures = sum(1 for ch in text if ch.isdigit() or ch in "$\u20ac\u00a3\u00a5%\u2030")
+        # "US$ 4.2bn" passes; "Q3 2025", "+12%", "2026E" are chart callouts, not titles.
+        return letters >= 2 and figures < letters
+
+    def _is_heading_block(self, block: CleanBlock, reference_size: float) -> bool:
         text = block.text.strip()
         if not text or len(text) > 220:
             return False
@@ -822,7 +1030,7 @@ class ParseService:
             return False
         if not any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" for ch in text):
             return False
-        if block.font_size > (median_size * 1.25):
+        if self._is_heading_by_size(block, reference_size):
             return True
         words = text.split()
         if 1 <= len(words) <= 12 and len(text) <= 90 and text[-1:] not in self.SENTENCE_DELIMS:
@@ -998,10 +1206,14 @@ class ParseService:
 
             line_text = "".join([s.get("text", "") for s in spans])
             sizes: List[float] = []
+            size_chars: dict[float, int] = {}
             for s in spans:
                 sz = float(s.get("size")) if s.get("size") else None
                 if sz:
                     sizes.append(sz)
+                    n_chars = len((s.get("text") or "").strip())
+                    if n_chars:
+                        size_chars[sz] = size_chars.get(sz, 0) + n_chars
 
             # Hyphenation fix across lines
             if i < (num_lines - 1) and line_text.rstrip().endswith("-"):
@@ -1019,6 +1231,8 @@ class ParseService:
                 continue
 
             avg_size = (sum(sizes) / len(sizes)) if sizes else 12.0
+            # The span size holding the most characters (ties: the larger one).
+            dominant = max(size_chars.items(), key=lambda kv: (kv[1], kv[0]))[0] if size_chars else 0.0
             line_dir = line.get("dir") or (1.0, 0.0)
             result.append(
                 BlockInfo(
@@ -1029,6 +1243,7 @@ class ParseService:
                     font_size=avg_size,
                     direction=(float(line_dir[0]), float(line_dir[1])),
                     vertical_writing=line.get("wmode") == 1,
+                    dominant_size=dominant,
                 )
             )
         return result

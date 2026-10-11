@@ -151,7 +151,11 @@ sequenceDiagram
 2a. **OCR fallback** (PDFs only; status → `ocr`): OCR runs when the PDF is **scanned** (`detect_scanned` — no text layer) **or low-quality** (`detect_low_quality_text` — a text layer exists but is garbled, e.g. a broken-font cmap that extracts as mojibake; scored with a Unicode-aware letter/number ratio, two-tier so good CJK is never false-flagged). The OCR **language is content-based**: `detect_script_osd` runs Tesseract OSD (`--psm 0`) on sample pages to detect the script, then `resolve_ocr_languages(locale, script)` selects a **narrow** Tesseract set (the script family, ≤3 languages, no `eng` appended to non-Latin scripts — extra languages make Tesseract hallucinate cross-script glyphs and run far slower). The UI `locale` only disambiguates within a script family. A low-quality re-OCR is adopted only if it improves on the existing text-layer quality. The worker records `parse_version`, `parse_method` (`text`/`ocr`), `text_quality`, and `ocr_languages` on the document (used by `scripts/find_low_quality_docs.py` to backfill docs parsed before a fix).
 
 3. **Chunking**: Text is split into 150–300 token windows with:
-   - Heading detection for section titles
+   - Heading detection for section titles: a line counts as a heading by size
+     when it is over 1.25× its page's body size, measured from paragraph runs
+     of running text (never from chart labels or table cells) and floored at
+     the document's median line size; heading lines are left out of chunk text
+     and become the chunk's `section_title`
    - Header/footer filtering to remove repeated page elements
    - Simple two-column reading-order detection so body text is chunked by
      column instead of interleaving left/right rows
