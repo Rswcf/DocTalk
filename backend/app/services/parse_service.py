@@ -1087,10 +1087,10 @@ class ParseService:
                 and (other.bbox[2] - other.bbox[0]) < rows.width * self.COLUMN_MIN_WIDTH_RATIO
                 and (abs(other.font_size - block.font_size) <= 0.5 or self._is_value_cell(other.text))
             )
+        return False
 
     def _is_value_cell(self, text: str) -> bool:
         return any(ch.isdigit() for ch in text) and sum(ch.isalpha() for ch in text) <= self.VALUE_CELL_MAX_LETTERS
-        return False
 
     @staticmethod
     def _line_angle(direction: Tuple[float, float]) -> float:
