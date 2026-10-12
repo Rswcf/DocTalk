@@ -8,6 +8,39 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-12
+
+Citations are cleaner in academic PDFs, Wikipedia pages import again, and
+every text format highlights the cited passage.
+
+### Fixed
+- Importing a Wikipedia article by URL failed for every article: the
+  boilerplate filter treated the page's own root elements as navigation
+  because their class names contain words such as "header". The document
+  roots are now never removed.
+- arXiv papers: the vertical arXiv stamp in the page margin was the section
+  title of every chunk and prefixed every citation snippet. Text wholly inside
+  the outer margin band that runs against the page's direction, or starts
+  with an arXiv identifier, is now dropped (parse pipeline v3). Real vertical
+  writing (Japanese/Chinese tategaki) is never dropped.
+- Headings: short all-caps tokens (`O(1)`, `100K`, table cells) and Chinese
+  lines that contain a Latin acronym were taken as headings and removed from
+  the searchable text. All-caps headings now need four capital letters and no
+  table row; numbered headings (`3 Model Architecture`) are detected
+  (parse pipeline v4).
+- The three demo documents are re-parsed in place when they were parsed by an
+  older pipeline (at startup and every 30 minutes), so their public links keep
+  working. Existing user documents keep their current parse until re-parsed.
+
+### Added
+- Citation highlighting in Markdown, Word (opens in the text view), PowerPoint,
+  Excel, plain-text files and web pages, in addition to PDF. When the passage
+  cannot be located with certainty the reader shows the page and says so
+  ("Page location only") instead of marking a guess. (Frontend, live since
+  2026-10-12.)
+- Reader chat: a restored conversation no longer streams the answer into the
+  question's bubble. (Frontend, live since 2026-10-11.)
+
 ## [0.35.0] - 2026-09-27
 
 Production Postgres is now backed up every night, and the backend checks
