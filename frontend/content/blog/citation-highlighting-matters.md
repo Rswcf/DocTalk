@@ -77,7 +77,7 @@ The value of citation highlighting is not just about whether verification is pos
 
 Here is the paradox of AI document analysis: the whole point of using AI is to avoid reading the entire document. But if you cannot verify the AI's answers efficiently, you either need to trust the AI blindly (risky) or read the document anyway (defeats the purpose).
 
-Citation highlighting resolves this paradox. You do not need to read the whole document. You click each citation, spend 5-10 seconds confirming the highlighted passage supports the AI's claim, and move on. A response with four citations takes about 30-60 seconds to verify. Compare that to the 20-30 minutes of reading you avoided by using AI in the first place.
+Citation highlighting resolves this paradox. You do not need to read the whole document. You click each citation, spend 5-10 seconds confirming the cited passage supports the AI's claim, and move on. A response with four citations takes about 30-60 seconds to verify. Compare that to the 20-30 minutes of reading you avoided by using AI in the first place.
 
 Without click-to-navigate highlighting, verification takes 2-3 minutes per citation (finding the right page, scanning for the relevant text, confirming it matches). Most users skip verification when it takes that long — which means they are effectively using the AI without any accuracy check.
 
@@ -107,11 +107,11 @@ A [student or researcher](/use-cases/students) asks about a paper's methodology:
 
 ### Medical and Clinical Documents
 
-A clinician reviewing a patient's medical history asks about medication allergies. The AI lists three allergies with citations. Each click shows the highlighted note from the relevant medical record. An error here — a missed allergy or a fabricated one — could have direct patient safety implications. Citation highlighting makes verification fast enough to be consistently practiced, not just theoretically possible.
+A clinician reviewing a patient's medical history asks about medication allergies. The AI lists three allergies with citations. Each click shows the cited note from the relevant medical record. An error here — a missed allergy or a fabricated one — could have direct patient safety implications. Citation highlighting makes verification fast enough to be consistently practiced, not just theoretically possible.
 
 ### Compliance and Regulatory Review
 
-A compliance officer asks about a policy document: "What are the reporting deadlines?" The AI lists three deadlines with dates. Clicking each citation shows the highlighted text in the regulatory document, including the specific conditions and exceptions that qualify each deadline. These nuances — "within 30 days of discovery, except when..." — are exactly the kind of detail that hallucination can get wrong and that citation highlighting makes easy to verify.
+A compliance officer asks about a policy document: "What are the reporting deadlines?" The AI lists three deadlines with dates. Clicking each citation shows the cited text in the regulatory document, including the specific conditions and exceptions that qualify each deadline. These nuances — "within 30 days of discovery, except when..." — are exactly the kind of detail that hallucination can get wrong and that citation highlighting makes easy to verify.
 
 ## How Tools Compare on Citation Quality
 
