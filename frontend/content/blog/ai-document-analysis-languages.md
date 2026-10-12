@@ -2,7 +2,7 @@
 title: "AI Document Analysis in 11 Languages: How Cross-Lingual RAG Works"
 description: "How DocTalk analyzes documents in 11 languages and supports cross-lingual queries. Ask questions in English about a Japanese document — here is the technology that makes it work."
 date: "2026-03-18"
-updated: "2026-10-11"
+updated: "2026-10-12"
 author: "DocTalk Team"
 category: "ai-insights"
 tags: ["multilingual", "languages", "rag", "embeddings", "ai insights", "cross-lingual"]
@@ -57,7 +57,7 @@ The retrieved chunks (in their original language) are sent to the LLM along with
 
 ### Citations in the Original Language
 
-The citations in the AI's answer point back to the original text in the document. If you uploaded a German contract, the citations take you to the original German passages in the document viewer; in PDF and plain-text (.txt) files, the passages are highlighted. This is important: the AI's answer may be in English, but the source verification happens against the original text.
+The citations in the AI's answer point back to the original text in the document. If you uploaded a German contract, the citations take you to the original German passages in the document viewer and highlight them. This is important: the AI's answer may be in English, but the source verification happens against the original text.
 
 ## Supported Languages and Quality Tiers
 

@@ -2,7 +2,7 @@
 title: "How to Chat with Word Documents (DOCX) Using AI"
 description: "Many AI PDF tools still expect a PDF. Learn how DocTalk lets you chat with Word (DOCX) files, with paragraph and table extraction and cited answers you can click through to the passage."
 date: "2026-02-18"
-updated: "2026-10-11"
+updated: "2026-10-12"
 author: "DocTalk Team"
 category: "guides"
 tags: ["docx", "word", "ai chat", "tutorial", "multi-format"]
@@ -48,7 +48,7 @@ The extracted content is converted to clean markdown, which preserves headings, 
 
 ### Citation Navigation
 
-When the AI cites a passage from your DOCX file, clicking the citation number scrolls the document viewer to the cited location. The passage highlight works in PDF and plain-text (.txt) files; in Word documents the passage itself is not highlighted.
+When the AI cites a passage from your DOCX file, clicking the citation number scrolls the document viewer to the relevant section and highlights the cited passage. Word documents open in the Text view, where DocTalk finds the cited text and marks it. When DocTalk cannot pinpoint the passage, it shows the cited page instead.
 
 ## Step-by-Step: Chat with a DOCX File
 
@@ -74,7 +74,7 @@ Once processing is complete, start chatting. Here are some example questions tha
 
 ### 4. Verify with Citations
 
-Click the numbered citations in the AI's response to jump to the source text in the document viewer. There you can read what the AI based its answer on.
+Click the numbered citations in the AI's response to jump to the source text in the document viewer. The highlighted passage shows you what the AI based its answer on.
 
 ## Tips for Best Results with Word Documents
 
@@ -122,7 +122,7 @@ Checked 30 September 2026 on each vendor's own site unless marked.
 
 | Tool | Native DOCX | Table Support | How you check an answer |
 |---|---|---|---|
-| **DocTalk** | Yes | Full table extraction | Click a citation → jumps to the cited location |
+| **DocTalk** | Yes | Full table extraction | Click a citation → passage highlighted |
 | ChatPDF | Yes (DOC/DOCX) | — | Clickable citations that scroll to the source |
 | AskYourPDF | Not listed¹ | — | Page-level text references¹ |
 | Gemini Notebook (formerly NotebookLM) | Yes (Word) | — | Inline source citations |
@@ -131,7 +131,7 @@ Checked 30 September 2026 on each vendor's own site unless marked.
 
 ¹ From third-party reviews. "—" means we could not confirm it.
 
-Word support is no longer rare: DocTalk, ChatPDF, Gemini Notebook and ChatDOC (on Pro) all read DOCX natively. In DocTalk, answers cite the location in the document, and clicking a citation jumps there.
+Word support is no longer rare: DocTalk, ChatPDF, Gemini Notebook and ChatDOC (on Pro) all read DOCX natively. In DocTalk, clicking a citation highlights the cited passage in the document.
 
 ## Frequently Asked Questions
 
@@ -157,6 +157,6 @@ You can export a Google Doc as .docx (File > Download > Microsoft Word) and uplo
 
 ## Get Started
 
-Upload your first Word document to [DocTalk](/) and ask a question. Click any citation to jump to the source text.
+Upload your first Word document to [DocTalk](/) and ask a question. Click a citation to jump to the source text and see the cited passage highlighted.
 
 If you want to try without signing up, the [free demo](/demo) lets you see the chat and citation experience with sample documents. For a deeper dive into PDF workflows, see our [complete guide to chatting with PDFs](/blog/how-to-chat-with-pdf-ai).

@@ -2,7 +2,7 @@
 title: "How to Chat with a PowerPoint Presentation Using AI"
 description: "Learn how to analyze and ask questions about PowerPoint (PPTX) files using AI. Step-by-step guide covering slide extraction, use cases for sales decks and lectures, and tips for best results."
 date: "2026-03-18"
-updated: "2026-10-11"
+updated: "2026-10-12"
 author: "DocTalk Team"
 category: "guides"
 tags: ["powerpoint", "pptx", "ai chat", "tutorial", "multi-format", "presentation"]
@@ -82,7 +82,7 @@ Once processing completes, the chat interface appears alongside the document vie
 
 ### 4. Review Citations and Verify
 
-The AI responds with numbered citations. Click any citation to jump to the corresponding slide in the document viewer. This lets you confirm that the AI's answer accurately reflects what the presentation actually says.
+The AI responds with numbered citations. Click any citation to jump to the corresponding slide in the document viewer; in the Text view, the cited passage is highlighted. This lets you confirm that the AI's answer accurately reflects what the presentation actually says.
 
 ### 5. Dig Deeper with Follow-Ups
 

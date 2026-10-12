@@ -2,7 +2,7 @@
 title: "How to Analyze Excel Spreadsheets with AI: A Complete Guide"
 description: "Learn how to chat with Excel (XLSX) files using AI. Most AI document tools skip spreadsheets entirely. See how DocTalk extracts table data for cited, verifiable answers."
 date: "2026-03-18"
-updated: "2026-10-11"
+updated: "2026-10-12"
 author: "DocTalk Team"
 category: "guides"
 tags: ["excel", "xlsx", "spreadsheet", "ai chat", "tutorial", "multi-format", "data analysis"]
@@ -91,7 +91,7 @@ Once processing completes, start asking questions. Here are examples that work w
 
 ### 4. Verify the Numbers
 
-Click the numbered citations in the AI's response to jump to the relevant section in the document viewer. There you can check the rows and columns the AI used. This is especially important for numerical data, where misinterpretation can have real consequences.
+Click the numbered citations in the AI's response to jump to the relevant section in the document viewer. The highlighted passage shows the rows and columns the AI used. This is especially important for numerical data, where misinterpretation can have real consequences.
 
 ### 5. Ask Follow-Up Questions
 
@@ -169,7 +169,7 @@ Instead of "How are sales doing?", ask "What were total sales in Q3 2025?" Preci
 
 | Approach | Handles XLSX Natively | Table Structure Preserved | Source Verification | Time for a 500-Row Workbook |
 |---|---|---|---|---|
-| **DocTalk** | Yes | Yes (markdown tables) | Click-to-source citations | 2-3 minutes |
+| **DocTalk** | Yes | Yes (markdown tables) | Click-to-highlight citations | 2-3 minutes |
 | **ChatGPT (Advanced Data Analysis)** | Yes (Code Interpreter) | Yes (pandas) | No source linking | 5-10 minutes (with prompting) |
 | **ChatPDF** | No (PDF only) | N/A | N/A | N/A |
 | **Google Sheets + Gemini** | Google Sheets only | Yes | No citation highlighting | Variable |
