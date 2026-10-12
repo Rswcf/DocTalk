@@ -1,6 +1,6 @@
 # DocTalk
 
-> AI document chat with cited answers. Upload PDF, DOCX, PPTX, XLSX, TXT, Markdown, or a URL and chat with AI that cites original text; click a citation to jump to the source, with the passage highlighted in PDF and plain-text (.txt) files.
+> AI document chat with cited answers. Upload PDF, DOCX, PPTX, XLSX, TXT, Markdown, or a URL and chat with AI that cites original text; click a citation to jump to the source and see the cited passage highlighted.
 
 ## Product
 
