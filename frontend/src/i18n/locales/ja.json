@@ -647,7 +647,7 @@
   "blog.post.tableOfContents": "目次",
   "blog.post.relatedArticles": "関連記事",
   "blog.post.aboutTitle": "DocTalkについて",
-  "blog.post.aboutDescription": "DocTalk は、AI を活用したドキュメント チャット アプリです。任意の文書をアップロードすると、元のテキスト内の引用箇所をハイライトする出典引用付きの回答がすぐに得られます。 PDF、DOCX、PPTX、XLSX などを 11 か国語でサポートします。",
+  "blog.post.aboutDescription": "DocTalk は、AI を活用したドキュメント チャット アプリです。任意の文書をアップロードすると、元のテキストにリンクする出典引用付きの回答がすぐに得られます。 PDF、DOCX、PPTX、XLSX などを 11 か国語でサポートします。",
   "blog.post.tryFreeDemo": "無料デモを試す",
   "blog.post.exploreFeatures": "DocTalk の機能を見る",
   "blog.post.cta.title": "DocTalk を無料でお試しください — サインアップは必要ありません",

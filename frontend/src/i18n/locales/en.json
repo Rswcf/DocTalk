@@ -665,7 +665,7 @@
   "blog.post.tableOfContents": "Table of Contents",
   "blog.post.relatedArticles": "Related Articles",
   "blog.post.aboutTitle": "About DocTalk",
-  "blog.post.aboutDescription": "DocTalk is an AI-powered document chat app. Upload any document and get instant answers with source citations that highlight the cited passage in your original text. Supports PDF, DOCX, PPTX, XLSX, and more in 11 languages.",
+  "blog.post.aboutDescription": "DocTalk is an AI-powered document chat app. Upload any document and get instant answers with source citations that link back to your original text. Supports PDF, DOCX, PPTX, XLSX, and more in 11 languages.",
   "blog.post.tryFreeDemo": "Try Free Demo",
   "blog.post.exploreFeatures": "Explore DocTalk Features",
   "blog.post.cta.title": "Try DocTalk Free — No Signup Required",

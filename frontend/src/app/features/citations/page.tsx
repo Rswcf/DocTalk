@@ -6,7 +6,7 @@ import { buildMarketingMetadata } from '../../../lib/seo';
 export const metadata: Metadata = buildMarketingMetadata({
   title: 'AI Answers with Source Citations',
   description:
-    'Every AI answer includes numbered citations. Click any citation to jump to the exact source text and verify every answer in your document.',
+    'Every AI answer includes numbered citations. Click a citation to jump to the source text and verify every answer in your document.',
   path: '/features/citations',
   localized: true,
   keywords: ['citation highlighting', 'ai citation', 'document citation', 'source verification ai'],

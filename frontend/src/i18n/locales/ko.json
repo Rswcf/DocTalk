@@ -647,7 +647,7 @@
   "blog.post.tableOfContents": "목차",
   "blog.post.relatedArticles": "관련 기사",
   "blog.post.aboutTitle": "DocTalk 소개",
-  "blog.post.aboutDescription": "DocTalk는 AI 기반 문서 채팅 앱입니다. 문서를 업로드하고 원본 텍스트에서 인용된 구절을 강조 표시하는 출처 인용으로 즉시 답변을 얻으세요. PDF, DOCX, PPTX, XLSX 등을 11개 언어로 지원합니다.",
+  "blog.post.aboutDescription": "DocTalk는 AI 기반 문서 채팅 앱입니다. 문서를 업로드하고 원본 텍스트로 연결되는 출처 인용으로 즉시 답변을 얻으세요. PDF, DOCX, PPTX, XLSX 등을 11개 언어로 지원합니다.",
   "blog.post.tryFreeDemo": "무료 데모를 사용해 보세요",
   "blog.post.exploreFeatures": "DocTalk 기능 살펴보기",
   "blog.post.cta.title": "DocTalk를 무료로 사용해 보세요 — 가입이 필요하지 않습니다",

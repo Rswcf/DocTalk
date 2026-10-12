@@ -40,7 +40,7 @@ Any replacement should match these strengths, or have a good reason not to:
 
 **Excel files.** There is no native .xlsx upload; you work through Google Sheets or CSV instead.
 
-**Checking an answer in the original layout.** Gemini Notebook cites the source text inline. If you need to see the passage highlighted on the page of the original PDF or Word file — for tables, figures, legal clauses or a thesis quote — a document-first tool fits better.
+**Checking an answer in the original layout.** Gemini Notebook cites the source text inline. If you need to see the passage highlighted on the page of the original PDF — for tables, figures, legal clauses or a thesis quote — a document-first tool fits better.
 
 **Quotes you can reuse with a page number.** For academic or legal writing you may want quotes checked against the source and tied to the page they come from.
 

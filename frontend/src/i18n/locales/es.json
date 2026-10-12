@@ -647,7 +647,7 @@
   "blog.post.tableOfContents": "Tabla de contenido",
   "blog.post.relatedArticles": "Artículos relacionados",
   "blog.post.aboutTitle": "Acerca de DocTalk",
-  "blog.post.aboutDescription": "DocTalk es una aplicación de chat de documentos basada en IA. Cargue cualquier documento y obtenga respuestas instantáneas con citas de fuentes que resaltan el pasaje citado en su texto original. Admite PDF, DOCX, PPTX, XLSX y más en 11 idiomas.",
+  "blog.post.aboutDescription": "DocTalk es una aplicación de chat de documentos basada en IA. Cargue cualquier documento y obtenga respuestas instantáneas con citas de fuentes que enlazan con su texto original. Admite PDF, DOCX, PPTX, XLSX y más en 11 idiomas.",
   "blog.post.tryFreeDemo": "Pruebe la demostración gratuita",
   "blog.post.exploreFeatures": "Explorar las características de DocTalk",
   "blog.post.cta.title": "Pruebe DocTalk gratis: no es necesario registrarse",

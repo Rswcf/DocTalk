@@ -665,7 +665,7 @@
   "blog.post.tableOfContents": "目录",
   "blog.post.relatedArticles": "相关文章",
   "blog.post.aboutTitle": "关于DocTalk",
-  "blog.post.aboutDescription": "DocTalk 是一款人工智能驱动的文档聊天应用程序。上传任何文档，即可获得附带来源引用的即时答案，引用会在您的原始文本中高亮显示被引用的段落。支持PDF、DOCX、PPTX、XLSX等11种语言。",
+  "blog.post.aboutDescription": "DocTalk 是一款人工智能驱动的文档聊天应用程序。上传任何文档，即可获得附带来源引用的即时答案，引用可链接回您的原始文本。支持PDF、DOCX、PPTX、XLSX等11种语言。",
   "blog.post.tryFreeDemo": "尝试免费演示",
   "blog.post.exploreFeatures": "探索 DocTalk 功能",
   "blog.post.cta.title": "免费试用 DocTalk — 无需注册",

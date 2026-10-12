@@ -660,7 +660,7 @@
   "blog.post.tableOfContents": "Table des matières",
   "blog.post.relatedArticles": "Articles connexes",
   "blog.post.aboutTitle": "À propos de DocTalk",
-  "blog.post.aboutDescription": "DocTalk est une application de discussion de documents basée sur l'IA. Téléchargez n'importe quel document et obtenez des réponses instantanées avec des citations de sources qui surlignent le passage cité dans votre texte original. Prend en charge PDF, DOCX, PPTX, XLSX et plus en 11 langues.",
+  "blog.post.aboutDescription": "DocTalk est une application de discussion de documents basée sur l'IA. Téléchargez n'importe quel document et obtenez des réponses instantanées avec des citations de sources qui renvoient à votre texte original. Prend en charge PDF, DOCX, PPTX, XLSX et plus en 11 langues.",
   "blog.post.tryFreeDemo": "Essayez la démo gratuite",
   "blog.post.exploreFeatures": "Explorez les fonctionnalités du DocTalk",
   "blog.post.cta.title": "Essayez DocTalk gratuitement — Aucune inscription requise",

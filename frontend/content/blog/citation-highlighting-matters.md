@@ -151,7 +151,7 @@ Citations appear as numbered references [1], [2], [3] inline with the answer tex
 
 ### Single-Click Navigation
 
-Clicking a citation number immediately scrolls the document viewer to the relevant page and highlights the cited passage. No secondary modal, no separate search step, no "see page X" instructions. One click, one destination.
+Clicking a citation number immediately scrolls the document viewer to the relevant page and highlights the cited passage. When DocTalk cannot pinpoint the passage, it shows the cited page instead. No secondary modal, no separate search step, no "see page X" instructions. One click, one destination.
 
 ### Context Preservation
 
@@ -185,6 +185,6 @@ Most answers include 2-5 citations, depending on the complexity of the question 
 
 ## Get Started
 
-Try the citation highlighting experience yourself. Upload a document to [DocTalk](/) and ask a question. Click the numbered citations in the answer to see the source passages highlighted in the original document.
+Try the citation highlighting experience yourself. Upload a document to [DocTalk](/) and ask a question. Click a numbered citation in the answer to see the cited passage highlighted in the original document. When DocTalk cannot pinpoint the passage, it shows the cited page instead.
 
 The [free demo](/demo) works without signing up — you can see how citations look and feel with sample documents in about 30 seconds. For a complete walkthrough of the document chat experience, see our guide on [how to chat with a PDF](/blog/how-to-chat-with-pdf-ai).
