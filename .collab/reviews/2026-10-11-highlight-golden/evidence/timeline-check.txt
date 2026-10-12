@@ -1,0 +1,2 @@
+records 68 unique labels 68 frames 166 status-frames {'loading': 35, 'region': 44, 'exact': 56, 'page': 4, 'other': 1}
+violations 0

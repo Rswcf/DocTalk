@@ -1,0 +1,7 @@
+Round 2b gate over citations.jsonl: in every recorded frame the label is never stronger than the marks.
+Sets: all records (calibration runs included); results (last record per label); live j (r2bL-* results).
+Note: for PDF the recorder counts page wrappers, not region boxes (round-1 caveat).
+
+all: records 90, frames 331, status labels {'loading': 51, 'exact': 105, 'other': 1, 'region': 118, 'page': 2}, violations 0
+results: records 86, frames 292, status labels {'loading': 48, 'exact': 98, 'other': 1, 'region': 96, 'page': 2}, violations 0
+live j: records 66, frames 169, status labels {'loading': 34, 'region': 61, 'exact': 62, 'page': 2}, violations 0

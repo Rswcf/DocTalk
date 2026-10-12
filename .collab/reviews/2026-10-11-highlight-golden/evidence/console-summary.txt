@@ -1,0 +1,20 @@
+Console messages captured over CDP (Runtime.consoleAPICalled + Log.entryAdded), grouped.
+Query strings are redacted. Two deliberate probe messages (console.warn/console.error) used to prove
+capture works are excluded.
+
+Totals by phase and level:
+  next dev                         error    4
+  next dev                         info     15
+  next start (production build)    error    4
+  next start (production build)    info     204
+
+Distinct messages:
+   198  next start (production build) | info | Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://va.vercel-scripts.com https://*.sentry-cdn
+    15  next dev | info | %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+     6  next start (production build) | info | Connecting to 'http://localhost:9000/doctalk-golden/documents/66fdc713-3bd1-4805-81e3-29718cc8ab93/attention-paper.pdf?<redacted>' violates the follow
+     2  next dev | error | Failed to fetch credits TypeError: Failed to fetch at eval (webpack-internal:///(app-pages-browser)/./src/components/CreditsDisplay.tsx:32:31)  [step scrollrepeat]
+     2  next dev | error | Failed to load resource: net::ERR_CONNECTION_REFUSED  [step scrollrepeat]
+     1  next start (production build) | error | Failed to load resource: the server responded with a status of 404 (Not Found)  [step cite:qf-saved-j1]
+     1  next start (production build) | error | Unable to preventDefault inside passive event listener invocation.  [step cite:mob-docx-c1]
+     1  next start (production build) | error | Unable to preventDefault inside passive event listener invocation.  [step cite:mob-docx-c4]
+     1  next start (production build) | error | Unable to preventDefault inside passive event listener invocation.  [step cite:mob-md2-tap-c2]

@@ -1,0 +1,7 @@
+Round 2b console messages, all under `next start` (production build of 8927e588), captured over CDP.
+Grouped by level and text; query strings redacted. For errors and warnings, the step that first logged it.
+
+Totals by level: info=308
+
+ 304  info     Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://va.vercel-scripts.com https://*.sentry-cdn.com https
+   4  info     Connecting to 'http://localhost:9000/doctalk-golden/documents/66fdc713-3bd1-4805-81e3-29718cc8ab93/attention-paper.pdf?<redacted>' violates the following Conten

@@ -1,0 +1,700 @@
+Status/mark timeline per citation jump (MutationObserver + requestAnimationFrame in the page).
+Columns: t ms after the click | status line | exact marks | region marks | PDF line boxes.
+PDF region boxes are not counted per frame; PDF final state was read separately.
+
+## md1-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     38 | Citation 1 · Page 1–3 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     46 | Citation 1 · Page 1–3 · Related passage | ex 0 | rg 11 | pdfLine 0
+     MARK region anchor: 'Site'
+     MARK region: 'Depth (m)'
+     MARK region: 'pH'
+     MARK region: 'Alder Marsh'
+     MARK region: '1.4'
+     MARK region: '6.8'
+     MARK region: 'Reed Hollow'
+     MARK region: '0.9'
+     MARK region: '7.1'
+     MARK region: '水样均在清晨采集，以减少昼夜温差的影响。'
+     MARK region: 'جمعت العينات عند الفجر.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md1-q1-c2 (pill)
+      0 | Citation 1 · Page 1–3 · Related passage | ex 0 | rg 11 | pdfLine 0
+     37 | Citation 2 · Page 1–3 · Related passage | ex 0 | rg 12 | pdfLine 0
+     MARK region anchor: 'Water samples were taken at dawn to limit the effect of daily temperature swings.'
+     MARK region: 'Site'
+     MARK region: 'Depth (m)'
+     MARK region: 'pH'
+     MARK region: 'Alder Marsh'
+     MARK region: '1.4'
+     MARK region: '6.8'
+     MARK region: 'Reed Hollow'
+     MARK region: '0.9'
+     MARK region: '7.1'
+     MARK region: '水样均在清晨采集，以减少昼夜温差的影响。'
+     MARK region: 'جمعت العينات عند الفجر.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md1-q2-c1 (pill)
+      0 | Citation 2 · Page 1–3 · Related passage | ex 0 | rg 12 | pdfLine 0
+     22 | Citation 1 · Page 1–3 · Related passage | ex 0 | rg 11 | pdfLine 0
+     MARK region anchor: 'Site'
+     MARK region: 'Depth (m)'
+     MARK region: 'pH'
+     MARK region: 'Alder Marsh'
+     MARK region: '1.4'
+     MARK region: '6.8'
+     MARK region: 'Reed Hollow'
+     MARK region: '0.9'
+     MARK region: '7.1'
+     MARK region: '水样均在清晨采集，以减少昼夜温差的影响。'
+     MARK region: 'جمعت العينات عند الفجر.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md1-q2-c2 (pill)
+      0 | Citation 1 · Page 1–3 · Related passage | ex 0 | rg 11 | pdfLine 0
+     15 | Citation 2 · Page 1–3 · Related passage | ex 0 | rg 12 | pdfLine 0
+     MARK region anchor: 'Water samples were taken at dawn to limit the effect of daily temperature swings.'
+     MARK region: 'Site'
+     MARK region: 'Depth (m)'
+     MARK region: 'pH'
+     MARK region: 'Alder Marsh'
+     MARK region: '1.4'
+     MARK region: '6.8'
+     MARK region: 'Reed Hollow'
+     MARK region: '0.9'
+     MARK region: '7.1'
+     MARK region: '水样均在清晨采集，以减少昼夜温差的影响。'
+     MARK region: 'جمعت العينات عند الفجر.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md1-q3-c1 (pill)
+      1 | Citation 2 · Page 1–3 · Related passage | ex 0 | rg 12 | pdfLine 0
+     27 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     MARK exact  anchor: '水样均在清晨采集，以减少昼夜温差的影响。'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md1-q3-c2 (pill)
+      1 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     25 | Citation 2 · Page 2 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     MARK exact  anchor: '水样均在清晨采集，以减少昼夜温差的影响。'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md1-q4-c1 (pill)
+      0 | Citation 2 · Page 2 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     29 | Citation 1 · Page 1–3 · Related passage | ex 0 | rg 12 | pdfLine 0
+     MARK region anchor: 'Water samples were taken at dawn to limit the effect of daily temperature swings.'
+     MARK region: 'Site'
+     MARK region: 'Depth (m)'
+     MARK region: 'pH'
+     MARK region: 'Alder Marsh'
+     MARK region: '1.4'
+     MARK region: '6.8'
+     MARK region: 'Reed Hollow'
+     MARK region: '0.9'
+     MARK region: '7.1'
+     MARK region: '水样均在清晨采集，以减少昼夜温差的影响。'
+     MARK region: 'جمعت العينات عند الفجر.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md2-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     28 | Citation 1 · Page 4 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     51 | Citation 1 · Page 4 · Exact passage | ex 1 | rg 4 | pdfLine 0
+     MARK exact  anchor: 'In September 2025 the team counted 214 grey seals, the highest total since records began.'
+     MARK region: 'Birds are counted with the block method: count ten birds, then estimate how many blocks of ten the flock holds.'
+     MARK region: 'Use binoculars rated 8x42 or better.'
+     MARK region: 'Never approach within fifty metres of a resting seal.'
+     MARK region: 'Record ringed birds with the ring colour and the leg it is on.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md2-q2-c1 (pill)
+      0 | Citation 1 · Page 4 · Exact passage | ex 1 | rg 4 | pdfLine 0
+     27 | Citation 1 · Page 1–5 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     32 | Citation 1 · Page 1–5 · Related passage | ex 0 | rg 18 | pdfLine 0
+     MARK region anchor: 'Observers work in pairs and never enter the water during an outgoing tide.\nThe programme started in 2019 with eleven volunteers and now has '
+     MARK region: 'Readings are taken every thirty minutes from two hours before high water until two hours after it.\nA reading is rejected when the gauge is h'
+     MARK region: 'Station'
+     MARK region: 'Gauge datum (m)'
+     MARK region: 'Typical range (m)'
+     MARK region: 'Pilot Jetty'
+     MARK region: '0.00'
+     MARK region: '3.8'
+     MARK region: 'Gull Point'
+     MARK region: '0.42'
+     MARK region: '3.1'
+     MARK region: 'Gusts above forty knots end the shift, and observers return to the hut by the inland path.\nCloud cover is estimated in eighths of the visibl'
+     MARK region: 'log format: HH:MM  speed_kn  direction_deg  cloud_okta'
+     MARK region: 'In September 2025 the team counted 214 grey seals, the highest total since records began.\nBirds are counted with the block method: count ten'
+     MARK region: 'Use binoculars rated 8x42 or better.'
+     MARK region: 'Never approach within fifty metres of a resting seal.'
+     MARK region: 'Record ringed birds with the ring colour and the leg it is on.'
+     MARK region: 'Entries with missing times are flagged rather than deleted.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md2-q2-c2 (pill)
+      0 | Citation 1 · Page 1–5 · Related passage | ex 0 | rg 18 | pdfLine 0
+     23 | Citation 2 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     28 | Citation 2 · Page 2 · Exact passage | ex 1 | rg 10 | pdfLine 0
+     MARK exact  anchor: 'Readings are taken every thirty minutes from two hours before high water until two hours after it.'
+     MARK region: 'A reading is rejected when the gauge is hidden by spray or floating weed.'
+     MARK region: 'Station'
+     MARK region: 'Gauge datum (m)'
+     MARK region: 'Typical range (m)'
+     MARK region: 'Pilot Jetty'
+     MARK region: '0.00'
+     MARK region: '3.8'
+     MARK region: 'Gull Point'
+     MARK region: '0.42'
+     MARK region: '3.1'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md2-q3-c1 (pill)
+      0 | Citation 2 · Page 2 · Exact passage | ex 1 | rg 10 | pdfLine 0
+     11 | Citation 1 · Page 1–5 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     16 | Citation 1 · Page 1–5 · Related passage | ex 0 | rg 18 | pdfLine 0
+     MARK region anchor: 'Observers work in pairs and never enter the water during an outgoing tide.\nThe programme started in 2019 with eleven volunteers and now has '
+     MARK region: 'Readings are taken every thirty minutes from two hours before high water until two hours after it.\nA reading is rejected when the gauge is h'
+     MARK region: 'Station'
+     MARK region: 'Gauge datum (m)'
+     MARK region: 'Typical range (m)'
+     MARK region: 'Pilot Jetty'
+     MARK region: '0.00'
+     MARK region: '3.8'
+     MARK region: 'Gull Point'
+     MARK region: '0.42'
+     MARK region: '3.1'
+     MARK region: 'Gusts above forty knots end the shift, and observers return to the hut by the inland path.\nCloud cover is estimated in eighths of the visibl'
+     MARK region: 'log format: HH:MM  speed_kn  direction_deg  cloud_okta'
+     MARK region: 'In September 2025 the team counted 214 grey seals, the highest total since records began.\nBirds are counted with the block method: count ten'
+     MARK region: 'Use binoculars rated 8x42 or better.'
+     MARK region: 'Never approach within fifty metres of a resting seal.'
+     MARK region: 'Record ringed birds with the ring colour and the leg it is on.'
+     MARK region: 'Entries with missing times are flagged rather than deleted.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## md2-q3-c2 (pill)
+      0 | Citation 1 · Page 1–5 · Related passage | ex 0 | rg 18 | pdfLine 0
+     12 | Citation 2 · Page 5 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     MARK region: 'Every sheet is checked by a second volunteer before it is entered into the database.\nEntries with missing times are flagged rather than dele'
+     MARK exact  anchor: 'The data manager publishes a cleaned dataset on the first Monday of each quarter.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## url-stray-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     14 | Citation 1 · Page 1–2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     40 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 21 | pdfLine 0
+     MARK region anchor: 'Abstract'
+     MARK region: 'Rationale'
+     MARK region: 'What is a Docstring?'
+     MARK region: 'One-line Docstrings'
+     MARK region: 'Multi-line Docstrings'
+     MARK region: 'Handling Docstring Indentation'
+     MARK region: 'Copyright'
+     MARK region: 'Acknowledgements'
+     MARK region: 'This PEP documents the semantics and conventions associated with\nPython docstrings.'
+     MARK region: 'The aim of this PEP is to standardize the high-level structure of\ndocstrings: what they should contain, and how to say it (without\ntouching '
+     MARK region: '“A universal convention supplies all of maintainability, clarity,\nconsistency, and a foundation for good programming habits too.\nWhat it doe'
+     MARK region: 'If you violate these conventions, the worst you’ll get is some dirty\nlooks. But some software (such as the Docutils docstring processing\nsys'
+     MARK region: 'A docstring is a string literal that occurs as the first statement in\na module, function, class, or method definition. Such a docstring\nbeco'
+     MARK region: 'doc'
+     MARK region: ' special attribute of that object.'
+     MARK region: 'All modules should normally have docstrings, and all functions and\nclasses exported by a module should also have docstrings. Public\nmethods '
+     MARK region: 'init'
+     MARK region: ' constructor) should also have\ndocstrings. A package may be documented in the module docstring of\nthe '
+     MARK region: 'init'
+     MARK region: '.py file in the package directory.'
+     MARK region: 'String literals occurring elsewhere in Python code may also act as\ndocumentation. They are not recognized by the Python bytecode\ncompiler an'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx2-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     16 | Citation 1 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     39 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     MARK exact  anchor: 'Cold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.'
+     MARK region: 'A delivery that arrives without a signed temperature log is held in quarantine cage B until the supplier confirms the readings.\nDamaged cart'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx2-q1-c2 (pill)
+      0 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     10 | Citation 2 · Page 1–4 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     15 | Citation 2 · Page 1–4 · Related passage | ex 0 | rg 16 | pdfLine 0
+     MARK region anchor: 'It applies to all forty-two staff members who work the morning, evening and night shifts.\nContractors who stay longer than five working days'
+     MARK region: 'Shift'
+     MARK region: 'Start'
+     MARK region: 'End'
+     MARK region: 'Staff'
+     MARK region: 'Morning'
+     MARK region: '06:00'
+     MARK region: '14:00'
+     MARK region: '18'
+     MARK region: 'Evening'
+     MARK region: '14:00'
+     MARK region: '22:00'
+     MARK region: '15'
+     MARK region: 'Cold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.\nA delivery that arrives without a sign'
+     MARK region: 'Heavy items above twenty kilograms are stored below waist height on the lowest two shelves.\nStock is rotated on a first-expiry, first-out ba'
+     MARK region: 'Urgent hospital orders use the red tote and skip the regular packing queue.\nEach dispatched box carries a seal number that the driver record'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx2-q2-c1 (pill)
+      0 | Citation 2 · Page 1–4 · Related passage | ex 0 | rg 16 | pdfLine 0
+      9 | Citation 1 · Page 1–4 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     14 | Citation 1 · Page 1–4 · Related passage | ex 0 | rg 16 | pdfLine 0
+     MARK region anchor: 'It applies to all forty-two staff members who work the morning, evening and night shifts.\nContractors who stay longer than five working days'
+     MARK region: 'Shift'
+     MARK region: 'Start'
+     MARK region: 'End'
+     MARK region: 'Staff'
+     MARK region: 'Morning'
+     MARK region: '06:00'
+     MARK region: '14:00'
+     MARK region: '18'
+     MARK region: 'Evening'
+     MARK region: '14:00'
+     MARK region: '22:00'
+     MARK region: '15'
+     MARK region: 'Cold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.\nA delivery that arrives without a sign'
+     MARK region: 'Heavy items above twenty kilograms are stored below waist height on the lowest two shelves.\nStock is rotated on a first-expiry, first-out ba'
+     MARK region: 'Urgent hospital orders use the red tote and skip the regular packing queue.\nEach dispatched box carries a seal number that the driver record'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx2-q3-c1 (pill)
+      0 | Citation 1 · Page 1–4 · Related passage | ex 0 | rg 16 | pdfLine 0
+     21 | Citation 1 · Page 5 · Exact passage | ex 1 | rg 2 | pdfLine 0
+     MARK region: 'Near misses are logged in the safety register even when nobody was hurt.'
+     MARK exact  anchor: 'The depot held 37 incident reviews in 2025, and nine of them led to a change in procedure.'
+     MARK region: 'Staff who report an incident in good faith are never disciplined for the report itself.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx2-q3-c2 (pill)
+      0 | Citation 1 · Page 5 · Exact passage | ex 1 | rg 2 | pdfLine 0
+     31 | Citation 2 · Page 5 · Exact passage | ex 1 | rg 2 | pdfLine 0
+     MARK region: 'Near misses are logged in the safety register even when nobody was hurt.'
+     MARK exact  anchor: 'The depot held 37 incident reviews in 2025, and nine of them led to a change in procedure.'
+     MARK region: 'Staff who report an incident in good faith are never disciplined for the report itself.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx2-q3-c4 (pill)
+      0 | Citation 2 · Page 5 · Exact passage | ex 1 | rg 2 | pdfLine 0
+     20 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     MARK exact  anchor: 'The refrigerated room is kept between two and eight degrees Celsius, and an alarm sounds after four minutes outside that range.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx1-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     11 | Citation 1 · Page 1–2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     25 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 8 | pdfLine 0
+     MARK region anchor: 'Participants were randomised to the intervention or to usual care in a one-to-one ratio.'
+     MARK region: 'Site'
+     MARK region: 'Enrolled'
+     MARK region: 'Completed'
+     MARK region: 'Northfield'
+     MARK region: '88'
+     MARK region: '81'
+     MARK region: 'Secondary outcomes included adherence, adverse events and quality-of-life scores.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx1-q1-c2 (pill)
+      0 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 8 | pdfLine 0
+     31 | Citation 2 · Page 2 · Related passage | ex 0 | rg 1 | pdfLine 0
+     MARK region anchor: 'The primary outcome was the change in systolic blood pressure at twelve months.\nSecondary outcomes included adherence, adverse events and qu'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx1-q1-c3 (pill)
+      0 | Citation 2 · Page 2 · Related passage | ex 0 | rg 1 | pdfLine 0
+     12 | Citation 3 · Page 1–2 · Related passage | ex 0 | rg 7 | pdfLine 0
+     MARK region anchor: 'Site'
+     MARK region: 'Enrolled'
+     MARK region: 'Completed'
+     MARK region: 'Northfield'
+     MARK region: '88'
+     MARK region: '81'
+     MARK region: 'Secondary outcomes included adherence, adverse events and quality-of-life scores.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx1-q1-c6 (pill)
+      0 | Citation 3 · Page 1–2 · Related passage | ex 0 | rg 7 | pdfLine 0
+     17 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 8 | pdfLine 0
+     MARK region anchor: 'Participants were randomised to the intervention or to usual care in a one-to-one ratio.'
+     MARK region: 'Site'
+     MARK region: 'Enrolled'
+     MARK region: 'Completed'
+     MARK region: 'Northfield'
+     MARK region: '88'
+     MARK region: '81'
+     MARK region: 'Secondary outcomes included adherence, adverse events and quality-of-life scores.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## txt1-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## txt1-q2-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## txt1-q2-c2 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## artxt-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## artxt-q2-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## pdf-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     25 | Citation 1 · Page 8 · Locating source… | ex 0 | rg 0 | pdfLine 0
+    113 | Citation 1 · Page 8 · Related passage | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## pdf-q1-c3 (pill)
+      0 | Citation 1 · Page 8 · Related passage | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## pdf-q1-c4 (pill)
+      0 | Citation 1 · Page 8 · Related passage | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## pdf-q2-c1 (pill)
+      0 | Citation 1 · Page 8 · Related passage | ex 0 | rg 0 | pdfLine 0
+     34 | Citation 1 · Page 5 · Page location only | ex 0 | rg 0 | pdfLine 1
+     35 | Citation 1 · Page 5 · Exact passage | ex 0 | rg 0 | pdfLine 1
+     68 | Citation 1 · Page 5 · Exact passage | ex 0 | rg 0 | pdfLine 1
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## pdf-q2-c2 (pill)
+      0 | Citation 1 · Page 5 · Exact passage | ex 0 | rg 0 | pdfLine 1
+     24 | Citation 2 · Page 4 · Page location only | ex 0 | rg 0 | pdfLine 0
+     28 | Citation 2 · Page 4 · Related passage | ex 0 | rg 0 | pdfLine 0
+    153 | Citation 2 · Page 4 · Related passage | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## pptx-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     26 | Citation 1 · Page 1 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     36 | Citation 1 · Page 1 · Exact passage | ex 1 | rg 2 | pdfLine 0
+     MARK exact  anchor: 'Quarterly review\nRevenue grew 14 percent year over year, driven by the enterprise segment.'
+     MARK region: 'Speaker Notes:'
+     MARK region: '\nMention the two delayed contracts before the questions.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## pptx-q1-c2 (pill)
+      0 | Citation 1 · Page 1 · Exact passage | ex 1 | rg 2 | pdfLine 0
+     33 | Citation 2 · Page 1 · Exact passage | ex 2 | rg 0 | pdfLine 0
+     MARK exact  anchor: 'Speaker Notes:'
+     MARK exact : '\nMention the two delayed contracts before the questions.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## pptx-q2-c1 (pill)
+      0 | Citation 2 · Page 1 · Exact passage | ex 2 | rg 0 | pdfLine 0
+     39 | Citation 1 · Page 1–3 · Related passage | ex 0 | rg 13 | pdfLine 0
+     MARK region anchor: 'Speaker Notes:'
+     MARK region: '\nMention the two delayed contracts before the questions.'
+     MARK region: 'Regional results'
+     MARK region: 'Region'
+     MARK region: 'Revenue'
+     MARK region: 'Growth'
+     MARK region: 'North'
+     MARK region: '4.2M'
+     MARK region: '12%'
+     MARK region: 'South'
+     MARK region: '3.1M'
+     MARK region: '9%'
+     MARK region: 'Quarterly review\nOperating costs fell for the third consecutive quarter.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## pptx-q2-c4 (pill)
+      0 | Citation 1 · Page 1–3 · Related passage | ex 0 | rg 13 | pdfLine 0
+     29 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     MARK region: 'Quarterly review'
+     MARK exact  anchor: 'Operating costs fell for the third consecutive quarter.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## pptx-q2-c3 (pill)
+      0 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     27 | Citation 3 · Page 2–3 · Related passage | ex 0 | rg 11 | pdfLine 0
+     MARK region anchor: 'Regional results'
+     MARK region: 'Region'
+     MARK region: 'Revenue'
+     MARK region: 'Growth'
+     MARK region: 'North'
+     MARK region: '4.2M'
+     MARK region: '12%'
+     MARK region: 'South'
+     MARK region: '3.1M'
+     MARK region: '9%'
+     MARK region: 'Quarterly review\nOperating costs fell for the third consecutive quarter.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## xlsx-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     20 | Citation 1 · Page 1–2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     32 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 7 | pdfLine 0
+     MARK region anchor: 'Travel'
+     MARK region: '1200'
+     MARK region: '950'
+     MARK region: 'Research'
+     MARK region: '12'
+     MARK region: 'Support'
+     MARK region: '7'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## xlsx-q1-c3 (pill)
+      0 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 7 | pdfLine 0
+     23 | Citation 3 · Page 2 · Exact passage | ex 2 | rg 2 | pdfLine 0
+     MARK region: 'Research'
+     MARK region: '12'
+     MARK exact  anchor: 'Support'
+     MARK exact : '7'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## xlsx-q1-c4 (pill)
+      0 | Citation 3 · Page 2 · Exact passage | ex 2 | rg 2 | pdfLine 0
+     16 | Citation 4 · Page 2 · Exact passage | ex 2 | rg 4 | pdfLine 0
+     MARK region: 'Team'
+     MARK region: 'People'
+     MARK region: 'Research'
+     MARK region: '12'
+     MARK exact  anchor: 'Support'
+     MARK exact : '7'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## xlsx-q2-c1 (pill)
+      0 | Citation 4 · Page 2 · Exact passage | ex 2 | rg 4 | pdfLine 0
+     13 | Citation 1 · Page 1 · Related passage | ex 0 | rg 3 | pdfLine 0
+     MARK region anchor: 'Travel'
+     MARK region: '1200'
+     MARK region: '950'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## url-q1-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     34 | Citation 1 · Page 1–2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     60 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 21 | pdfLine 0
+     MARK region anchor: 'Abstract'
+     MARK region: 'Rationale'
+     MARK region: 'What is a Docstring?'
+     MARK region: 'One-line Docstrings'
+     MARK region: 'Multi-line Docstrings'
+     MARK region: 'Handling Docstring Indentation'
+     MARK region: 'Copyright'
+     MARK region: 'Acknowledgements'
+     MARK region: 'This PEP documents the semantics and conventions associated with\nPython docstrings.'
+     MARK region: 'The aim of this PEP is to standardize the high-level structure of\ndocstrings: what they should contain, and how to say it (without\ntouching '
+     MARK region: '“A universal convention supplies all of maintainability, clarity,\nconsistency, and a foundation for good programming habits too.\nWhat it doe'
+     MARK region: 'If you violate these conventions, the worst you’ll get is some dirty\nlooks. But some software (such as the Docutils docstring processing\nsys'
+     MARK region: 'A docstring is a string literal that occurs as the first statement in\na module, function, class, or method definition. Such a docstring\nbeco'
+     MARK region: 'doc'
+     MARK region: ' special attribute of that object.'
+     MARK region: 'All modules should normally have docstrings, and all functions and\nclasses exported by a module should also have docstrings. Public\nmethods '
+     MARK region: 'init'
+     MARK region: ' constructor) should also have\ndocstrings. A package may be documented in the module docstring of\nthe '
+     MARK region: 'init'
+     MARK region: '.py file in the package directory.'
+     MARK region: 'String literals occurring elsewhere in Python code may also act as\ndocumentation. They are not recognized by the Python bytecode\ncompiler an'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## url-q1-p3 (pill)
+      0 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 21 | pdfLine 0
+     28 | Citation 1 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     49 | Citation 1 · Page 2 · Exact passage | ex 4 | rg 7 | pdfLine 0
+     MARK region: 'This\nlooks better for one-liners.'
+     MARK region: 'There’s no blank line either before or after the docstring.'
+     MARK region: 'The docstring is a phrase ending in a period. It prescribes the\nfunction or method’s effect as a command (“Do this”, “Return that”),\nnot as '
+     MARK region: 'def function ( a , b ): """function(a, b) -> list"""\n'
+     MARK region: 'This type of docstring is only appropriate for C functions (such as\nbuilt-ins), where introspection is not possible. However, the\nnature of '
+     MARK exact  anchor: 'The preferred form for such a docstring\nwould be something like:'
+     MARK exact : 'def function ( a , b ): """Do X and return a list."""\n'
+     MARK exact : '(Of course “Do X” should be replaced by a useful description!)'
+     MARK exact : 'Multi-line docstrings consist of a summary line just like a one-line\ndocstring, followed by a blank line, followed by a more elaborate\ndescr'
+     MARK region: 'The summary line may be used by automatic indexing\ntools; it is important that it fits on one line and is separated from\nthe rest of the doc'
+     MARK region: 'Insert a blank line after all docstrings (one-line or multi-line) that'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## url-q1-p7 (pill)
+      0 | Citation 1 · Page 2 · Exact passage | ex 4 | rg 7 | pdfLine 0
+     31 | Citation 2 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     48 | Citation 2 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     MARK exact  anchor: 'The entire\ndocstring is indented the same as the quotes at its first line (see\nexample below).'
+     MARK region: 'Insert a blank line after all docstrings (one-line or multi-line) that'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## url-q1-p8 (pill)
+      0 | Citation 2 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     18 | Citation 3 · Page 3 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     38 | Citation 3 · Page 3 · Exact passage | ex 1 | rg 4 | pdfLine 0
+     MARK region: 'For example:'
+     MARK region: 'def complex ( real = 0.0 , imag = 0.0 ): """Form a complex number. Keyword arguments: real -- the real part (default 0.0) imag -- the imagin'
+     MARK exact  anchor: 'Unless the entire docstring fits on a line, place the closing quotes\non a line by themselves.'
+     MARK region: 'This way, Emacs’ fill-paragraph command\ncan be used on it.'
+     MARK region: 'Docstring processing tools will strip a uniform amount of indentation'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## mob-md-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     15 | Citation 1 · Page 1–5 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     30 | Citation 1 · Page 1–5 · Related passage | ex 0 | rg 18 | pdfLine 0
+     MARK region anchor: 'Observers work in pairs and never enter the water during an outgoing tide.\nThe programme started in 2019 with eleven volunteers and now has '
+     MARK region: 'Readings are taken every thirty minutes from two hours before high water until two hours after it.\nA reading is rejected when the gauge is h'
+     MARK region: 'Station'
+     MARK region: 'Gauge datum (m)'
+     MARK region: 'Typical range (m)'
+     MARK region: 'Pilot Jetty'
+     MARK region: '0.00'
+     MARK region: '3.8'
+     MARK region: 'Gull Point'
+     MARK region: '0.42'
+     MARK region: '3.1'
+     MARK region: 'Gusts above forty knots end the shift, and observers return to the hut by the inland path.\nCloud cover is estimated in eighths of the visibl'
+     MARK region: 'log format: HH:MM  speed_kn  direction_deg  cloud_okta'
+     MARK region: 'In September 2025 the team counted 214 grey seals, the highest total since records began.\nBirds are counted with the block method: count ten'
+     MARK region: 'Use binoculars rated 8x42 or better.'
+     MARK region: 'Never approach within fifty metres of a resting seal.'
+     MARK region: 'Record ringed birds with the ring colour and the leg it is on.'
+     MARK region: 'Entries with missing times are flagged rather than deleted.'
+     anchor visible: True  scrollWidth 375 / innerWidth 375
+## mob-md2-tap-c2 (tap)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+    100 | Citation 2 · Page 4 · Locating source… | ex 0 | rg 0 | pdfLine 0
+    121 | Citation 2 · Page 4 · Exact passage | ex 1 | rg 4 | pdfLine 0
+     MARK exact  anchor: 'In September 2025 the team counted 214 grey seals, the highest total since records began.'
+     MARK region: 'Birds are counted with the block method: count ten birds, then estimate how many blocks of ten the flock holds.'
+     MARK region: 'Use binoculars rated 8x42 or better.'
+     MARK region: 'Never approach within fifty metres of a resting seal.'
+     MARK region: 'Record ringed birds with the ring colour and the leg it is on.'
+     anchor visible: True  scrollWidth 375 / innerWidth 375
+## mob-docx-c4 (tap)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     91 | Citation 4 · Page 3 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     99 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     MARK exact  anchor: 'The refrigerated room is kept between two and eight degrees Celsius, and an alarm sounds after four minutes outside that range.'
+     anchor visible: True  scrollWidth 375 / innerWidth 375
+## mob-docx-c1 (tap)
+      0 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     73 | Citation 1 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     90 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     MARK exact  anchor: 'Cold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.'
+     MARK region: 'A delivery that arrives without a signed temperature log is held in quarantine cage B until the supplier confirms the readings.\nDamaged cart'
+     anchor visible: True  scrollWidth 375 / innerWidth 375
+## docx2b-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     17 | Citation 1 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     32 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     MARK exact  anchor: 'Cold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.'
+     MARK region: 'A delivery that arrives without a signed temperature log is held in quarantine cage B until the supplier confirms the readings.\nDamaged cart'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## docx2b-c4 (pill)
+      0 | Citation 1 · Page 2 · Highlight hidden | ex 1 | rg 1 | pdfLine 0
+     21 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     MARK exact  anchor: 'The refrigerated room is kept between two and eight degrees Celsius, and an alarm sounds after four minutes outside that range.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## qf-docx2-j1 (qf)
+      0 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     30 | Citation 1 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     32 | Citation 1 · Page 2 · Page location only | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## qf-saved-j1 (qf)
+      0 | Citation 1 · Page 2 · Page location only | ex 0 | rg 0 | pdfLine 0
+     18 | Citation 1 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     38 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     MARK exact  anchor: 'A delivery that arrives without a signed temperature log is held in quarantine cage B until the supplier confirms the readings.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-md2-c1 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     19 | Citation 1 · Page 1–5 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     59 | Citation 1 · Page 1–5 · Related passage | ex 0 | rg 18 | pdfLine 0
+     MARK region anchor: 'Observers work in pairs and never enter the water during an outgoing tide.\nThe programme started in 2019 with eleven volunteers and now has '
+     MARK region: 'Readings are taken every thirty minutes from two hours before high water until two hours after it.\nA reading is rejected when the gauge is h'
+     MARK region: 'Station'
+     MARK region: 'Gauge datum (m)'
+     MARK region: 'Typical range (m)'
+     MARK region: 'Pilot Jetty'
+     MARK region: '0.00'
+     MARK region: '3.8'
+     MARK region: 'Gull Point'
+     MARK region: '0.42'
+     MARK region: '3.1'
+     MARK region: 'Gusts above forty knots end the shift, and observers return to the hut by the inland path.\nCloud cover is estimated in eighths of the visibl'
+     MARK region: 'log format: HH:MM  speed_kn  direction_deg  cloud_okta'
+     MARK region: 'In September 2025 the team counted 214 grey seals, the highest total since records began.\nBirds are counted with the block method: count ten'
+     MARK region: 'Use binoculars rated 8x42 or better.'
+     MARK region: 'Never approach within fifty metres of a resting seal.'
+     MARK region: 'Record ringed birds with the ring colour and the leg it is on.'
+     MARK region: 'Entries with missing times are flagged rather than deleted.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-md2-c2 (pill)
+      0 | Citation 1 · Page 1–5 · Related passage | ex 0 | rg 18 | pdfLine 0
+     16 | Citation 2 · Page 4 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     22 | Citation 2 · Page 4 · Exact passage | ex 1 | rg 4 | pdfLine 0
+     MARK exact  anchor: 'In September 2025 the team counted 214 grey seals, the highest total since records began.'
+     MARK region: 'Birds are counted with the block method: count ten birds, then estimate how many blocks of ten the flock holds.'
+     MARK region: 'Use binoculars rated 8x42 or better.'
+     MARK region: 'Never approach within fifty metres of a resting seal.'
+     MARK region: 'Record ringed birds with the ring colour and the leg it is on.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-docx2-c0 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     15 | Citation 1 · Page 2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     46 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     MARK exact  anchor: 'Cold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.'
+     MARK region: 'A delivery that arrives without a signed temperature log is held in quarantine cage B until the supplier confirms the readings.\nDamaged cart'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-docx2-c7 (pill)
+      0 | Citation 1 · Page 2 · Exact passage | ex 1 | rg 1 | pdfLine 0
+     52 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     MARK exact  anchor: 'The refrigerated room is kept between two and eight degrees Celsius, and an alarm sounds after four minutes outside that range.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-docx2-c2 (pill)
+      0 | Citation 4 · Page 3 · Exact passage | ex 1 | rg 0 | pdfLine 0
+     17 | Citation 1 · Page 1–4 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     27 | Citation 1 · Page 1–4 · Related passage | ex 0 | rg 16 | pdfLine 0
+     MARK region anchor: 'It applies to all forty-two staff members who work the morning, evening and night shifts.\nContractors who stay longer than five working days'
+     MARK region: 'Shift'
+     MARK region: 'Start'
+     MARK region: 'End'
+     MARK region: 'Staff'
+     MARK region: 'Morning'
+     MARK region: '06:00'
+     MARK region: '14:00'
+     MARK region: '18'
+     MARK region: 'Evening'
+     MARK region: '14:00'
+     MARK region: '22:00'
+     MARK region: '15'
+     MARK region: 'Cold-chain items must reach the refrigerated room within eighteen minutes of the truck doors opening.\nA delivery that arrives without a sign'
+     MARK region: 'Heavy items above twenty kilograms are stored below waist height on the lowest two shelves.\nStock is rotated on a first-expiry, first-out ba'
+     MARK region: 'Urgent hospital orders use the red tote and skip the regular packing queue.\nEach dispatched box carries a seal number that the driver record'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-url-p8 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     38 | Citation 3 · Page 3 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     70 | Citation 3 · Page 3 · Exact passage | ex 1 | rg 4 | pdfLine 0
+     MARK region: 'For example:'
+     MARK region: 'def complex ( real = 0.0 , imag = 0.0 ): """Form a complex number. Keyword arguments: real -- the real part (default 0.0) imag -- the imagin'
+     MARK exact  anchor: 'Unless the entire docstring fits on a line, place the closing quotes\non a line by themselves.'
+     MARK region: 'This way, Emacs’ fill-paragraph command\ncan be used on it.'
+     MARK region: 'Docstring processing tools will strip a uniform amount of indentation'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-url-p15 (pill)
+      0 | Citation 3 · Page 3 · Exact passage | ex 1 | rg 4 | pdfLine 0
+     49 | Citation 7 · Page 3–4 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     66 | Citation 7 · Page 3–4 · Exact passage | ex 2 | rg 6 | pdfLine 0
+     MARK region: 'For example:'
+     MARK region: 'def complex ( real = 0.0 , imag = 0.0 ): """Form a complex number. Keyword arguments: real -- the real part (default 0.0) imag -- the imagin'
+     MARK region: 'Unless the entire docstring fits on a line, place the closing quotes\non a line by themselves. This way, Emacs’ fill-paragraph command\ncan be'
+     MARK exact  anchor: 'Docstring processing tools will strip a uniform amount of indentation'
+     MARK exact : 'from the second and further lines of the docstring, equal to the\nminimum indentation of all non-blank lines after the first line.'
+     MARK region: 'Any\nindentation in the first line of the docstring (i.e., up to the first\nnewline) is insignificant and removed. Relative indentation of lat'
+     MARK region: 'Since code is much more precise than words, here is an implementation\nof the algorithm:'
+     MARK region: "def trim ( docstring ): if not docstring : return '' # Convert tabs to spaces (following the normal Python rules) # and split into a list of"
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-url-p12 (pill)
+      0 | Citation 7 · Page 3–4 · Exact passage | ex 2 | rg 6 | pdfLine 0
+     42 | Citation 6 · Page 2–3 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     80 | Citation 6 · Page 2–3 · Exact passage | ex 2 | rg 7 | pdfLine 0
+     MARK region: 'The entire\ndocstring is indented the same as the quotes at its first line (see\nexample below).'
+     MARK exact  anchor: 'Insert a blank line after all docstrings (one-line or multi-line) that'
+     MARK exact : 'document a class – generally speaking, the class’s methods are\nseparated from each other by a single blank line, and the docstring\nneeds to '
+     MARK region: 'The docstring of a script (a stand-alone program) should be usable as\nits “usage” message, printed when the script is invoked with incorrect'
+     MARK region: 'The docstring for a module should generally list the classes,\nexceptions and functions (and any other objects) that are exported by\nthe modu'
+     MARK region: 'init'
+     MARK region: '.py module) should also list the modules and\nsubpackages exported by the package.'
+     MARK region: 'The docstring for a function or method should summarize its behavior\nand document its arguments, return value(s), side effects, exceptions\nr'
+     MARK region: 'The docstring for a class should summarize its behavior and list the\npublic methods and instance variables.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-pdf-c5 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     32 | Citation 1 · Page 5 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     85 | Citation 1 · Page 5 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     97 | Citation 1 · Page 5 · Exact passage | ex 0 | rg 0 | pdfLine 1
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## dev-pdf-c9 (pill)
+      0 | Citation 1 · Page 5 · Exact passage | ex 0 | rg 0 | pdfLine 1
+     40 | Citation 3 · Page 5 · Exact passage | ex 0 | rg 0 | pdfLine 2
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## dev-txt-c0 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440
+## dev-pptx-c0 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     34 | Citation 1 · Page 1 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     44 | Citation 1 · Page 1 · Exact passage | ex 1 | rg 2 | pdfLine 0
+     MARK exact  anchor: 'Quarterly review\nRevenue grew 14 percent year over year, driven by the enterprise segment.'
+     MARK region: 'Speaker Notes:'
+     MARK region: '\nMention the two delayed contracts before the questions.'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-xlsx-c0 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     41 | Citation 1 · Page 1–2 · Locating source… | ex 0 | rg 0 | pdfLine 0
+     54 | Citation 1 · Page 1–2 · Related passage | ex 0 | rg 7 | pdfLine 0
+     MARK region anchor: 'Travel'
+     MARK region: '1200'
+     MARK region: '950'
+     MARK region: 'Research'
+     MARK region: '12'
+     MARK region: 'Support'
+     MARK region: '7'
+     anchor visible: True  scrollWidth 1440 / innerWidth 1440
+## dev-artxt-c0 (pill)
+      0 | (no status line) | ex 0 | rg 0 | pdfLine 0
+     anchor visible: None  scrollWidth 1440 / innerWidth 1440

@@ -1,0 +1,535 @@
+Round 2b timelines: one block per recorded jump, deep link or race run.
+Chat and Quote Finder jumps: t is ms after the click. Links and races: t is performance.now() in the page.
+A label recorded twice: the earlier block is a probe calibration run (the probe read the wrong scroller or
+page header, or the race never overlapped). The later block with the same label is the result.
+
+== r2b-c-md1-j1 (kind qf)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    20 mutation      status=['Citation 1 · Page 1 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    40 mutation      status=['Citation 1 · Page 1 · Exact passage'] exact=1 region=12 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1 · Exact passage'] marks=[('exact', 'Water samples were taken at dawn to limit the effect of dail'), ('region', 'Site'), ('region', 'Depth (m)'), ('region', 'pH'), ('region', 'Alder Marsh'), ('region', '1.4')] anchorVisible=True
+== r2b-c-docx-j1 (kind qf)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    12 mutation      status=['Citation 1 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    30 mutation      status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 2 · Exact passage'] marks=[('region', 'Every inbound pallet is scanned at bay three before it leave'), ('exact', 'A delivery that arrives without a signed temperature log is '), ('region', 'Damaged cartons are photographed and the images are attached')] anchorVisible=True
+== r2b-c-pptx-j1 (kind qf)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 1 · Page 3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    34 mutation      status=['Citation 1 · Page 3 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 3 · Exact passage'] marks=[('region', 'Quarterly review'), ('exact', 'Operating costs fell for the third consecutive quarter.')] anchorVisible=True
+== r2b-c-xlsx-j1 (kind qf)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    20 mutation      status=['Citation 1 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    36 mutation      status=['Citation 1 · Page 2 · Exact passage'] exact=6 region=0 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 2 · Exact passage'] marks=[('exact', 'Team'), ('exact', 'People'), ('exact', 'Research'), ('exact', '12'), ('exact', 'Support'), ('exact', '7')] anchorVisible=True
+== r2b-c-url-j1 (kind qf)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    25 mutation      status=['Citation 1 · Page 3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    45 mutation      status=['Citation 1 · Page 3 · Exact passage'] exact=1 region=4 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 3 · Exact passage'] marks=[('region', 'For example:'), ('region', 'def complex ( real = 0.0 , imag = 0.0 ): """Form a complex n'), ('exact', 'Unless the entire docstring fits on a line, place the closin'), ('region', 'This way, Emacs’ fill-paragraph command\ncan be used on it.'), ('region', 'Docstring processing tools will strip a uniform amount of in')] anchorVisible=True
+== r2b-c-hl-multi (kind link)
+   t=    64 change        status=['@keyframes spellBar { 0%,100% { transform: scaleY(.5); } 50% { transform: scaleY(1); } }'] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=None markInView=None pageInView=None
+   t=   115 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   426 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   477 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   528 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   579 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   final: status=['Citation 1 · Page 2 · Related passage'] marks=[('region', 'Every inbound pallet is scanned at bay three before it leave')] anchorVisible=True
+== r2b-c-hl-multi-b (kind link)
+   t=    68 change        status=['Citation 1 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   119 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   427 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=25 markInView=True pageInView=True
+   t=   478 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=65 markInView=True pageInView=True
+   t=   529 change        status=['Citation 1 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=70 markInView=True pageInView=True
+   final: status=['Citation 1 · Page 2 · Related passage'] marks=[('region', 'Every inbound pallet is scanned at bay three before it leave')] anchorVisible=True
+== r2b-d-hl-single-1 (kind link)  [calibration run, superseded by the later block]
+   t=    70 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   121 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=False
+   t=   386 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=False pageInView=False
+   t=   438 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=38 markInView=False pageInView=False
+   t=   489 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=204 markInView=True pageInView=False
+   t=   541 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=264 markInView=True pageInView=False
+   t=   593 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=289 markInView=True pageInView=False
+   t=   645 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=300 markInView=True pageInView=False
+   t=   697 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=302 markInView=True pageInView=False
+   final: status=['Citation 1 · Page 5 · Related passage'] marks=[('region', 'The depot held 37 incident reviews in 2025, and nine of them')] anchorVisible=True
+== r2b-d-hl-single-2 (kind link)  [calibration run, superseded by the later block]
+   t=    67 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   118 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=False
+   t=   424 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=13 markInView=False pageInView=False
+   t=   476 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=163 markInView=False pageInView=False
+   t=   527 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=250 markInView=True pageInView=False
+   t=   579 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=283 markInView=True pageInView=False
+   t=   630 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=298 markInView=True pageInView=False
+   t=   681 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=302 markInView=True pageInView=False
+   final: status=['Citation 1 · Page 5 · Related passage'] marks=[('region', 'The depot held 37 incident reviews in 2025, and nine of them')] anchorVisible=True
+== r2b-d-hl-single-3 (kind link)  [calibration run, superseded by the later block]
+   t=    65 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   116 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=False
+   t=   426 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=13 markInView=False pageInView=False
+   t=   476 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=163 markInView=False pageInView=False
+   t=   526 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=250 markInView=True pageInView=False
+   t=   578 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=283 markInView=True pageInView=False
+   t=   629 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=298 markInView=True pageInView=False
+   t=   680 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=302 markInView=True pageInView=False
+   final: status=['Citation 1 · Page 5 · Related passage'] marks=[('region', 'The depot held 37 incident reviews in 2025, and nine of them')] anchorVisible=True
+== r2b-d-hl-single-1 (kind link)
+   t=    61 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=None markInView=None pageInView=None
+   t=   113 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   419 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=2 markInView=False pageInView=False
+   t=   471 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=98 markInView=False pageInView=False
+   t=   522 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=231 markInView=True pageInView=True
+   t=   574 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=275 markInView=True pageInView=True
+   t=   626 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=294 markInView=True pageInView=True
+   t=   678 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=301 markInView=True pageInView=True
+   t=   729 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=302 markInView=True pageInView=True
+   final: status=['Citation 1 · Page 5 · Related passage'] marks=[('region', 'The depot held 37 incident reviews in 2025, and nine of them')] anchorVisible=True
+== r2b-d-hl-single-2 (kind link)
+   t=    65 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   115 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   424 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=2 markInView=False pageInView=False
+   t=   475 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=98 markInView=False pageInView=False
+   t=   527 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=231 markInView=True pageInView=True
+   t=   579 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=275 markInView=True pageInView=True
+   t=   630 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=294 markInView=True pageInView=True
+   t=   681 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=302 markInView=True pageInView=True
+   final: status=['Citation 1 · Page 5 · Related passage'] marks=[('region', 'The depot held 37 incident reviews in 2025, and nine of them')] anchorVisible=True
+== r2b-d-hl-single-3 (kind link)
+   t=    80 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=None markInView=None pageInView=None
+   t=   131 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   438 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=False pageInView=False
+   t=   489 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=38 markInView=False pageInView=False
+   t=   541 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=204 markInView=True pageInView=True
+   t=   591 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=264 markInView=True pageInView=True
+   t=   644 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=289 markInView=True pageInView=True
+   t=   695 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=300 markInView=True pageInView=True
+   t=   747 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=302 markInView=True pageInView=True
+   final: status=['Citation 1 · Page 5 · Related passage'] marks=[('region', 'The depot held 37 incident reviews in 2025, and nine of them')] anchorVisible=True
+== r2b-d-page5-1 (kind link)
+   t=    63 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   375 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=False
+   t=   428 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=13 markInView=None pageInView=False
+   t=   480 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=155 markInView=None pageInView=True
+   t=   531 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=219 markInView=None pageInView=True
+   t=   583 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=243 markInView=None pageInView=True
+   t=   635 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=253 markInView=None pageInView=True
+   final: status=[] marks=[] anchorVisible=None
+== r2b-d-page5-2 (kind link)
+   t=    65 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   380 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=False
+   t=   432 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=43 markInView=None pageInView=False
+   t=   484 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=184 markInView=None pageInView=True
+   t=   536 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=229 markInView=None pageInView=True
+   t=   589 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=247 markInView=None pageInView=True
+   t=   641 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=253 markInView=None pageInView=True
+   final: status=[] marks=[] anchorVisible=None
+== r2b-d-page5-3 (kind link)
+   t=    65 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   377 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=False
+   t=   429 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=13 markInView=None pageInView=False
+   t=   481 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=155 markInView=None pageInView=True
+   t=   533 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=229 markInView=None pageInView=True
+   t=   584 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=247 markInView=None pageInView=True
+   t=   635 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=253 markInView=None pageInView=True
+   final: status=[] marks=[] anchorVisible=None
+== r2b-d-hl-single-wheel (kind link)
+   t=    67 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=None pageInView=True
+   t=   119 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=0 markInView=True pageInView=True
+   t=   326 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=95 markInView=True pageInView=True
+   t=   430 change        status=['Citation 1 · Page 5 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0 scrollTop=98 markInView=False pageInView=False
+   final: status=['Citation 1 · Page 5 · Related passage'] marks=[('region', 'The depot held 37 incident reviews in 2025, and nine of them')] anchorVisible=False
+== r2b-i-switch-1 (kind race-switch)  [calibration run, superseded by the later block]
+   event t=31569 pill present (body spinners 0)
+   event t=31572 click Jump to page 5 (body spinners 0)
+   event t=31633 switch to B (body spinners 0)
+   t=  1565 poll          status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=None markInView=None spinners=-1
+   t= 13617 poll          status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=0 markInView=None spinners=5
+   t= 16951 poll          status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=0 markInView=None spinners=0
+   t= 31572 after-click-1 status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=0 markInView=None spinners=0
+   t= 31633 poll          status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=12 markInView=False spinners=0
+   t= 31659 poll          status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=37 markInView=False spinners=0
+   t= 31685 poll          status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=165 markInView=False spinners=0
+   t= 31712 poll          status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=212 markInView=True spinners=0
+   t= 31738 poll          status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=265 markInView=True spinners=0
+   t= 31765 poll          status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=281 markInView=True spinners=0
+   t= 31790 poll          status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…/d/f1c73c97-2c9b-4808-89e8-82e064ed2284 scrollTop=302 markInView=True spinners=0
+   t= 33158 poll          status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…/d/c3f000f1-aaa9-46fb-9cad-e609b547dc29 scrollTop=None markInView=None spinners=-1
+   t= 36176 poll          status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…/d/c3f000f1-aaa9-46fb-9cad-e609b547dc29 scrollTop=0 markInView=None spinners=0
+   t= 39647 end           status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…/d/c3f000f1-aaa9-46fb-9cad-e609b547dc29 scrollTop=0 markInView=None spinners=0
+   final: status=[] scrollTop=0 markInView=None
+== r2b-i-single-1 (kind race-single)
+   event t=122 click chip Page 5 #0: 1depot-manual.docxPage 5 (body spinners 5)
+   event t=434 release chunk (body spinners 0)
+   t=   146 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=True spinners=4
+   t=   446 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=False spinners=0
+   t=   471 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=2 markInView=False spinners=0
+   t=   495 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=38 markInView=False spinners=0
+   t=   521 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=98 markInView=False spinners=0
+   t=   546 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=204 markInView=True spinners=0
+   t=   571 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=231 markInView=True spinners=0
+   t=   595 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=264 markInView=True spinners=0
+   t=   622 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=275 markInView=True spinners=0
+   t=   646 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=289 markInView=True spinners=0
+   t=   670 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=294 markInView=True spinners=0
+   t=   696 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=300 markInView=True spinners=0
+   t=   721 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=301 markInView=True spinners=0
+   t=   745 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=302 markInView=True spinners=0
+   final: status=['Citation 1 · Page 5 · Exact passage'] scrollTop=302 markInView=True
+== r2b-i-single-2 (kind race-single)
+   event t=129 click chip Page 5 #0: 1depot-manual.docxPage 5 (body spinners 5)
+   event t=440 release chunk (body spinners 5)
+   t=   154 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=None spinners=5
+   t=   460 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=False spinners=0
+   t=   503 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=13 markInView=False spinners=0
+   t=   530 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=38 markInView=False spinners=0
+   t=   553 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=163 markInView=False spinners=0
+   t=   580 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=204 markInView=True spinners=0
+   t=   603 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=250 markInView=True spinners=0
+   t=   629 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=264 markInView=True spinners=0
+   t=   653 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=283 markInView=True spinners=0
+   t=   680 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=289 markInView=True spinners=0
+   t=   703 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=298 markInView=True spinners=0
+   t=   730 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=300 markInView=True spinners=0
+   t=   753 change        status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=302 markInView=True spinners=0
+   final: status=['Citation 1 · Page 5 · Exact passage'] scrollTop=302 markInView=True
+== r2b-i-double-1 (kind race-double)
+   event t=132 click chip Page 5 #0: 1depot-manual.docxPage 5 (body spinners 5)
+   event t=444 click chip Page 2 #0: 1depot-manual.docxPage 2 (body spinners 5)
+   event t=762 release chunk (body spinners 5)
+   t=   158 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=None spinners=5
+   t=   458 change        status=['Citation 1 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=None spinners=5
+   t=   807 change        status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=True spinners=0
+   t=   832 change        status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=26 markInView=True spinners=0
+   t=   858 change        status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=37 markInView=True spinners=0
+   t=   882 change        status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=45 markInView=True spinners=0
+   t=   908 change        status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=46 markInView=True spinners=0
+   final: status=['Citation 1 · Page 2 · Exact passage'] scrollTop=46 markInView=True
+== r2b-i-switch-1 (kind race-switch)
+   event t=129 click chip Page 5 #0: 1depot-manual.docxPage 5 (body spinners 5)
+   event t=437 switch to B (body spinners 5)
+   event t=1056 release chunk (body spinners 5)
+   t=   155 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=None spinners=5
+   t=   465 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…e609b547dc29 scrollTop=None markInView=None spinners=-1
+   t=   504 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…e609b547dc29 scrollTop=0 markInView=None spinners=5
+   t=  1078 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…e609b547dc29 scrollTop=0 markInView=None spinners=0
+   final: status=[] scrollTop=0 markInView=None
+== r2b-i-switchfast-1 (kind race-switchfast)
+   event t=129 click chip Page 5 #0: 1depot-manual.docxPage 5 (body spinners 5)
+   event t=441 switch to B (body spinners 5)
+   event t=497 release chunk (body spinners -1)
+   t=   155 change        status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=None spinners=5
+   t=   461 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…e609b547dc29 scrollTop=None markInView=None spinners=-1
+   t=   504 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…e609b547dc29 scrollTop=0 markInView=None spinners=5
+   t=   829 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…e609b547dc29 scrollTop=0 markInView=None spinners=0
+   final: status=[] scrollTop=0 markInView=None
+== r2b-i-switch-2-md (kind race-switch)
+   event t=128 click chip Page 5 #0: 2coastal-handbook.mdPage 5 (body spinners 5)
+   event t=438 switch to B (body spinners 5)
+   event t=1007 release chunk (body spinners 5)
+   t=   152 change        status=['Citation 2 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…e609b547dc29 scrollTop=0 markInView=None spinners=5
+   t=   462 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=None markInView=None spinners=-1
+   t=   503 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=None spinners=5
+   t=  1029 change        status=[] exact=0 region=0 pdfLines=0 pdfRegions=0 doc=…82e064ed2284 scrollTop=0 markInView=None spinners=0
+   final: status=[] scrollTop=0 markInView=None
+== r2bL-md1-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    25 mutation      status=['Citation 1 · Page 1–3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    37 mutation      status=['Citation 1 · Page 1–3 · Related passage'] exact=0 region=14 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–3 · Related passage'] marks=[('region', 'Site'), ('region', 'Depth (m)'), ('region', 'pH'), ('region', 'Alder Marsh'), ('region', '1.4'), ('region', '6.8')] anchorVisible=True
+== r2bL-md1-m1-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–3 · Related passage'] exact=0 region=14 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 2 · Page 1–3 · Related passage'] exact=0 region=15 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 1–3 · Related passage'] marks=[('region', 'Water samples were taken at dawn to limit the effect of dail'), ('region', 'Site'), ('region', 'Depth (m)'), ('region', 'pH'), ('region', 'Alder Marsh'), ('region', '1.4')] anchorVisible=True
+== r2bL-md1-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 1–3 · Related passage'] exact=0 region=15 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 1 · Page 1–3 · Related passage'] exact=0 region=14 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–3 · Related passage'] marks=[('region', 'Site'), ('region', 'Depth (m)'), ('region', 'pH'), ('region', 'Alder Marsh'), ('region', '1.4'), ('region', '6.8')] anchorVisible=True
+== r2bL-md1-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–3 · Related passage'] exact=0 region=14 pdfLines=0 pdfRegions=0
+   t=    18 mutation      status=['Citation 2 · Page 1–3 · Related passage'] exact=0 region=15 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 1–3 · Related passage'] marks=[('region', 'Water samples were taken at dawn to limit the effect of dail'), ('region', 'Site'), ('region', 'Depth (m)'), ('region', 'pH'), ('region', 'Alder Marsh'), ('region', '1.4')] anchorVisible=True
+== r2bL-md1-m3-c1 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 1–3 · Related passage'] exact=0 region=15 pdfLines=0 pdfRegions=0
+   t=    17 mutation      status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 2 · Exact passage'] marks=[('region', '本研究共调查了三十八处湿地。'), ('exact', '水样均在清晨采集，以减少昼夜温差的影响。')] anchorVisible=True
+== r2bL-md1-m3-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=0 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 2 · Exact passage'] marks=[('exact', '水样均在清晨采集，以减少昼夜温差的影响。')] anchorVisible=True
+== r2bL-md1-m3-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=0 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 3 · Page 2 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 2 · Exact passage'] marks=[('region', '本研究共调查了三十八处湿地。'), ('exact', '水样均在清晨采集，以减少昼夜温差的影响。')] anchorVisible=True
+== r2bL-md1-m3-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 2 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    11 mutation      status=['Citation 4 · Page 2 · Exact passage'] exact=1 region=0 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 2 · Exact passage'] marks=[('exact', '水样均在清晨采集，以减少昼夜温差的影响。')] anchorVisible=True
+== r2bL-md1-m4-c1 (kind pill)
+   t=     0 start         status=['Citation 4 · Page 2 · Exact passage'] exact=1 region=0 pdfLines=0 pdfRegions=0
+   t=    27 mutation      status=['Citation 1 · Page 1–3 · Related passage'] exact=0 region=15 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–3 · Related passage'] marks=[('region', 'Water samples were taken at dawn to limit the effect of dail'), ('region', 'Site'), ('region', 'Depth (m)'), ('region', 'pH'), ('region', 'Alder Marsh'), ('region', '1.4')] anchorVisible=True
+== r2bL-md2-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    20 mutation      status=['Citation 1 · Page 4 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    35 mutation      status=['Citation 1 · Page 4 · Exact passage'] exact=1 region=5 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 4 · Exact passage'] marks=[('region', 'Seal counts happen at low water, when the animals haul out o'), ('exact', 'In September 2025 the team counted 214 grey seals, the highe'), ('region', 'Birds are counted with the block method: count ten birds, th'), ('region', 'Use binoculars rated 8x42 or better.'), ('region', 'Never approach within fifty metres of a resting seal.'), ('region', 'Record ringed birds with the ring colour and the leg it is o')] anchorVisible=True
+== r2bL-md2-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 4 · Exact passage'] exact=1 region=5 pdfLines=0 pdfRegions=0
+   t=    14 mutation      status=['Citation 1 · Page 1–5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 1 · Page 1–5 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–5 · Related passage'] marks=[('region', 'Observers work in pairs and never enter the water during an '), ('region', 'Tide height is read from the painted staff gauge at the end '), ('region', 'Station'), ('region', 'Gauge datum (m)'), ('region', 'Typical range (m)'), ('region', 'Pilot Jetty')] anchorVisible=True
+== r2bL-md2-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–5 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   t=    23 mutation      status=['Citation 2 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    26 mutation      status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=14 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 2 · Exact passage'] marks=[('region', 'Tide height is read from the painted staff gauge at the end '), ('exact', 'Readings are taken every thirty minutes from two hours befor'), ('region', 'A reading is rejected when the gauge is hidden by spray or f'), ('region', 'Station'), ('region', 'Gauge datum (m)'), ('region', 'Typical range (m)')] anchorVisible=True
+== r2bL-md2-m3-c1 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=14 pdfLines=0 pdfRegions=0
+   t=    12 mutation      status=['Citation 1 · Page 1–5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    16 mutation      status=['Citation 1 · Page 1–5 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–5 · Related passage'] marks=[('region', 'Observers work in pairs and never enter the water during an '), ('region', 'Tide height is read from the painted staff gauge at the end '), ('region', 'Station'), ('region', 'Gauge datum (m)'), ('region', 'Typical range (m)'), ('region', 'Pilot Jetty')] anchorVisible=True
+== r2bL-md2-m3-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–5 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   t=    14 mutation      status=['Citation 2 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 5 · Exact passage'] marks=[('region', 'Every sheet is checked by a second volunteer before it is en'), ('exact', 'The data manager publishes a cleaned dataset on the first Mo')] anchorVisible=True
+== r2bL-md2-m3-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    18 mutation      status=['Citation 3 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 5 · Exact passage'] marks=[('region', 'Every sheet is checked by a second volunteer before it is en'), ('exact', 'The data manager publishes a cleaned dataset on the first Mo')] anchorVisible=True
+== r2bL-md2-m3-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    20 mutation      status=['Citation 4 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 5 · Exact passage'] marks=[('region', 'Entries with missing times are flagged rather than deleted.'), ('exact', 'The data manager publishes a cleaned dataset on the first Mo')] anchorVisible=True
+== r2bL-md2-m3-c5 (kind pill)
+   t=     0 start         status=['Citation 4 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    16 mutation      status=['Citation 5 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 5 · Page 5 · Exact passage'] marks=[('region', 'Every sheet is checked by a second volunteer before it is en'), ('exact', 'The data manager publishes a cleaned dataset on the first Mo')] anchorVisible=True
+== r2bL-md2-m4-c1 (kind pill)
+   t=     0 start         status=['Citation 5 · Page 5 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    13 mutation      status=['Citation 1 · Page 1–5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 1 · Page 1–5 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–5 · Related passage'] marks=[('region', 'Observers work in pairs and never enter the water during an '), ('region', 'Tide height is read from the painted staff gauge at the end '), ('region', 'Station'), ('region', 'Gauge datum (m)'), ('region', 'Typical range (m)'), ('region', 'Pilot Jetty')] anchorVisible=True
+== r2bL-md2-m4-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–5 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   t=    24 mutation      status=['Citation 2 · Page 4 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    27 mutation      status=['Citation 2 · Page 4 · Exact passage'] exact=1 region=5 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 4 · Exact passage'] marks=[('region', 'Seal counts happen at low water, when the animals haul out o'), ('exact', 'In September 2025 the team counted 214 grey seals, the highe'), ('region', 'Birds are counted with the block method: count ten birds, th'), ('region', 'Use binoculars rated 8x42 or better.'), ('region', 'Never approach within fifty metres of a resting seal.'), ('region', 'Record ringed birds with the ring colour and the leg it is o')] anchorVisible=True
+== r2bL-docx2-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 1 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    39 mutation      status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 2 · Exact passage'] marks=[('region', 'Every inbound pallet is scanned at bay three before it leave'), ('exact', 'Cold-chain items must reach the refrigerated room within eig'), ('region', 'A delivery that arrives without a signed temperature log is ')] anchorVisible=True
+== r2bL-docx2-m1-c2 (kind pill)
+   t=     1 start         status=['Citation 1 · Page 2 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 2 · Page 3 · Exact passage'] exact=1 region=0 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 3 · Exact passage'] marks=[('exact', 'The refrigerated room is kept between two and eight degrees ')] anchorVisible=True
+== r2bL-docx2-m1-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 3 · Exact passage'] exact=1 region=0 pdfLines=0 pdfRegions=0
+   t=    14 mutation      status=['Citation 3 · Page 1–4 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 3 · Page 1–4 · Related passage'] exact=0 region=20 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 1–4 · Related passage'] marks=[('region', 'It applies to all forty-two staff members who work the morni'), ('region', 'Shift'), ('region', 'Start'), ('region', 'End'), ('region', 'Staff'), ('region', 'Morning')] anchorVisible=True
+== r2bL-docx2-m1-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 1–4 · Related passage'] exact=0 region=20 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 4 · Page 3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 4 · Page 3 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 3 · Exact passage'] marks=[('region', 'Shelving in aisle seven is reserved for controlled substance'), ('exact', 'The refrigerated room is kept between two and eight degrees ')] anchorVisible=True
+== r2bL-docx2-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 4 · Page 3 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    24 mutation      status=['Citation 1 · Page 1–4 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    27 mutation      status=['Citation 1 · Page 1–4 · Related passage'] exact=0 region=20 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–4 · Related passage'] marks=[('region', 'It applies to all forty-two staff members who work the morni'), ('region', 'Shift'), ('region', 'Start'), ('region', 'End'), ('region', 'Staff'), ('region', 'Morning')] anchorVisible=True
+== r2bL-docx2-m3-c1 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–4 · Related passage'] exact=0 region=20 pdfLines=0 pdfRegions=0
+   t=    15 mutation      status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 5 · Exact passage'] marks=[('region', 'Any spill of a hazardous substance is reported to the shift '), ('exact', 'The depot held 37 incident reviews in 2025, and nine of them'), ('region', 'Staff who report an incident in good faith are never discipl')] anchorVisible=True
+== r2bL-docx2-m3-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   t=    20 mutation      status=['Citation 2 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 5 · Exact passage'] marks=[('region', 'Near misses are logged in the safety register even when nobo'), ('exact', 'The depot held 37 incident reviews in 2025, and nine of them'), ('region', 'Staff who report an incident in good faith are never discipl')] anchorVisible=True
+== r2bL-docx2-m3-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 3 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 5 · Exact passage'] marks=[('region', 'Any spill of a hazardous substance is reported to the shift '), ('exact', 'The depot held 37 incident reviews in 2025, and nine of them'), ('region', 'Staff who report an incident in good faith are never discipl')] anchorVisible=True
+== r2bL-docx2-m3-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 5 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   t=    18 mutation      status=['Citation 4 · Page 3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 4 · Page 3 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 3 · Exact passage'] marks=[('region', 'Shelving in aisle seven is reserved for controlled substance'), ('exact', 'The refrigerated room is kept between two and eight degrees ')] anchorVisible=True
+== r2bL-docx2-m3-c5 (kind pill)
+   t=     0 start         status=['Citation 4 · Page 3 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    24 mutation      status=['Citation 5 · Page 3 · Exact passage'] exact=1 region=0 pdfLines=0 pdfRegions=0
+   final: status=['Citation 5 · Page 3 · Exact passage'] marks=[('exact', 'The refrigerated room is kept between two and eight degrees ')] anchorVisible=True
+== r2bL-docx1-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    26 mutation      status=['Citation 1 · Page 1–2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    31 mutation      status=['Citation 1 · Page 1–2 · Related passage'] exact=0 region=11 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–2 · Related passage'] marks=[('region', 'Participants were randomised to the intervention or to usual'), ('region', 'Site'), ('region', 'Enrolled'), ('region', 'Completed'), ('region', 'Northfield'), ('region', '88')] anchorVisible=True
+== r2bL-docx1-m1-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–2 · Related passage'] exact=0 region=11 pdfLines=0 pdfRegions=0
+   t=    15 mutation      status=['Citation 2 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 2 · Related passage'] marks=[('region', 'The primary outcome was the change in systolic blood pressur')] anchorVisible=True
+== r2bL-docx1-m1-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   t=    15 mutation      status=['Citation 3 · Page 1–2 · Related passage'] exact=0 region=10 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 1–2 · Related passage'] marks=[('region', 'Site'), ('region', 'Enrolled'), ('region', 'Completed'), ('region', 'Northfield'), ('region', '88'), ('region', '81')] anchorVisible=True
+== r2bL-docx1-m1-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 1–2 · Related passage'] exact=0 region=10 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 4 · Page 2 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 2 · Related passage'] marks=[('region', 'Secondary outcomes included adherence, adverse events and qu')] anchorVisible=True
+== r2bL-pptx-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    29 mutation      status=['Citation 1 · Page 1 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    38 mutation      status=['Citation 1 · Page 1 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1 · Exact passage'] marks=[('exact', 'Quarterly review\nRevenue grew 14 percent year over year, dri'), ('region', 'Speaker Notes:'), ('region', '\nMention the two delayed contracts before the questions.')] anchorVisible=True
+== r2bL-pptx-m1-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   t=    24 mutation      status=['Citation 2 · Page 1 · Exact passage'] exact=2 region=0 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 1 · Exact passage'] marks=[('exact', 'Speaker Notes:'), ('exact', '\nMention the two delayed contracts before the questions.')] anchorVisible=True
+== r2bL-pptx-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 1 · Exact passage'] exact=2 region=0 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 1 · Page 1–3 · Related passage'] exact=0 region=13 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–3 · Related passage'] marks=[('region', 'Speaker Notes:'), ('region', '\nMention the two delayed contracts before the questions.'), ('region', 'Regional results'), ('region', 'Region'), ('region', 'Revenue'), ('region', 'Growth')] anchorVisible=True
+== r2bL-pptx-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–3 · Related passage'] exact=0 region=13 pdfLines=0 pdfRegions=0
+   t=    22 mutation      status=['Citation 2 · Page 1–3 · Related passage'] exact=0 region=14 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 1–3 · Related passage'] marks=[('region', 'Quarterly review\nRevenue grew 14 percent year over year, dri'), ('region', 'Speaker Notes:'), ('region', '\nMention the two delayed contracts before the questions.'), ('region', 'Regional results'), ('region', 'Region'), ('region', 'Revenue')] anchorVisible=True
+== r2bL-pptx-m2-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 1–3 · Related passage'] exact=0 region=14 pdfLines=0 pdfRegions=0
+   t=    12 mutation      status=['Citation 3 · Page 2–3 · Related passage'] exact=0 region=11 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 2–3 · Related passage'] marks=[('region', 'Regional results'), ('region', 'Region'), ('region', 'Revenue'), ('region', 'Growth'), ('region', 'North'), ('region', '4.2M')] anchorVisible=True
+== r2bL-pptx-m2-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 2–3 · Related passage'] exact=0 region=11 pdfLines=0 pdfRegions=0
+   t=    25 mutation      status=['Citation 4 · Page 3 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 3 · Exact passage'] marks=[('region', 'Quarterly review'), ('exact', 'Operating costs fell for the third consecutive quarter.')] anchorVisible=True
+== r2bL-xlsx-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    27 mutation      status=['Citation 1 · Page 1–2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    37 mutation      status=['Citation 1 · Page 1–2 · Related passage'] exact=0 region=12 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–2 · Related passage'] marks=[('region', 'Travel'), ('region', '1200'), ('region', '950'), ('region', 'Software'), ('region', '4300'), ('region', '4300')] anchorVisible=True
+== r2bL-xlsx-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–2 · Related passage'] exact=0 region=12 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–2 · Related passage'] marks=[('region', 'Travel'), ('region', '1200'), ('region', '950'), ('region', 'Software'), ('region', '4300'), ('region', '4300')] anchorVisible=True
+== r2bL-xlsx-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–2 · Related passage'] exact=0 region=12 pdfLines=0 pdfRegions=0
+   t=    20 mutation      status=['Citation 2 · Page 1–2 · Related passage'] exact=0 region=15 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 1–2 · Related passage'] marks=[('region', 'Item'), ('region', 'Q1'), ('region', 'Q2'), ('region', 'Travel'), ('region', '1200'), ('region', '950')] anchorVisible=True
+== r2bL-txt-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    17 mutation      status=['Citation 1 · Page 1 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    32 mutation      status=['Citation 1 · Page 1 · Related passage'] exact=0 region=4 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1 · Related passage'] marks=[('region', "THE LIGHTHOUSE KEEPER'S LOG — EXTRACT\n\nWeek one.\nThe lamp at"), ('region', 'A coal steamer named the Wrenfield passed within half a mile'), ('region', 'Repairs to the landing stage took nine days and used two hun'), ('region', 'An inspector from the board arrived on the twenty-second day')] anchorVisible=True
+== r2bL-txt-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1 · Related passage'] exact=0 region=4 pdfLines=0 pdfRegions=0
+   t=    28 mutation      status=['Citation 1 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1 · Related passage'] marks=[('region', 'An inspector from the board arrived on the twenty-second day')] anchorVisible=True
+== r2bL-txt-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   t=    26 mutation      status=['Citation 2 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 1 · Related passage'] marks=[('region', 'He praised the clean brasswork but criticised the state of t')] anchorVisible=True
+== r2bL-artxt-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    11 mutation      status=['Citation 1 · Page 1 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    22 mutation      status=['Citation 1 · Page 1 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1 · Exact passage'] marks=[('region', 'تقرير المكتبة العامة في مدينة الواحة\n\nافتتحت المكتبة العامة '), ('exact', 'حضر هذه الجلسات أكثر من تسعمائة طفل خلال العام الماضي.'), ('region', 'قاعة الدراسة\nتتسع قاعة الدراسة في الطابق الثاني لستين طالبا ')] anchorVisible=True
+== r2bL-artxt-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1 · Exact passage'] exact=1 region=2 pdfLines=0 pdfRegions=0
+   t=    13 mutation      status=['Citation 1 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1 · Related passage'] marks=[('region', 'تبقى القاعة مفتوحة حتى منتصف الليل خلال فترة الامتحانات.\nيطل')] anchorVisible=True
+== r2bL-artxt-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   t=    22 mutation      status=['Citation 2 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 1 · Related passage'] marks=[('region', 'قاعة الدراسة\nتتسع قاعة الدراسة في الطابق الثاني لستين طالبا ')] anchorVisible=True
+== r2bL-artxt-m2-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   t=    12 mutation      status=['Citation 3 · Page 1 · Related passage'] exact=0 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 1 · Related passage'] marks=[('region', 'تقرير المكتبة العامة في مدينة الواحة\n\nافتتحت المكتبة العامة ')] anchorVisible=True
+== r2bL-pdf-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=4
+   t=    19 mutation      status=['Citation 1 · Page 8 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=7
+   t=    87 mutation      status=['Citation 1 · Page 8 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=11
+   t=   103 mutation      status=['Citation 1 · Page 8 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=7
+   t=   176 mutation      status=['Citation 1 · Page 8 · Related passage'] exact=0 region=0 pdfLines=0 pdfRegions=7
+   final: status=['Citation 1 · Page 8 · Related passage'] marks=[] anchorVisible=None
+== r2bL-pdf-m1-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 8 · Related passage'] exact=0 region=0 pdfLines=0 pdfRegions=7
+   t=    17 mutation      status=['Citation 2 · Page 1 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=4
+   t=    65 mutation      status=['Citation 2 · Page 1 · Related passage'] exact=0 region=0 pdfLines=0 pdfRegions=4
+   final: status=['Citation 2 · Page 1 · Related passage'] marks=[] anchorVisible=None
+== r2bL-pdf-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 1 · Related passage'] exact=0 region=0 pdfLines=0 pdfRegions=4
+   t=    22 mutation      status=['Citation 1 · Page 5 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=7
+   t=    70 mutation      status=['Citation 1 · Page 5 · Exact passage'] exact=0 region=0 pdfLines=1 pdfRegions=7
+   final: status=['Citation 1 · Page 5 · Exact passage'] marks=[] anchorVisible=None
+== r2bL-pdf-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 5 · Exact passage'] exact=0 region=0 pdfLines=1 pdfRegions=7
+   t=    17 mutation      status=['Citation 2 · Page 4 · Page location only'] exact=0 region=0 pdfLines=0 pdfRegions=7
+   t=    17 mutation      status=['Citation 2 · Page 4 · Related passage'] exact=0 region=0 pdfLines=0 pdfRegions=7
+   t=   176 mutation      status=['Citation 2 · Page 4 · Related passage'] exact=0 region=0 pdfLines=0 pdfRegions=10
+   final: status=['Citation 2 · Page 4 · Related passage'] marks=[] anchorVisible=None
+== r2bL-pdf-m2-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 4 · Related passage'] exact=0 region=0 pdfLines=0 pdfRegions=10
+   t=    23 mutation      status=['Citation 3 · Page 5 · Page location only'] exact=0 region=0 pdfLines=2 pdfRegions=7
+   t=    32 mutation      status=['Citation 3 · Page 5 · Exact passage'] exact=0 region=0 pdfLines=2 pdfRegions=7
+   t=   147 mutation      status=['Citation 3 · Page 5 · Exact passage'] exact=0 region=0 pdfLines=2 pdfRegions=10
+   final: status=['Citation 3 · Page 5 · Exact passage'] marks=[] anchorVisible=None
+== r2bL-url-m1-c1 (kind pill)
+   t=     0 start         status=[] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=     8 mutation      status=['Citation 1 · Page 1–2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    31 mutation      status=['Citation 1 · Page 1–2 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 1–2 · Related passage'] marks=[('region', 'Abstract'), ('region', 'Rationale'), ('region', 'What is a Docstring?'), ('region', 'One-line Docstrings'), ('region', 'Multi-line Docstrings'), ('region', 'Handling Docstring Indentation')] anchorVisible=True
+== r2bL-url-m1-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 1–2 · Related passage'] exact=0 region=21 pdfLines=0 pdfRegions=0
+   t=    18 mutation      status=['Citation 2 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    39 mutation      status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=9 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 2 · Exact passage'] marks=[('region', 'This\nlooks better for one-liners.'), ('region', 'There’s no blank line either before or after the docstring.'), ('region', 'The docstring is a phrase ending in a period. It prescribes '), ('region', 'def function ( a , b ): """function(a, b) -> list"""\n'), ('region', 'This type of docstring is only appropriate for C functions ('), ('region', 'def function ( a , b ): """Do X and return a list."""\n')] anchorVisible=True
+== r2bL-url-m1-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=9 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 3 · Page 4 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    37 mutation      status=['Citation 3 · Page 4 · Exact passage'] exact=2 region=2 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 4 · Exact passage'] marks=[('region', 'from the second and further lines of the docstring, equal to'), ('exact', 'Since code is much more precise than words, here is an imple'), ('exact', "def trim ( docstring ): if not docstring : return '' # Conve"), ('region', 'expandtabs () . splitlines () # Determine minimum indentatio')] anchorVisible=True
+== r2bL-url-m1-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 4 · Exact passage'] exact=2 region=2 pdfLines=0 pdfRegions=0
+   t=    16 mutation      status=['Citation 4 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    36 mutation      status=['Citation 4 · Page 2 · Exact passage'] exact=1 region=21 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 2 · Exact passage'] marks=[('region', 'Public\nmethods (including the '), ('region', 'init'), ('region', ' constructor) should also have\ndocstrings. A package may be '), ('region', 'init'), ('region', '.py file in the package directory.'), ('region', 'String literals occurring elsewhere in Python code may also ')] anchorVisible=True
+== r2bL-url-m1-c5 (kind pill)
+   t=     0 start         status=['Citation 4 · Page 2 · Exact passage'] exact=1 region=21 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 5 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    28 mutation      status=['Citation 5 · Page 2 · Exact passage'] exact=3 region=8 pdfLines=0 pdfRegions=0
+   final: status=['Citation 5 · Page 2 · Exact passage'] marks=[('region', 'A docstring is a string literal that occurs as the first sta'), ('region', 'doc'), ('region', ' special attribute of that object.'), ('region', 'All modules should normally have docstrings, and all functio'), ('exact', 'Public\nmethods (including the '), ('exact', 'init')] anchorVisible=True
+== r2bL-url-m2-c1 (kind pill)
+   t=     0 start         status=['Citation 5 · Page 2 · Exact passage'] exact=3 region=8 pdfLines=0 pdfRegions=0
+   t=    17 mutation      status=['Citation 1 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    26 mutation      status=['Citation 1 · Page 2 · Exact passage'] exact=4 region=7 pdfLines=0 pdfRegions=0
+   final: status=['Citation 1 · Page 2 · Exact passage'] marks=[('region', 'This\nlooks better for one-liners.'), ('region', 'There’s no blank line either before or after the docstring.'), ('region', 'The docstring is a phrase ending in a period. It prescribes '), ('region', 'def function ( a , b ): """function(a, b) -> list"""\n'), ('region', 'This type of docstring is only appropriate for C functions ('), ('exact', 'The preferred form for such a docstring\nwould be something l')] anchorVisible=True
+== r2bL-url-m2-c2 (kind pill)
+   t=     0 start         status=['Citation 1 · Page 2 · Exact passage'] exact=4 region=7 pdfLines=0 pdfRegions=0
+   t=    19 mutation      status=['Citation 2 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    36 mutation      status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   final: status=['Citation 2 · Page 2 · Exact passage'] marks=[('exact', 'The entire\ndocstring is indented the same as the quotes at i'), ('region', 'Insert a blank line after all docstrings (one-line or multi-')] anchorVisible=True
+== r2bL-url-m2-c3 (kind pill)
+   t=     0 start         status=['Citation 2 · Page 2 · Exact passage'] exact=1 region=1 pdfLines=0 pdfRegions=0
+   t=    30 mutation      status=['Citation 3 · Page 3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    37 mutation      status=['Citation 3 · Page 3 · Exact passage'] exact=1 region=4 pdfLines=0 pdfRegions=0
+   final: status=['Citation 3 · Page 3 · Exact passage'] marks=[('region', 'For example:'), ('region', 'def complex ( real = 0.0 , imag = 0.0 ): """Form a complex n'), ('exact', 'Unless the entire docstring fits on a line, place the closin'), ('region', 'This way, Emacs’ fill-paragraph command\ncan be used on it.'), ('region', 'Docstring processing tools will strip a uniform amount of in')] anchorVisible=True
+== r2bL-url-m2-c4 (kind pill)
+   t=     0 start         status=['Citation 3 · Page 3 · Exact passage'] exact=1 region=4 pdfLines=0 pdfRegions=0
+   t=    13 mutation      status=['Citation 4 · Page 2 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    18 mutation      status=['Citation 4 · Page 2 · Related passage'] exact=0 region=22 pdfLines=0 pdfRegions=0
+   final: status=['Citation 4 · Page 2 · Related passage'] marks=[('region', 'Public\nmethods (including the '), ('region', 'init'), ('region', ' constructor) should also have\ndocstrings. A package may be '), ('region', 'init'), ('region', '.py file in the package directory.'), ('region', 'String literals occurring elsewhere in Python code may also ')] anchorVisible=True
+== r2bL-url-m2-c5 (kind pill)
+   t=     0 start         status=['Citation 4 · Page 2 · Related passage'] exact=0 region=22 pdfLines=0 pdfRegions=0
+   t=    18 mutation      status=['Citation 5 · Page 3–4 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    23 mutation      status=['Citation 5 · Page 3–4 · Related passage'] exact=0 region=7 pdfLines=0 pdfRegions=0
+   final: status=['Citation 5 · Page 3–4 · Related passage'] marks=[('region', 'For example:'), ('region', 'def complex ( real = 0.0 , imag = 0.0 ): """Form a complex n'), ('region', 'Unless the entire docstring fits on a line, place the closin'), ('region', 'Docstring processing tools will strip a uniform amount of in'), ('region', 'from the second and further lines of the docstring, equal to'), ('region', 'Since code is much more precise than words, here is an imple')] anchorVisible=True
+== r2bL-url-m2-c6 (kind pill)
+   t=     0 start         status=['Citation 5 · Page 3–4 · Related passage'] exact=0 region=7 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 6 · Page 2–3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    30 mutation      status=['Citation 6 · Page 2–3 · Related passage'] exact=0 region=10 pdfLines=0 pdfRegions=0
+   final: status=['Citation 6 · Page 2–3 · Related passage'] marks=[('region', 'This\nlooks better for one-liners.'), ('region', 'There’s no blank line either before or after the docstring.'), ('region', 'The docstring is a phrase ending in a period. It prescribes '), ('region', 'def function ( a , b ): """function(a, b) -> list"""\n'), ('region', 'This type of docstring is only appropriate for C functions ('), ('region', 'def function ( a , b ): """Do X and return a list."""\n')] anchorVisible=True
+== r2bL-url-m2-c7 (kind pill)
+   t=     0 start         status=['Citation 6 · Page 2–3 · Related passage'] exact=0 region=10 pdfLines=0 pdfRegions=0
+   t=    21 mutation      status=['Citation 7 · Page 2–3 · Locating source…'] exact=0 region=0 pdfLines=0 pdfRegions=0
+   t=    29 mutation      status=['Citation 7 · Page 2–3 · Exact passage'] exact=2 region=7 pdfLines=0 pdfRegions=0
+   final: status=['Citation 7 · Page 2–3 · Exact passage'] marks=[('region', 'The entire\ndocstring is indented the same as the quotes at i'), ('exact', 'Insert a blank line after all docstrings (one-line or multi-'), ('exact', 'document a class – generally speaking, the class’s methods a'), ('region', 'The docstring of a script (a stand-alone program) should be '), ('region', 'The docstring for a module should generally list the classes'), ('region', 'init')] anchorVisible=True
