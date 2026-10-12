@@ -12,6 +12,7 @@ import { useLocale } from '../../i18n';
 import { usePdfRecovery } from '../../lib/usePdfRecovery';
 import { errorCopy } from '../../lib/errorCopy';
 import { citationPageRange } from '../../lib/citationText';
+import { convertedPageIndex, uniqueInPageRange } from '../../lib/convertedEvidence';
 import type { EvidenceKind } from '../../lib/pdfEvidence';
 import { Eye, EyeOff, ScanLine } from 'lucide-react';
 
@@ -75,12 +76,18 @@ export interface PdfViewerProps {
   layoutTranslateBusy?: boolean;
   layoutTranslateDisabled?: boolean;
   onRefreshUrl?: () => Promise<string | undefined>;
+  /** Converted DOCX/PPTX: chunk boxes are synthetic placeholders, not text
+   * geometry, so draw no region and match the passage in the text layer. */
+  syntheticBoxes?: boolean;
 }
+
+const NO_BOXES: NormalizedBBox[] = [];
 
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' as const : 'smooth' as const;
 
-export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scrollNonce, highlightSnippet, highlightFocus, citation, onReturnToAnswer, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl }: PdfViewerProps) {
+export default function PdfViewer({ pdfUrl, currentPage, highlights: boxHighlights, scale, scrollNonce, highlightSnippet: snippetProp, highlightFocus: focusProp, citation, onReturnToAnswer, onLayoutTranslate, layoutTranslateBusy, layoutTranslateDisabled, onRefreshUrl, syntheticBoxes }: PdfViewerProps) {
+  const highlights = syntheticBoxes ? NO_BOXES : boxHighlights;
   const { refreshing, revision, retry, error: recoveryError } = usePdfRecovery(pdfUrl, onRefreshUrl);
   const [hiddenEvidence, setHiddenEvidence] = useState(false);
   const [evidenceVersion, setEvidenceVersion] = useState(0);
@@ -116,6 +123,21 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
     }
     return { validPdfUrl: pdfUrl, urlError: null };
   }, [pdfUrl, t]);
+
+  // Converted DOCX/PPTX: keep a text candidate only when it occurs once in the
+  // whole converted document, on the cited page(s); withheld until the page
+  // text is extracted (textCacheVersion versions extractedTextRef).
+  const convertedIndex = useMemo(() => {
+    const cached = extractedTextRef.current;
+    return syntheticBoxes && cached && cached.pdfUrl === validPdfUrl ? convertedPageIndex(cached.pages) : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syntheticBoxes, validPdfUrl, textCacheVersion]);
+  const { highlightSnippet, highlightFocus } = useMemo(() => {
+    if (!syntheticBoxes) return { highlightSnippet: snippetProp, highlightFocus: focusProp };
+    const keep = (text?: string | null) => (convertedIndex && citation
+      && uniqueInPageRange(convertedIndex, citation.page, citation.pageEnd || citation.page, text) ? text : null);
+    return { highlightSnippet: keep(snippetProp), highlightFocus: keep(focusProp) };
+  }, [syntheticBoxes, snippetProp, focusProp, convertedIndex, citation]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -576,7 +598,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights, scale, scro
                     highlightSnippet={citation && pageNumber >= citation.page && pageNumber <= (citation.pageEnd || citation.page) ? highlightSnippet : null}
                     highlightFocus={citation && pageNumber >= citation.page && pageNumber <= (citation.pageEnd || citation.page) ? highlightFocus : null}
                     citationIndex={pageHighlights.length || (citation?.page === pageNumber) ? citation?.refIndex : undefined}
-                    navigationId={scrollNonce} hidden={hiddenEvidence} onEvidenceReady={onEvidenceReady} />
+                    navigationId={scrollNonce} hidden={hiddenEvidence} onEvidenceReady={onEvidenceReady} syntheticBoxes={syntheticBoxes} />
                 </div>
               );
             })}

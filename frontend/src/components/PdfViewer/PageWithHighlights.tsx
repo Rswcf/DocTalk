@@ -18,6 +18,7 @@ interface PageWithHighlightsProps {
   navigationId?: number;
   hidden?: boolean;
   onEvidenceReady?: () => void;
+  syntheticBoxes?: boolean;
 }
 
 function escapeHtml(value: string): string {
@@ -35,7 +36,7 @@ function textPoint(element: HTMLElement, offset: number): { node: Node; offset: 
   return null;
 }
 
-const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, scale, highlights, searchQuery, highlightSnippet, highlightFocus, citationIndex, navigationId, hidden, onEvidenceReady }: PageWithHighlightsProps) {
+const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, scale, highlights, searchQuery, highlightSnippet, highlightFocus, citationIndex, navigationId, hidden, onEvidenceReady, syntheticBoxes }: PageWithHighlightsProps) {
   const { t } = useLocale();
   const root = useRef<HTMLDivElement>(null);
   const [pageDims, setPageDims] = useState<{ w: number; h: number } | null>(null);
@@ -63,7 +64,12 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
   const regions = useMemo(() => groupEvidenceRegions(highlights), [highlights]);
   // Only the explicitly cited page receives text candidates, including the
   // converted-PDF path. Other virtualized pages cannot match stray short words.
-  const candidate = highlightFocus || (highlights.some(box => box.x === 0 && box.y === 0 && box.w === 1 && box.h === 1) ? highlightSnippet : null);
+  // Converted DOCX/PPTX chunks carry synthetic boxes (a sliver near the page
+  // origin, from parse_worker's whole-page block), so they get no region and
+  // the focus sentence or the chunk passage is matched in the text layer.
+  const candidate = syntheticBoxes
+    ? highlightFocus || highlightSnippet || null
+    : highlightFocus || (highlights.some(box => box.x === 0 && box.y === 0 && box.w === 1 && box.h === 1) ? highlightSnippet : null);
 
   useLayoutEffect(() => {
     const element = root.current;
