@@ -57,7 +57,7 @@ The retrieved chunks (in their original language) are sent to the LLM along with
 
 ### Citations in the Original Language
 
-The citations in the AI's answer point back to the original text in the document. If you uploaded a German contract, the citations take you to the original German passages in the document viewer and highlight them. This is important: the AI's answer may be in English, but the source verification happens against the original text.
+The citations in the AI's answer point back to the original text in the document. If you uploaded a German contract, the citations take you to the original German passages in the document viewer and highlight the cited passage. When DocTalk cannot pinpoint the passage, it shows the cited page instead. This is important: the AI's answer may be in English, but the source verification happens against the original text.
 
 ## Supported Languages and Quality Tiers
 

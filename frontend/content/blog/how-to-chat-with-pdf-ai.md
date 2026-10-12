@@ -49,7 +49,7 @@ The top-matching chunks are sent to a large language model (LLM) along with your
 
 ### Step 5: Citation Highlighting
 
-When you click a citation, the application jumps to the corresponding page and highlights the exact passage in the original document. This lets you verify every claim the AI makes.
+When you click a citation, the application jumps to the corresponding page and highlights the cited passage in the original document. This lets you verify every claim the AI makes.
 
 ## Step-by-Step: Chat with a PDF Using DocTalk
 
@@ -77,7 +77,7 @@ The AI responds with an answer that includes numbered citations like [1], [2], [
 
 ### 5. Click Citations to Verify
 
-Click any citation number to jump directly to the source passage in the document viewer. The relevant text is highlighted so you can see exactly what the AI based its answer on. This is the critical verification step that separates reliable AI tools from unreliable ones.
+Click any citation number to jump directly to the source passage in the document viewer. The relevant text is highlighted so you can see exactly what the AI based its answer on. When DocTalk cannot pinpoint the passage, it shows the cited page instead. This is the critical verification step that separates reliable AI tools from unreliable ones.
 
 ### 6. Continue the Conversation
 
@@ -146,7 +146,7 @@ DocTalk is not limited to PDFs. You can also chat with:
 - **TXT and Markdown** — plain text and formatted documents
 - **Web URLs** — paste a link and chat with the webpage content
 
-In all of these formats, clicking a citation jumps to the source and highlights the cited passage; in PowerPoint files, the highlight shows on the slide when DocTalk can match the passage there, and in the Text view.
+In all of these formats, clicking a citation jumps to the source and highlights the cited passage; in PowerPoint files, the highlight shows on the slide when DocTalk can match the passage there, and in the Text view. When DocTalk cannot pinpoint the passage, it shows the cited page instead.
 
 ## AI PDF Chat vs. Manual Reading
 

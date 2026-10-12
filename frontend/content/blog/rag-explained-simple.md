@@ -11,7 +11,7 @@ imageAlt: "Diagram showing the RAG pipeline from document upload through parsing
 keywords: ["what is rag ai", "retrieval augmented generation explained", "how ai document chat works", "rag vs fine tuning", "rag pipeline", "vector database explained"]
 ---
 
-You upload a 200-page contract, ask "What is the termination clause?", and get an answer in seconds — with a citation you can click to see the exact paragraph highlighted in the original document. It feels like magic. It is not. It is a technique called Retrieval-Augmented Generation, or RAG, and once you understand how it works, you will use AI document tools far more effectively.
+You upload a 200-page contract, ask "What is the termination clause?", and get an answer in seconds — with a citation you can click to see the cited paragraph highlighted in the original document. It feels like magic. It is not. It is a technique called Retrieval-Augmented Generation, or RAG, and once you understand how it works, you will use AI document tools far more effectively.
 
 This article breaks RAG down into plain language. No machine-learning degree required. By the end, you will understand every stage of the pipeline, why it matters, and where things can go wrong.
 
@@ -108,7 +108,7 @@ The LLM reads the passages, synthesizes an answer, and attaches citation numbers
 
 The final step connects the citation numbers back to their source locations in the original document. When you click [1], the application navigates to the page and paragraph that chunk came from and highlights it.
 
-This step is what separates serious RAG tools from toys. Without [citation highlighting](/features/citations), you have no way to verify whether the AI's answer is accurate. With it, verification takes seconds. DocTalk highlights the cited passage in the original document viewer, so you can read the source in full context.
+This step is what separates serious RAG tools from toys. Without [citation highlighting](/features/citations), you have no way to verify whether the AI's answer is accurate. With it, verification takes seconds. DocTalk highlights the cited passage in the original document viewer, so you can read the source in full context. When DocTalk cannot pinpoint the passage, it shows the cited page instead.
 
 ## Why Not Just Paste Text into ChatGPT?
 

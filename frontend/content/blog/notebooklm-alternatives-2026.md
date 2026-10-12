@@ -11,7 +11,7 @@ imageAlt: "Comparison of NotebookLM alternatives showing feature differences acr
 keywords: ["notebooklm alternative", "notebooklm alternatives 2026", "google notebooklm alternative", "gemini notebook alternative", "tools like notebooklm", "notebooklm competitors", "notebooklm vs chatpdf"]
 ---
 
-**Short answer:** NotebookLM is now called **Gemini Notebook**, and it is still the strongest free AI notebook for many sources at once. Look elsewhere if you need to check each answer against the highlighted passage in the original file, work in Excel files, or prefer not to use a Google account: [DocTalk](/) covers those. ChatPDF is the simplest document chat, AskYourPDF suits large PDFs, Humata suits teams, and PDF.ai suits occasional PDF questions.
+**Short answer:** NotebookLM is now called **Gemini Notebook**, and it is still the strongest free AI notebook for many sources at once. Look elsewhere if you need to check each answer against the highlighted passage in the original PDF, work in Excel files, or prefer not to use a Google account: [DocTalk](/) covers those. ChatPDF is the simplest document chat, AskYourPDF suits large PDFs, Humata suits teams, and PDF.ai suits occasional PDF questions.
 
 > **Updated October 2026 — what changed since March:**
 > - **NotebookLM is now Gemini Notebook**; notebooklm.google redirects to notebook.google. It now accepts Word and PowerPoint files.
@@ -48,9 +48,9 @@ Any replacement should match these strengths, or have a good reason not to:
 
 ### 1. DocTalk — Best for Verifying Answers in the Original Document
 
-[DocTalk](/) is an AI document Q&A tool for PDF, DOCX, PPTX, XLSX, TXT, Markdown and web URLs. Every answer carries numbered citations; click one and the document scrolls to the passage and [highlights it](/features/citations). **Quote Finder** returns quotes taken from the source text and checked against it by machine before they are shown, with the page they come from.
+[DocTalk](/) is an AI document Q&A tool for PDF, DOCX, PPTX, XLSX, TXT, Markdown and web URLs. Every answer carries numbered citations; click one and the document scrolls to the passage and [highlights it](/features/citations). When DocTalk cannot pinpoint the passage, it shows the cited page instead. **Quote Finder** returns quotes taken from the source text and checked against it by machine before they are shown, with the page they come from.
 
-**How it compares to Gemini Notebook:** Gemini Notebook is broader — more source types, audio overviews and a bigger free allowance. DocTalk is narrower and deeper on verification: the highlighted passage in the original file, machine-checked quotes, native Excel support, and no Google account (the [demo](/demo) needs no signup at all). Collections let you ask across several documents.
+**How it compares to Gemini Notebook:** Gemini Notebook is broader — more source types, audio overviews and a bigger free allowance. DocTalk is narrower and deeper on verification: the highlighted passage in the original PDF, machine-checked quotes, native Excel support, and no Google account (the [demo](/demo) needs no signup at all). Collections let you ask across several documents.
 
 **Key differences:**
 - Native PDF, DOCX, PPTX, XLSX, TXT, Markdown and URL
@@ -164,13 +164,13 @@ For how these tools work under the hood, see [what RAG is and how AI document ch
 It is now called Gemini Notebook. notebooklm.google redirects to notebook.google, and the free plan still allows up to 100 notebooks with 50 sources each.
 
 ### What is the best free alternative to NotebookLM?
-If you need free and many sources, Gemini Notebook itself is hard to beat. For verifying answers against the highlighted passage in the original file without a Google account, DocTalk's free plan gives 500 starter credits and then 300 a month, and its [demo](/demo) needs no signup.
+If you need free and many sources, Gemini Notebook itself is hard to beat. For verifying answers against the highlighted passage in the original PDF without a Google account, DocTalk's free plan gives 500 starter credits and then 300 a month, and its [demo](/demo) needs no signup.
 
 ### Does NotebookLM support Word files?
 Yes. Gemini Notebook (formerly NotebookLM) accepts Word and PowerPoint files, but not native .xlsx — use Google Sheets or CSV for spreadsheets.
 
 ### Which NotebookLM alternative shows the source passage in the original document?
-DocTalk: click a citation and the document scrolls to the passage and highlights it. ChatPDF's citations also scroll to the source in a side-by-side view.
+DocTalk: click a citation and the document scrolls to the passage and highlights it. When DocTalk cannot pinpoint the passage, it shows the cited page instead. ChatPDF's citations also scroll to the source in a side-by-side view.
 
 ## Final Thoughts
 

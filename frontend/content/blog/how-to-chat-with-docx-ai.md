@@ -74,7 +74,7 @@ Once processing is complete, start chatting. Here are some example questions tha
 
 ### 4. Verify with Citations
 
-Click the numbered citations in the AI's response to jump to the source text in the document viewer. The highlighted passage shows you what the AI based its answer on.
+Click the numbered citations in the AI's response to jump to the source text in the document viewer. The highlighted passage shows you what the AI based its answer on. When DocTalk cannot pinpoint the passage, it shows the cited page instead.
 
 ## Tips for Best Results with Word Documents
 
@@ -131,7 +131,7 @@ Checked 30 September 2026 on each vendor's own site unless marked.
 
 ¹ From third-party reviews. "—" means we could not confirm it.
 
-Word support is no longer rare: DocTalk, ChatPDF, Gemini Notebook and ChatDOC (on Pro) all read DOCX natively. In DocTalk, clicking a citation highlights the cited passage in the document.
+Word support is no longer rare: DocTalk, ChatPDF, Gemini Notebook and ChatDOC (on Pro) all read DOCX natively. In DocTalk, clicking a citation highlights the cited passage in the document. When DocTalk cannot pinpoint the passage, it shows the cited page instead.
 
 ## Frequently Asked Questions
 
@@ -157,6 +157,6 @@ You can export a Google Doc as .docx (File > Download > Microsoft Word) and uplo
 
 ## Get Started
 
-Upload your first Word document to [DocTalk](/) and ask a question. Click a citation to jump to the source text and see the cited passage highlighted.
+Upload your first Word document to [DocTalk](/) and ask a question. Click a citation to jump to the source text and see the cited passage highlighted. When DocTalk cannot pinpoint the passage, it shows the cited page instead.
 
 If you want to try without signing up, the [free demo](/demo) lets you see the chat and citation experience with sample documents. For a deeper dive into PDF workflows, see our [complete guide to chatting with PDFs](/blog/how-to-chat-with-pdf-ai).

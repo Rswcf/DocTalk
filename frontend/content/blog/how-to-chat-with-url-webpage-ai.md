@@ -90,7 +90,7 @@ Once processing completes, chat as you normally would:
 
 ### 4. Verify with Citations
 
-Click a numbered citation to jump to the source passage in the document viewer and see it highlighted. The viewer shows the extracted text content of the webpage, organized by section.
+Click a numbered citation to jump to the source passage in the document viewer and see it highlighted. When DocTalk cannot pinpoint the passage, it shows the cited page instead. The viewer shows the extracted text content of the webpage, organized by section.
 
 ### 5. Follow Up
 
@@ -205,7 +205,7 @@ Each URL creates a separate document session. To analyze multiple pages, create 
 
 ### Is this the same as pasting text into ChatGPT?
 
-No. When you paste text into ChatGPT, you lose source structure, there are no citations, and you are limited by the context window. DocTalk indexes the full page content, generates cited answers with highlighted source passages, and supports follow-up questions with maintained context.
+No. When you paste text into ChatGPT, you lose source structure, there are no citations, and you are limited by the context window. DocTalk indexes the full page content, generates cited answers linked to their source passages, and supports follow-up questions with maintained context.
 
 ### Will DocTalk access my private browsing data?
 

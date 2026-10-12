@@ -91,7 +91,7 @@ Once processing completes, start asking questions. Here are examples that work w
 
 ### 4. Verify the Numbers
 
-Click the numbered citations in the AI's response to jump to the relevant section in the document viewer. The highlighted passage shows the rows and columns the AI used. This is especially important for numerical data, where misinterpretation can have real consequences.
+Click the numbered citations in the AI's response to jump to the relevant section in the document viewer. The highlighted passage shows the rows and columns the AI used. When DocTalk cannot pinpoint the passage, it shows the cited page instead. This is especially important for numerical data, where misinterpretation can have real consequences.
 
 ### 5. Ask Follow-Up Questions
 
