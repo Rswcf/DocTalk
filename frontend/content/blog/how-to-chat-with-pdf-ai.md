@@ -146,7 +146,7 @@ DocTalk is not limited to PDFs. You can also chat with:
 - **TXT and Markdown** — plain text and formatted documents
 - **Web URLs** — paste a link and chat with the webpage content
 
-In all of these formats, clicking a citation jumps to the source and highlights the cited passage; in PowerPoint files, the highlight shows in the Text view.
+In all of these formats, clicking a citation jumps to the source and highlights the cited passage; in PowerPoint files, the highlight shows on the slide when DocTalk can match the passage there, and in the Text view.
 
 ## AI PDF Chat vs. Manual Reading
 

@@ -82,7 +82,7 @@ Once processing completes, the chat interface appears alongside the document vie
 
 ### 4. Review Citations and Verify
 
-The AI responds with numbered citations. Click any citation to jump to the corresponding slide in the document viewer; in the Text view, the cited passage is highlighted. This lets you confirm that the AI's answer accurately reflects what the presentation actually says.
+The AI responds with numbered citations. Click any citation to jump to the corresponding slide in the document viewer; the cited passage is highlighted on the slide when DocTalk can match it there, and in the Text view. This lets you confirm that the AI's answer accurately reflects what the presentation actually says.
 
 ### 5. Dig Deeper with Follow-Ups
 
