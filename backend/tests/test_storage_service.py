@@ -257,14 +257,15 @@ def test_transfer_client_keeps_minio_default_http_policy(recording_minio) -> Non
         "0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com", True, "auto"
     )
     pool_kw = transfer.http_client.connection_pool_kw
-    assert (pool_kw["timeout"].connect_timeout, pool_kw["timeout"].read_timeout) == (300, 300)
+    assert (pool_kw["timeout"].connect_timeout, pool_kw["timeout"].read_timeout) == (300, 120)
     assert pool_kw["retries"].total == 5
     assert pool_kw["socket_options"] == storage_module.pool_socket_options()
 
 
-def test_transfer_pool_matches_minio_default_pool_except_socket_options() -> None:
-    # The transfer client must keep minio-py's own HTTP policy; it only adds
-    # keepalive. Compare against the pool minio-py builds when given none.
+def test_transfer_pool_matches_minio_default_pool_except_keepalive_and_read_timeout() -> None:
+    # The transfer client keeps minio-py's own HTTP policy; it only adds
+    # keepalive and caps the read timeout (per-recv inactivity) at 120 s.
+    # Compare against the pool minio-py builds when given none.
     from minio import Minio
 
     service = storage_module.StorageService(
@@ -277,7 +278,12 @@ def test_transfer_pool_matches_minio_default_pool_except_socket_options() -> Non
 
     assert "socket_options" not in reference  # minio-py keeps urllib3's default, TCP_NODELAY
     assert set(ours) - {"socket_options"} == set(reference)
+    assert (reference["timeout"].connect_timeout, reference["timeout"].read_timeout) == (300, 300)
+    assert (ours["timeout"].connect_timeout, ours["timeout"].read_timeout) == (300, 120)
+    assert storage_module.TRANSFER_READ_TIMEOUT_S == 120
     for key, expected in reference.items():
+        if key == "timeout":
+            continue
         if hasattr(expected, "__dict__"):  # urllib3 Timeout / Retry have no __eq__
             assert type(ours[key]) is type(expected) and vars(ours[key]) == vars(expected), key
         else:

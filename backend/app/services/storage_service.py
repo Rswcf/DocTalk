@@ -27,12 +27,24 @@ logger = logging.getLogger(__name__)
 #   test discards it.
 # - TCP_USER_TIMEOUT (Linux) bounds a request written onto a socket that died
 #   since the last probe: data unacknowledged for IDLE + INTERVAL * COUNT
-#   aborts the connection, and urllib3 retries the request. It counts only
-#   our own unacknowledged bytes, so a slow but live response is still
+#   aborts the connection. urllib3 retries that read error only for
+#   idempotent methods (GET, HEAD, PUT, DELETE); a POST (multipart create or
+#   complete) fails at once and is left to the caller's retry, where before it
+#   hung for the whole read timeout and then failed the same way. It counts
+#   only our own unacknowledged bytes, so a slow but live response is still
 #   waited out for the full read timeout.
+# A local reproduction (Linux 6.12, iptables DROP on one pooled flow, scaled to
+# idle 3 s / interval 1 s / count 2, read timeout 20 s) measured: 20.0 s stall
+# without these options; 0.0 s with them after idle (checkout discards the
+# dead socket); 5.4 s when the flow dies just before reuse (user timeout).
 KEEPALIVE_IDLE_S = 60
 KEEPALIVE_INTERVAL_S = 10
 KEEPALIVE_COUNT = 3
+# Transfer client read timeout: per-socket inactivity, not total time. minio-py
+# uses 300 s. 120 s still waits out any slow but live R2 body and caps the
+# residual stall where the runtime ignores TCP_USER_TIMEOUT (it is Linux-only,
+# and the probe below proves only that the kernel accepts it).
+TRANSFER_READ_TIMEOUT_S = 120
 
 
 def _candidate_socket_options(idle: int, interval: int, count: int) -> list[tuple[int, int, int]]:
@@ -174,8 +186,9 @@ class StorageService:
     @property
     def transfer_client(self) -> Minio:
         """Same endpoint, credentials, TLS and region, but minio-py's own HTTP
-        policy (5-minute timeouts, 5 retries) for worker-side transfers, with
-        the same TCP keepalive as the request client.
+        policy (5-minute connect timeout, 5 retries) with a 2-minute read
+        timeout for worker-side transfers, and the same TCP keepalive as the
+        request client.
 
         The parse worker streams whole documents; under the request client's
         10 s read timeout a slow response body would fail the download
@@ -189,14 +202,15 @@ class StorageService:
     @staticmethod
     def _transfer_http_client():
         """The pool minio-py 7.2 builds when it is given none (Minio.__init__
-        in minio/api.py), plus the keepalive socket options. A test pins every
-        other setting against the pool minio-py itself builds."""
+        in minio/api.py), plus the keepalive socket options and a 120 s read
+        timeout instead of 300 s. A test pins every other setting against the
+        pool minio-py itself builds."""
         import certifi
         import urllib3
 
-        timeout = int(datetime.timedelta(minutes=5).total_seconds())
+        connect_timeout = int(datetime.timedelta(minutes=5).total_seconds())
         return urllib3.PoolManager(
-            timeout=urllib3.Timeout(connect=timeout, read=timeout),
+            timeout=urllib3.Timeout(connect=connect_timeout, read=TRANSFER_READ_TIMEOUT_S),
             maxsize=10,
             cert_reqs="CERT_REQUIRED",
             ca_certs=os.environ.get("SSL_CERT_FILE") or certifi.where(),
