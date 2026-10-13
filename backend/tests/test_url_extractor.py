@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import re
 import zlib
 from contextlib import nullcontext
 
@@ -48,6 +49,7 @@ class _StreamResponse(_FakeResponse):
 class _StreamClient:
     def __init__(self, responses: list[_StreamResponse]) -> None:
         self._responses = responses
+        self.requests: list[tuple[tuple, dict]] = []
 
     def __enter__(self):
         return self
@@ -55,7 +57,8 @@ class _StreamClient:
     def __exit__(self, *_args):
         return False
 
-    def stream(self, *_args, **_kwargs):
+    def stream(self, *args, **kwargs):
+        self.requests.append((args, kwargs))
         return nullcontext(self._responses.pop(0))
 
 
@@ -335,3 +338,53 @@ def test_fetch_and_extract_url_keeps_a_page_whose_root_classes_name_boilerplate(
     assert "The Pharos of Alexandria was among the earliest lighthouses." in content
     assert "Search Wikipedia" not in content
     assert "Privacy policy" not in content
+
+
+def test_fetch_sends_a_policy_compliant_user_agent_on_every_hop(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Wikimedia answers 403 to a generic agent from a cloud IP (Railway, 2026-10-12).
+    # Its policy asks for "<client>/<version> (<contact>)"; the contact is the one
+    # the imprint and contact pages publish.
+    url_extractor._user_agent.cache_clear()
+    monkeypatch.setattr(url_extractor, "get_product_version", lambda: "9.8.7")
+    monkeypatch.setattr(url_extractor, "validate_and_resolve_url", lambda url: (url, "198.35.26.224"))
+    client = _StreamClient([
+        _StreamResponse([], headers={"location": "https://en.wikipedia.org/wiki/Fresnel_lens"}, redirect=True),
+        _StreamResponse([b"<p>Fresnel lens</p>"], headers={"content-type": "text/html"}),
+    ])
+    monkeypatch.setattr(url_extractor.httpx, "Client", lambda **_kwargs: client)
+    try:
+        url_extractor._fetch_with_safe_redirects("https://en.wikipedia.org/wiki/Fresnel")
+    finally:
+        url_extractor._user_agent.cache_clear()
+
+    assert len(client.requests) == 2
+    for (method, pinned_url), kwargs in client.requests:
+        assert method == "GET"
+        assert pinned_url.startswith("https://198.35.26.224/")  # still pinned to the validated IP
+        headers = kwargs["headers"]
+        assert headers["Host"] == "en.wikipedia.org"
+        assert kwargs["extensions"] == {"sni_hostname": "en.wikipedia.org"}
+        assert headers["User-Agent"] == "DocTalk/9.8.7 (https://www.doctalk.site; support@doctalk.site)"
+        assert re.fullmatch(r"DocTalk/[0-9A-Za-z.+-]+ \(https://[^;()]+; [^@\s;()]+@[^@\s;()]+\)", headers["User-Agent"])
+        assert "Mozilla" not in headers["User-Agent"]
+
+
+def test_user_agent_reads_the_repo_version_and_survives_a_missing_version_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.version import get_product_version
+
+    url_extractor._user_agent.cache_clear()
+    try:
+        assert url_extractor._user_agent() == (
+            f"DocTalk/{get_product_version()} (https://www.doctalk.site; support@doctalk.site)"
+        )
+        url_extractor._user_agent.cache_clear()
+
+        def missing() -> str:
+            raise FileNotFoundError("version.json")
+
+        monkeypatch.setattr(url_extractor, "get_product_version", missing)
+        assert url_extractor._user_agent() == "DocTalk/unknown (https://www.doctalk.site; support@doctalk.site)"
+    finally:
+        url_extractor._user_agent.cache_clear()

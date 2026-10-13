@@ -1,6 +1,7 @@
 """Extract text content from URLs/webpages."""
 from __future__ import annotations
 
+import functools
 import ipaddress
 import re
 import zlib
@@ -12,6 +13,7 @@ from bs4 import BeautifulSoup
 from httpx import URL
 
 from app.core.url_validator import validate_and_resolve_url
+from app.core.version import get_product_version
 from app.services.file_validation import validate_file_content
 
 from .base import ExtractedPage
@@ -64,6 +66,27 @@ BOILERPLATE_RE = re.compile(
     re.IGNORECASE,
 )
 WHITESPACE_RE = re.compile(r"[ \t\r\f\v]+")
+
+# Contact details as published on the imprint and contact pages.
+USER_AGENT_CONTACT = "https://www.doctalk.site; support@doctalk.site"
+
+
+@functools.lru_cache(maxsize=1)
+def _user_agent() -> str:
+    """Name, version and contact, as the Wikimedia User-Agent policy asks.
+
+    Wikimedia refuses requests from cloud IPs whose User-Agent is generic
+    (403 for every Wikipedia import from Railway with the old
+    "Mozilla/5.0 (compatible; DocTalk/1.0)"). The policy format is
+    "<client>/<version> (<contact>) [<library>/<version>]"; the library part
+    is left out because some ordinary sites block any "python-" agent.
+    No "bot" token: an import is one fetch a signed-in user asked for.
+    """
+    try:
+        version = get_product_version()
+    except Exception:  # A missing version.json must never break URL import.
+        version = "unknown"
+    return f"DocTalk/{version} ({USER_AGENT_CONTACT})"
 
 
 def _read_response_bytes_limited(
@@ -210,7 +233,7 @@ def _fetch_with_safe_redirects(
                 pinned_url,
                 headers={
                     "Host": host_header,
-                    "User-Agent": "Mozilla/5.0 (compatible; DocTalk/1.0)",
+                    "User-Agent": _user_agent(),
                     # Only encodings with a bounded-output decoder are accepted.
                     "Accept-Encoding": "gzip, deflate",
                 },
