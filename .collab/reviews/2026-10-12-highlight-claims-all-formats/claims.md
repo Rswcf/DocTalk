@@ -484,3 +484,24 @@ https://www.doctalk.site/llms.txt
   NUANCE once in each of the 14 flagged keys per locale, meta = hero pairs equal, no `*.metaTitle` change, no
   newline or ".txt" in a changed value: CROSS OK.
 - Not verified in a browser: the rendered copy (no dev server was started); whether the Slides-view jump scrolls.
+
+## I. Release (2026-10-13)
+
+Frontend and content only: no `backend/`, `version.json` or infra diff, so it shipped under the standing frontend
+approval (CI green + Codex SHIP).
+
+| Step | Evidence |
+|---|---|
+| Commit | `b95fed39` on `main` and `stable` (claims `e442cc37..09821195` + record `edcfc791`, then the 0.36.0 record) |
+| CI | run `38434275219` on `b95fed39`: backend, frontend, integration, docker = success (16:54:09Z → 16:57:03Z) |
+| Vercel production | deployment for `b95fed39` = success at 16:59:48Z |
+| Live check | `live_claims_check.py` against www.doctalk.site, three runs (two saved, about 40 s apart): 155 OK / 0 FAIL / ALL_OK each |
+| IndexNow | 156 URLs from §F (home as `https://www.doctalk.site`, `/llms.txt` dropped: not in the sitemap). The 17:03:01Z send printed no visible status, so it was resent at 17:05:41Z: `validated 156 URL(s)`, `IndexNow HTTP 200 OK` |
+
+Left open for the owner:
+
+1. `HomeJsonLd` `DATE_MODIFIED` stays `2026-10-11`. The home page copy changed, so a bump is defensible, but the
+   value is pinned on purpose and was not changed in this batch.
+2. The frozen-post queue Q1–Q3 (§D) is applied on each post's read date, not before.
+3. Two existing locale defects, not rendered on any page: `blog.post.aboutDescription` is mistranslated in `zh`, and
+   the `ja` value has a stray space. Not touched here.
