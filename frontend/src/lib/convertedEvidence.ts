@@ -41,33 +41,32 @@ const LIST_MARKERS = new Set([
 ]);
 
 /**
- * Replaces each list marker that stands alone with spaces of the same length,
- * so text offsets are unchanged. A marker stands alone when whitespace or the
- * edge of the text is on both sides of it; the edge of a pdf.js text item is
- * an edge, because items are joined with a space or a line break. A marker
- * inside a word or number ("12–14", "well–known") is kept. Used only for
- * converted DOCX/PPTX pages and their candidates, on both sides of every
- * comparison: a native PDF's own text layer is what its extractor read, so
- * its bullets are in its citation text too.
+ * True for a pdf.js text item (one text-layer span) that holds nothing but
+ * list markers. LibreOffice draws a bullet as its own text item: another
+ * font, and an indent gap before its text. Only such an item is a bullet. A
+ * marker inside an item ("Revenue rose – sharply", "12–14", "• Text") stays
+ * text, because ignoring it there would let text without the character match
+ * text with it (Codex r1 #1). The citation text is never changed. Used only
+ * for converted DOCX/PPTX pages, in both the uniqueness index below and the
+ * text-layer match in PageWithHighlights, so the two always agree. A native
+ * PDF's citation text is read from its own text layer, bullets included.
  */
-export function maskListMarkers(text: string): string {
-  let output = '';
-  for (let i = 0; i < text.length;) {
-    if (!LIST_MARKERS.has(text[i])) { output += text[i]; i++; continue; }
-    let end = i;
-    while (end < text.length && LIST_MARKERS.has(text[end])) end++;
-    const alone = (i === 0 || /\s/.test(text[i - 1])) && (end === text.length || /\s/.test(text[end]));
-    output += alone ? ' '.repeat(end - i) : text.slice(i, end);
-    i = end;
-  }
-  return output;
+export function isListMarkerItem(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  for (const char of trimmed) if (!LIST_MARKERS.has(char)) return false;
+  return true;
 }
 
-const squeeze = (value: string) => canonicalize(maskListMarkers(value)).text.replace(/\s+/g, '');
+const squeeze = (value: string) => canonicalize(value).text.replace(/\s+/g, '');
 
-/** The converted PDF's page texts (index 0 = page 1), prepared once. */
-export function convertedPageIndex(pages: readonly string[]): string[] {
-  return pages.map(squeeze);
+/** The converted PDF's pages (index 0 = page 1), prepared once. A page is its
+ * text items (bullet-only items are dropped, as the text-layer match ignores
+ * them) or, for callers without items, its joined text. */
+export function convertedPageIndex(pages: readonly (string | readonly string[])[]): string[] {
+  return pages.map(page => squeeze(typeof page === 'string'
+    ? page
+    : page.filter(item => !isListMarkerItem(item)).join(' ')));
 }
 
 export function uniqueInPageRange(index: readonly string[], start: number, end: number, text: string | null | undefined): boolean {

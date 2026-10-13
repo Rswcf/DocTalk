@@ -6,7 +6,7 @@ import type { PDFPageProxy } from 'pdfjs-dist/types/src/display/api';
 import { useLocale } from '../../i18n';
 import type { NormalizedBBox } from '../../types';
 import { evidenceOverlap, findEvidenceRange, groupEvidenceRegions, groupEvidenceMargins, mergeEvidenceLines, type EvidenceKind, validEvidenceBox } from '../../lib/pdfEvidence';
-import { maskListMarkers } from '../../lib/convertedEvidence';
+import { isListMarkerItem } from '../../lib/convertedEvidence';
 
 interface PageWithHighlightsProps {
   pageNumber: number;
@@ -100,20 +100,20 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
         const spans = Array.from(element.querySelectorAll<HTMLElement>('.textLayer span[role="presentation"]'))
           .filter(span => span.textContent && !span.querySelector('span[role="presentation"]'));
         const toBox = (rect: DOMRect): NormalizedBBox => ({ x: (rect.left - bounds.left) / bounds.width, y: (rect.top - bounds.top) / bounds.height, w: rect.width / bounds.width, h: rect.height / bounds.height, page: pageNumber });
-        // Converted DOCX/PPTX: a bullet LibreOffice drew is not in the citation
-        // text, so lone list markers read as spaces on both sides (same length,
-        // so run offsets still address the span's own text).
-        const runs = spans.map(span => {
+        // Converted DOCX/PPTX: a bullet LibreOffice drew is its own span and is
+        // not in the citation text, so a bullet-only span reads as spaces of
+        // the same length (run offsets still address the span's own text).
+        const bullets = spans.map(span => Boolean(syntheticBoxes) && isListMarkerItem(span.textContent || ''));
+        const runs = spans.map((span, index) => {
           const text = span.textContent || '';
-          return { text: syntheticBoxes ? maskListMarkers(text) : text, box: toBox(span.getBoundingClientRect()) };
+          return { text: bullets[index] ? ' '.repeat(text.length) : text, box: toBox(span.getBoundingClientRect()) };
         });
-        const match = findEvidenceRange(runs, syntheticBoxes ? maskListMarkers(candidate) : candidate, regions);
+        const match = findEvidenceRange(runs, candidate, regions);
         if (match) {
           const measured: NormalizedBBox[] = [];
           let complete = true;
           for (let i = match.start.run; i <= match.end.run; i++) {
-            // A bullet between matched lines is not part of the passage: no box for it.
-            if (syntheticBoxes && !runs[i].text.trim() && runs[i].text !== spans[i].textContent) continue;
+            if (bullets[i]) continue; // A bullet between matched lines is not part of the passage: no box for it.
             const start = textPoint(spans[i], i === match.start.run ? match.start.offset : 0);
             const end = textPoint(spans[i], i === match.end.run ? match.end.offset : runs[i].text.length);
             if (!start || !end) { complete = false; break; }

@@ -1,8 +1,8 @@
-// Converted DOCX/PPTX slide view: LibreOffice draws list bullets as glyphs that
-// the extractor's citation text never has (production, 2026-10-12, a 3-slide
-// python-pptx deck). The span sequence of slide 1 below is the one the reader
-// rendered; the text after "because" was cut off in the report, so its
-// continuation and slides 2-3 are illustrative.
+// Converted DOCX/PPTX slide view: LibreOffice draws a list bullet as its own
+// text item, a glyph the extractor's citation text never has (production,
+// 2026-10-12, a 3-slide python-pptx deck). The span sequence of slide 1 below
+// is the one the reader rendered; the text after "because" was cut off in the
+// report, so its continuation and slides 2-3 are illustrative.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -13,11 +13,11 @@ require('./_load-ts.cjs');
 
 const SRC = path.resolve(__dirname, '../src');
 const pdfEvidence = require(path.join(SRC, 'lib/pdfEvidence.ts'));
-const { maskListMarkers, convertedPageIndex, uniqueInPageRange } = require(path.join(SRC, 'lib/convertedEvidence.ts'));
+const { isListMarkerItem, convertedPageIndex, uniqueInPageRange } = require(path.join(SRC, 'lib/convertedEvidence.ts'));
 const { findEvidenceRange } = pdfEvidence;
 
 const PAGE = { width: 1000, height: 562.5 }; // 16:9 slide, px
-// [text, left, top, width, height] in px, in text-layer order.
+// [text, left, top, width, height] in px, in text-layer order (one entry = one pdf.js item = one span).
 const SLIDE_1 = [
   ['Drip lines', 80, 40, 260, 40],
   ['•', 80, 140, 14, 24],
@@ -35,7 +35,7 @@ const SLIDE_2 = [
 ];
 const SLIDE_3 = [
   ['Next steps', 80, 40, 280, 40],
-  ['–', 80, 140, 14, 24],
+  ['–', 80, 140, 14, 24], // PowerPoint's level-2 bullet
   ['Re-test the reservoir in November.', 110, 140, 480, 24],
 ];
 // The citation focus: the chunker glued the slide title onto the first bullet.
@@ -43,72 +43,77 @@ const FIRST_BULLET = 'Drip lines The drip lines in block C were flushed on 9 Sep
 const LATER_BULLET = 'He used clean well water only, because the reservoir had not yet been tested.';
 
 const box = ([, left, top, width, height]) => ({ x: left / PAGE.width, y: top / PAGE.height, w: width / PAGE.width, h: height / PAGE.height });
-const runsOf = (spans, mask) => spans.map(span => ({ text: mask ? maskListMarkers(span[0]) : span[0], box: box(span) }));
-// PdfViewer builds each page's search/uniqueness text the same way.
-const pageText = (spans) => spans.map(span => span[0]).join(' ').toLowerCase();
+// The converted path's runs, as PageWithHighlights builds them.
+const runsOf = (spans, converted = true) => spans.map(span => ({
+  text: converted && isListMarkerItem(span[0]) ? ' '.repeat(span[0].length) : span[0], box: box(span),
+}));
+// PdfViewer keeps each page's items; the old index took their joined text.
+const itemsOf = spans => spans.map(span => span[0]);
+const joined = spans => itemsOf(spans).join(' ').toLowerCase();
 const DECK = [SLIDE_1, SLIDE_2, SLIDE_3];
 
-test('the bug: an unmasked bullet glyph breaks both converted-PDF gates for a first bullet', () => {
+test('the bug: a bullet glyph breaks both converted-PDF gates for a first bullet', () => {
   assert.equal(findEvidenceRange(runsOf(SLIDE_1, false), FIRST_BULLET, []), null);
-  const squeezedWithBullet = pageText(SLIDE_1).replace(/\s+/g, '');
-  assert.ok(squeezedWithBullet.startsWith('driplines•thedriplines'), 'the glyph sits between title and sentence');
+  // Joined page text (what the index used before) keeps the glyph between title and sentence.
+  assert.equal(uniqueInPageRange(convertedPageIndex(DECK.map(joined)), 1, 1, FIRST_BULLET), false);
   // A later bullet never contained a glyph, so it always matched.
   assert.ok(findEvidenceRange(runsOf(SLIDE_1, false), LATER_BULLET, []));
 });
 
-test('the uniqueness gate keeps the glued first bullet once list markers are ignored', () => {
-  const index = convertedPageIndex(DECK.map(pageText));
+test('the uniqueness index drops bullet-only items and keeps the glued first bullet', () => {
+  const index = convertedPageIndex(DECK.map(itemsOf));
   assert.equal(uniqueInPageRange(index, 1, 1, FIRST_BULLET), true);
   assert.equal(uniqueInPageRange(index, 2, 2, FIRST_BULLET), false, 'still only on the cited page');
   assert.equal(uniqueInPageRange(index, 1, 1, LATER_BULLET), true);
-  // An en dash bullet (PowerPoint level 2) is a marker too; the hyphen in "Re-test" is text.
+  // An en dash bullet item is a marker too; the hyphen in "Re-test" is text.
   assert.equal(uniqueInPageRange(index, 3, 3, 'Next steps Re-test the reservoir in November.'), true);
   assert.equal(uniqueInPageRange(index, 3, 3, 'Next steps Retest the reservoir in November.'), false);
 });
 
-test('the text-layer match of the glued first bullet covers title and sentence, from the first glyph to the last', () => {
-  const match = findEvidenceRange(runsOf(SLIDE_1, true), maskListMarkers(FIRST_BULLET), []);
-  assert.deepEqual(match, { start: { run: 0, offset: 0 }, end: { run: 4, offset: 'Tomas Brandt.'.length } });
-  const later = findEvidenceRange(runsOf(SLIDE_1, true), maskListMarkers(LATER_BULLET), []);
-  assert.deepEqual(later, { start: { run: 6, offset: 0 }, end: { run: 7, offset: SLIDE_1[7][0].length } });
+test('the text-layer match of the glued first bullet runs from the title to the end of the sentence', () => {
+  assert.deepEqual(findEvidenceRange(runsOf(SLIDE_1), FIRST_BULLET, []),
+    { start: { run: 0, offset: 0 }, end: { run: 4, offset: 'Tomas Brandt.'.length } });
+  assert.deepEqual(findEvidenceRange(runsOf(SLIDE_1), LATER_BULLET, []),
+    { start: { run: 6, offset: 0 }, end: { run: 7, offset: SLIDE_1[7][0].length } });
 });
 
-test('a bullet inside the same text item as its sentence is masked without moving offsets', () => {
-  const glued = [['Drip lines', 80, 40, 260, 40], ['• The drip lines in block C were flushed on', 80, 140, 650, 24],
-    ...SLIDE_1.slice(3)];
-  const masked = runsOf(glued, true);
-  assert.equal(masked[1].text.length, glued[1][0].length);
-  const match = findEvidenceRange(masked, maskListMarkers(FIRST_BULLET), []);
-  assert.deepEqual(match.start, { run: 0, offset: 0 });
-  const sentence = findEvidenceRange(masked, maskListMarkers('The drip lines in block C were flushed on 9 September 2026'), []);
-  assert.deepEqual(sentence.start, { run: 1, offset: 2 }, 'the mark starts after the glyph');
+test('Codex r1 #1: a marker inside an item is text, so text without it never matches', () => {
+  const prose = [['Revenue rose – sharply in 2025.', 80, 40, 600, 24]];
+  const index = convertedPageIndex([itemsOf(prose)]);
+  assert.equal(uniqueInPageRange(index, 1, 1, 'Revenue rose sharply in 2025.'), false);
+  assert.equal(findEvidenceRange(runsOf(prose), 'Revenue rose sharply in 2025.', []), null);
+  // The passage with its dash still matches itself.
+  assert.equal(uniqueInPageRange(index, 1, 1, 'Revenue rose – sharply in 2025.'), true);
+  assert.ok(findEvidenceRange(runsOf(prose), 'Revenue rose – sharply in 2025.', []));
+  const range = [['See pp. 12 – 14.', 80, 40, 200, 24]];
+  assert.equal(uniqueInPageRange(convertedPageIndex([itemsOf(range)]), 1, 1, 'See pp. 12 14.'), false);
+  assert.equal(findEvidenceRange(runsOf(range), 'See pp. 12 14.', []), null);
+  // A bullet inside its sentence's own item is not treated as a bullet: no mark, never a wrong one.
+  const glued = [SLIDE_1[0], ['• The drip lines in block C were flushed on', 80, 140, 650, 24], ...SLIDE_1.slice(3)];
+  assert.equal(uniqueInPageRange(convertedPageIndex([itemsOf(glued)]), 1, 1, FIRST_BULLET), false);
+  assert.equal(findEvidenceRange(runsOf(glued), FIRST_BULLET, []), null);
 });
 
-test('only a marker with whitespace or an item edge on both sides is masked', () => {
-  assert.equal(maskListMarkers('•'), ' ');
-  assert.equal(maskListMarkers('• ◦ ▪ ● ■ ➢ ✓ –'), '               ');
-  assert.equal(maskListMarkers('•\tText'), ' \tText');
-  for (const kept of ['pp. 12–14', 'well–known', 'A•B', 'x•', '•x', '2019–2020 budget', '-', 'o Item', '1. Item', '» quote']) {
-    assert.equal(maskListMarkers(kept), kept, kept);
+test('only an item made of nothing but list markers is a bullet', () => {
+  for (const bullet of ['•', ' • ', '●', '▪', '◦', '■', '➢', '✓', '–', '••']) assert.equal(isListMarkerItem(bullet), true, bullet);
+  for (const text of ['', '   ', '-', '*', 'o', '1.', '»', '—', '• Text', 'A • B', '12–14', 'x•', 'pp. 12 – 14']) {
+    assert.equal(isListMarkerItem(text), false, JSON.stringify(text));
   }
-  // A spaced en dash in prose is masked on both sides of the comparison, so it still matches itself.
-  const prose = [['Revenue rose – sharply – in 2025.', 80, 40, 600, 24]];
-  assert.ok(findEvidenceRange(runsOf(prose, true), maskListMarkers('Revenue rose – sharply – in 2025.'), []));
-  // Digits joined by a dash never match digits joined by a space, either way round.
-  assert.equal(findEvidenceRange(runsOf([['pp. 12–14', 80, 40, 200, 24]], true), maskListMarkers('pp. 12 14'), []), null);
-  assert.equal(findEvidenceRange(runsOf([['pp. 12 14', 80, 40, 200, 24]], true), maskListMarkers('pp. 12–14'), []), null);
 });
 
-test('masking can only add occurrences to the uniqueness count, so a repeat is still refused', () => {
-  const repeated = [...SLIDE_2.slice(0, 1), ['The drip lines in block C were flushed on 9 September 2026 by the field lead, Tomas Brandt.', 110, 140, 900, 24]];
-  const index = convertedPageIndex([SLIDE_1, repeated, SLIDE_3].map(pageText));
+test('a repeat is still refused, by the index and by the per-page match', () => {
   const sentence = 'The drip lines in block C were flushed on 9 September 2026 by the field lead, Tomas Brandt.';
+  const repeated = [SLIDE_2[0], [sentence, 110, 140, 900, 24]];
+  const index = convertedPageIndex([SLIDE_1, repeated, SLIDE_3].map(itemsOf));
   assert.equal(uniqueInPageRange(index, 1, 1, sentence), false, 'once behind a bullet, once without: two occurrences');
-  // The glued title makes the slide-1 occurrence distinct again.
-  assert.equal(uniqueInPageRange(index, 1, 1, FIRST_BULLET), true);
-  // Two identical bullets on one slide: the per-page matcher refuses too.
+  assert.equal(uniqueInPageRange(index, 1, 1, FIRST_BULLET), true, 'the glued title makes the slide-1 occurrence distinct');
   const twice = [...SLIDE_1.slice(0, 5), ['•', 80, 250, 14, 24], ['Tomas Brandt.', 110, 250, 190, 24]];
-  assert.equal(findEvidenceRange(runsOf(twice, true), maskListMarkers('Tomas Brandt.'), []), null);
+  assert.equal(findEvidenceRange(runsOf(twice), 'Tomas Brandt.', []), null);
+});
+
+test('the index still accepts joined page text, unchanged, for callers without items', () => {
+  const index = convertedPageIndex(['the trial enrol led 412 adults']);
+  assert.equal(uniqueInPageRange(index, 1, 1, 'The trial enrolled 412 adults'), true);
 });
 
 // ---- The measurement effect itself, with the DOM mocked --------------------
@@ -141,7 +146,7 @@ function measure(spans, candidate, syntheticBoxes) {
     requestAnimationFrame: () => 1, cancelAnimationFrame() {}, ResizeObserver: class { observe() {} disconnect() {} },
     findEvidenceRange, mergeEvidenceLines: pdfEvidence.mergeEvidenceLines, groupEvidenceMargins: pdfEvidence.groupEvidenceMargins,
     validEvidenceBox: pdfEvidence.validEvidenceBox, evidenceOverlap: pdfEvidence.evidenceOverlap,
-    syntheticBoxes, maskListMarkers,
+    syntheticBoxes, isListMarkerItem,
     textPoint: (element, offset) => ({ node: element, offset }),
     document: { createRange: () => {
       const range = { setStart(node, offset) { range.node = node; range.start = offset; }, setEnd(_node, offset) { range.end = offset; },
@@ -163,25 +168,31 @@ test('slide view: the glued first bullet is marked exactly, title and sentence l
     { left: 110, top: 172, width: 520 },
     { left: 110, top: 204, width: 190 },
   ]);
-  assert.ok(result.rects.every(rect => rect.x * PAGE.width >= 80 && !(rect.x * PAGE.width < 94 && rect.y * PAGE.height === 140)));
   const later = measure(SLIDE_1, LATER_BULLET, true);
   assert.equal(later.kind, 'exact');
   assert.deepEqual(later.rects.map(px), [{ left: 110, top: 250, width: 560 }, { left: 110, top: 282, width: 540 }]);
+  assert.deepEqual(measure([['Revenue rose – sharply in 2025.', 80, 40, 600, 24]], 'Revenue rose sharply in 2025.', true),
+    { kind: 'page', rects: [], ready: true });
 });
 
-test('native PDF path (no synthetic boxes) is unchanged: no masking, so the glyph still blocks the match', () => {
+test('native PDF path (no synthetic boxes) is unchanged: the glyph still blocks the match', () => {
   assert.deepEqual(measure(SLIDE_1, FIRST_BULLET, false), { kind: 'page', rects: [], ready: true });
   assert.equal(measure(SLIDE_1, LATER_BULLET, false).kind, 'exact');
 });
 
-test('the masking is wired only into the converted path', () => {
+test('bullet handling is wired only into the converted path, and both gates use the same rule', () => {
   const strip = code => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
   const page = strip(pageSource);
-  assert.match(page, /text: syntheticBoxes \? maskListMarkers\(text\) : text/);
-  assert.match(page, /findEvidenceRange\(runs, syntheticBoxes \? maskListMarkers\(candidate\) : candidate, regions\)/);
-  assert.match(page, /if \(syntheticBoxes && !runs\[i\]\.text\.trim\(\) && runs\[i\]\.text !== spans\[i\]\.textContent\) continue;/);
+  assert.match(page, /const bullets = spans\.map\(span => Boolean\(syntheticBoxes\) && isListMarkerItem\(span\.textContent \|\| ''\)\);/);
+  assert.match(page, /text: bullets\[index\] \? ' '\.repeat\(text\.length\) : text/);
+  assert.match(page, /findEvidenceRange\(runs, candidate, regions\)/, 'the citation text is never changed');
+  assert.match(page, /if \(bullets\[i\]\) continue;/);
+  const viewer = strip(fs.readFileSync(path.join(SRC, 'components/PdfViewer/PdfViewer.tsx'), 'utf8'));
+  assert.match(viewer, /convertedPageIndex\(cached\.items\)/);
+  assert.match(viewer, /pages\.push\(items\.join\(' '\)\.toLowerCase\(\)\);/, 'search text is built as before');
   const native = fs.readFileSync(path.join(SRC, 'lib/pdfEvidence.ts'), 'utf8');
-  assert.doesNotMatch(native, /maskListMarkers|convertedEvidence|•|\\u2022/, 'pdfEvidence.ts has no bullet handling');
+  assert.doesNotMatch(native, /isListMarkerItem|convertedEvidence|•|\\u2022/, 'pdfEvidence.ts has no bullet handling');
   const converted = strip(fs.readFileSync(path.join(SRC, 'lib/convertedEvidence.ts'), 'utf8'));
-  assert.match(converted, /const squeeze = \(value: string\) => canonicalize\(maskListMarkers\(value\)\)\.text\.replace\(\/\\s\+\/g, ''\);/);
+  assert.match(converted, /page\.filter\(item => !isListMarkerItem\(item\)\)\.join\(' '\)/);
+  assert.match(converted, /const squeeze = \(value: string\) => canonicalize\(value\)\.text\.replace\(\/\\s\+\/g, ''\);/);
 });
