@@ -6,6 +6,7 @@ import type { PDFPageProxy } from 'pdfjs-dist/types/src/display/api';
 import { useLocale } from '../../i18n';
 import type { NormalizedBBox } from '../../types';
 import { evidenceOverlap, findEvidenceRange, groupEvidenceRegions, groupEvidenceMargins, mergeEvidenceLines, type EvidenceKind, validEvidenceBox } from '../../lib/pdfEvidence';
+import { isListMarkerItem } from '../../lib/convertedEvidence';
 
 interface PageWithHighlightsProps {
   pageNumber: number;
@@ -99,12 +100,20 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
         const spans = Array.from(element.querySelectorAll<HTMLElement>('.textLayer span[role="presentation"]'))
           .filter(span => span.textContent && !span.querySelector('span[role="presentation"]'));
         const toBox = (rect: DOMRect): NormalizedBBox => ({ x: (rect.left - bounds.left) / bounds.width, y: (rect.top - bounds.top) / bounds.height, w: rect.width / bounds.width, h: rect.height / bounds.height, page: pageNumber });
-        const runs = spans.map(span => ({ text: span.textContent || '', box: toBox(span.getBoundingClientRect()) }));
+        // Converted DOCX/PPTX: a bullet LibreOffice drew is its own span and is
+        // not in the citation text, so a bullet-only span reads as spaces of
+        // the same length (run offsets still address the span's own text).
+        const bullets = spans.map(span => Boolean(syntheticBoxes) && isListMarkerItem(span.textContent || ''));
+        const runs = spans.map((span, index) => {
+          const text = span.textContent || '';
+          return { text: bullets[index] ? ' '.repeat(text.length) : text, box: toBox(span.getBoundingClientRect()) };
+        });
         const match = findEvidenceRange(runs, candidate, regions);
         if (match) {
           const measured: NormalizedBBox[] = [];
           let complete = true;
           for (let i = match.start.run; i <= match.end.run; i++) {
+            if (bullets[i]) continue; // A bullet between matched lines is not part of the passage: no box for it.
             const start = textPoint(spans[i], i === match.start.run ? match.start.offset : 0);
             const end = textPoint(spans[i], i === match.end.run ? match.end.offset : runs[i].text.length);
             if (!start || !end) { complete = false; break; }
@@ -131,7 +140,7 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
     const observer = new ResizeObserver(() => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); });
     observer.observe(element);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
-  }, [pageDims, regions, candidate, textEpoch, textFailed, pageFailed, scale, searchQuery, navigationId, pageNumber, onEvidenceReady]);
+  }, [pageDims, regions, candidate, textEpoch, textFailed, pageFailed, scale, searchQuery, navigationId, pageNumber, onEvidenceReady, syntheticBoxes]);
 
   const badgeLeft = (regions.length ? Math.min(...regions.map(region => region.x)) : evidence.rects[0]?.x || 0) * (pageDims?.w || 0) * scale;
 

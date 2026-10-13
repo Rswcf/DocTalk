@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import datetime
+import socket
+import sys
 
 import certifi
 import pytest
@@ -254,7 +256,128 @@ def test_transfer_client_keeps_minio_default_http_policy(recording_minio) -> Non
     assert (transfer.host, transfer.secure, transfer.region) == (
         "0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com", True, "auto"
     )
-    assert transfer.http_client is None  # minio-py builds its own: 5-min timeouts, 5 retries
+    pool_kw = transfer.http_client.connection_pool_kw
+    assert (pool_kw["timeout"].connect_timeout, pool_kw["timeout"].read_timeout) == (300, 120)
+    assert pool_kw["retries"].total == 5
+    assert pool_kw["socket_options"] == storage_module.pool_socket_options()
+
+
+def test_transfer_pool_matches_minio_default_pool_except_keepalive_and_read_timeout() -> None:
+    # The transfer client keeps minio-py's own HTTP policy; it only adds
+    # keepalive and caps the read timeout (per-recv inactivity) at 120 s.
+    # Compare against the pool minio-py builds when given none.
+    from minio import Minio
+
+    service = storage_module.StorageService(
+        endpoint=R2_ENDPOINT, region="auto", access_key="AKIDEXAMPLE",
+        secret_key="secret", bucket="doctalk-pdfs", default_ttl=300,
+    )
+    ours = service.transfer_client._http.connection_pool_kw
+    reference = Minio("0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com", access_key="AKIDEXAMPLE",
+                      secret_key="secret", secure=True, region="auto")._http.connection_pool_kw
+
+    assert "socket_options" not in reference  # minio-py keeps urllib3's default, TCP_NODELAY
+    assert set(ours) - {"socket_options"} == set(reference)
+    assert (reference["timeout"].connect_timeout, reference["timeout"].read_timeout) == (300, 300)
+    assert (ours["timeout"].connect_timeout, ours["timeout"].read_timeout) == (300, 120)
+    assert storage_module.TRANSFER_READ_TIMEOUT_S == 120
+    for key, expected in reference.items():
+        if key == "timeout":
+            continue
+        if hasattr(expected, "__dict__"):  # urllib3 Timeout / Retry have no __eq__
+            assert type(ours[key]) is type(expected) and vars(ours[key]) == vars(expected), key
+        else:
+            assert ours[key] == expected, key
+    assert (socket.IPPROTO_TCP, socket.TCP_NODELAY, 1) in ours["socket_options"]
+    client = service.transfer_client
+    assert (client._base_url.host, client._base_url.is_https, client._base_url.region) == (
+        "0a78c0c34d3e08a9297247ce98d44ad1.r2.cloudflarestorage.com", True, "auto"
+    )
+    assert client._provider.retrieve().access_key == "AKIDEXAMPLE"
+
+
+def _expected_keepalive_options() -> list[tuple[int, int, int]]:
+    tcp = socket.IPPROTO_TCP
+    expected = [(tcp, socket.TCP_NODELAY, 1), (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)]
+    idle = getattr(socket, "TCP_KEEPIDLE", None)
+    if idle is None:
+        idle = getattr(socket, "TCP_KEEPALIVE", None)  # macOS
+    for name_or_value, value in ((idle, 60), (getattr(socket, "TCP_KEEPINTVL", None), 10),
+                                 (getattr(socket, "TCP_KEEPCNT", None), 3),
+                                 (getattr(socket, "TCP_USER_TIMEOUT", None), 90_000)):
+        if name_or_value is not None:
+            expected.append((tcp, name_or_value, value))
+    return expected
+
+
+def test_pool_socket_options_enable_keepalive_and_keep_nodelay() -> None:
+    options = storage_module.pool_socket_options()
+    assert options == _expected_keepalive_options()
+    if sys.platform.startswith("linux"):  # production: every knob is present
+        assert {opt for _level, opt, _value in options} >= {
+            socket.TCP_NODELAY, socket.SO_KEEPALIVE, socket.TCP_KEEPIDLE, socket.TCP_KEEPINTVL,
+            socket.TCP_KEEPCNT, socket.TCP_USER_TIMEOUT,
+        }
+
+
+def test_request_and_public_pools_carry_the_keepalive_options(recording_minio) -> None:
+    _service(public_endpoint="https://minio-v2-production.up.railway.app")
+    for client in recording_minio.instances:
+        assert client.http_client.connection_pool_kw["socket_options"] == _expected_keepalive_options()
+        timeout = client.http_client.connection_pool_kw["timeout"]
+        assert (timeout.connect_timeout, timeout.read_timeout) == (5, 10)  # unchanged
+
+
+def test_a_socket_option_the_kernel_rejects_is_left_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    bogus = (socket.SOL_SOCKET, 0x7FFF, 1)  # no such option: setsockopt raises OSError
+    real = storage_module._candidate_socket_options
+    monkeypatch.setattr(storage_module, "_candidate_socket_options", lambda *a: real(*a) + [bogus])
+    storage_module._accepted_socket_options.cache_clear()
+    try:
+        options = storage_module.pool_socket_options(idle=61)
+    finally:
+        storage_module._accepted_socket_options.cache_clear()
+    assert bogus not in options
+    assert (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1) in options
+
+
+def test_urllib3_sets_the_options_on_real_pooled_sockets() -> None:
+    import http.server
+    import threading
+
+    import urllib3
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"  # keep-alive, so the socket goes back to the pool
+
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, *_args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        pool = urllib3.PoolManager(socket_options=storage_module.pool_socket_options())
+        response = pool.request("GET", f"http://127.0.0.1:{server.server_port}/")
+        assert response.data == b"ok"
+        conn_pool = pool.connection_from_host("127.0.0.1", server.server_port)
+        conn = conn_pool.pool.get_nowait()
+        conn_pool.pool.put(conn)
+        sock = conn.sock
+        assert sock is not None
+        for level, option, value in storage_module.pool_socket_options():
+            got = sock.getsockopt(level, option)
+            assert (got != 0) if value == 1 else (got == value), (level, option, got)
+        pool.clear()
+    finally:
+        server.shutdown()
+        server.server_close()
 
 
 def test_real_sdk_presigns_r2_urls_offline_with_auto_region_scope() -> None:

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import logging
+import os
+import socket
 from io import BytesIO
 from typing import Optional
 from urllib.parse import urlparse
@@ -12,6 +15,82 @@ from minio.error import S3Error
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# TCP keepalive for every pooled storage connection (2026-10-12). A keep-alive
+# connection that sat idle in the pool for 30-50 minutes was dropped silently
+# on the path (no FIN, no RST: Railway's egress NAT or a load balancer forgot
+# the flow). urllib3's checkout test only notices a FIN or an RST, so it handed
+# out the dead socket, the request went nowhere, and the worker waited out the
+# whole read timeout: 300 s on the transfer client, twice in production.
+# - Probes after 60 s idle keep the path's flow state alive; a path that is
+#   gone anyway fails them, the kernel marks the socket dead, and the checkout
+#   test discards it.
+# - TCP_USER_TIMEOUT (Linux) bounds a request written onto a socket that died
+#   since the last probe: data unacknowledged for IDLE + INTERVAL * COUNT
+#   aborts the connection. urllib3 retries that read error only for
+#   idempotent methods (GET, HEAD, PUT, DELETE); a POST (multipart create or
+#   complete) fails at once and is left to the caller's retry, where before it
+#   hung for the whole read timeout and then failed the same way. It counts
+#   only our own unacknowledged bytes, so a slow but live response is still
+#   waited out for the full read timeout.
+# A local reproduction (Linux 6.12, iptables DROP on one pooled flow, scaled to
+# idle 3 s / interval 1 s / count 2, read timeout 20 s) measured: 20.0 s stall
+# without these options; 0.0 s with them after idle (checkout discards the
+# dead socket); 5.4 s when the flow dies just before reuse (user timeout).
+KEEPALIVE_IDLE_S = 60
+KEEPALIVE_INTERVAL_S = 10
+KEEPALIVE_COUNT = 3
+# Transfer client read timeout: per-socket inactivity, not total time. minio-py
+# uses 300 s. 120 s still waits out any slow but live R2 body and caps the
+# residual stall where the runtime ignores TCP_USER_TIMEOUT (it is Linux-only,
+# and the probe below proves only that the kernel accepts it).
+TRANSFER_READ_TIMEOUT_S = 120
+
+
+def _candidate_socket_options(idle: int, interval: int, count: int) -> list[tuple[int, int, int]]:
+    tcp = socket.IPPROTO_TCP
+    # socket_options REPLACES urllib3's default list, which is TCP_NODELAY.
+    options = [(tcp, socket.TCP_NODELAY, 1), (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)]
+    # Linux names the idle time TCP_KEEPIDLE; macOS (dev) names it TCP_KEEPALIVE.
+    idle_option = getattr(socket, "TCP_KEEPIDLE", None)
+    if idle_option is None:
+        idle_option = getattr(socket, "TCP_KEEPALIVE", None)
+    for option, value in (
+        (idle_option, idle),
+        (getattr(socket, "TCP_KEEPINTVL", None), interval),
+        (getattr(socket, "TCP_KEEPCNT", None), count),
+        (getattr(socket, "TCP_USER_TIMEOUT", None), (idle + interval * count) * 1000),  # milliseconds
+    ):
+        if option is not None:
+            options.append((tcp, option, value))
+    return options
+
+
+@functools.lru_cache(maxsize=None)
+def _accepted_socket_options(idle: int, interval: int, count: int) -> tuple[tuple[int, int, int], ...]:
+    accepted = []
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        for level, option, value in _candidate_socket_options(idle, interval, count):
+            try:
+                probe.setsockopt(level, option, value)
+            except OSError as exc:
+                logger.warning("Storage socket option (%s, %s, %s) rejected: %s", level, option, value, exc)
+                continue
+            accepted.append((level, option, value))
+    finally:
+        probe.close()
+    logger.info("Storage connection socket options: %s", accepted)
+    return tuple(accepted)
+
+
+def pool_socket_options(idle: int = KEEPALIVE_IDLE_S, interval: int = KEEPALIVE_INTERVAL_S,
+                        count: int = KEEPALIVE_COUNT) -> list[tuple[int, int, int]]:
+    """Socket options for the storage connection pools: the candidates this
+    kernel accepts. urllib3 sets them on every new socket and a rejected one
+    would fail every storage request, so each is tried on a throwaway socket
+    first and left out if the kernel refuses it."""
+    return list(_accepted_socket_options(idle, interval, count))
 
 
 def _parse_minio_endpoint(endpoint: str, default_secure: bool = False) -> tuple[str, bool]:
@@ -81,6 +160,7 @@ class StorageService:
             "retries": urllib3.Retry(total=2, backoff_factor=0.5,
                                      status_forcelist=[429, 500, 502, 503, 504],
                                      respect_retry_after_header=False),
+            "socket_options": pool_socket_options(),
         }
         if secure:
             import certifi
@@ -106,7 +186,9 @@ class StorageService:
     @property
     def transfer_client(self) -> Minio:
         """Same endpoint, credentials, TLS and region, but minio-py's own HTTP
-        policy (5-minute timeouts, 5 retries) for worker-side transfers.
+        policy (5-minute connect timeout, 5 retries) with a 2-minute read
+        timeout for worker-side transfers, and the same TCP keepalive as the
+        request client.
 
         The parse worker streams whole documents; under the request client's
         10 s read timeout a slow response body would fail the download
@@ -114,8 +196,27 @@ class StorageService:
         """
         if self._transfer_client is None:
             args = dict(self._transfer_args)
-            self._transfer_client = Minio(args.pop("endpoint"), **args)
+            self._transfer_client = Minio(args.pop("endpoint"), http_client=self._transfer_http_client(), **args)
         return self._transfer_client
+
+    @staticmethod
+    def _transfer_http_client():
+        """The pool minio-py 7.2 builds when it is given none (Minio.__init__
+        in minio/api.py), plus the keepalive socket options and a 120 s read
+        timeout instead of 300 s. A test pins every other setting against the
+        pool minio-py itself builds."""
+        import certifi
+        import urllib3
+
+        connect_timeout = int(datetime.timedelta(minutes=5).total_seconds())
+        return urllib3.PoolManager(
+            timeout=urllib3.Timeout(connect=connect_timeout, read=TRANSFER_READ_TIMEOUT_S),
+            maxsize=10,
+            cert_reqs="CERT_REQUIRED",
+            ca_certs=os.environ.get("SSL_CERT_FILE") or certifi.where(),
+            retries=urllib3.Retry(total=5, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504]),
+            socket_options=pool_socket_options(),
+        )
 
     def _storage_unavailable(self, operation: str, exc: Exception) -> StorageUnavailableError:
         logger.warning("Object storage %s failed: %s", operation, exc)

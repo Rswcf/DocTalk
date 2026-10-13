@@ -23,6 +23,7 @@ function harness() {
   measuredRef:{current:null},setEvidence:value=>updates.push(value),onEvidenceReady:()=>notifications++,
   requestAnimationFrame:()=>1,cancelAnimationFrame(){},ResizeObserver:class {observe(){} disconnect(){}},
   findEvidenceRange:()=>null,mergeEvidenceLines:()=>[],groupEvidenceMargins:regions=>regions,validEvidenceBox:()=>true,evidenceOverlap:()=>true,
+  syntheticBoxes:false,isListMarkerItem:()=>false,
  };
  return {scope,updates,notifications:()=>notifications,effect:()=>Function(...Object.keys(scope),body.slice(1,-1))(...Object.values(scope))?.()};
 }

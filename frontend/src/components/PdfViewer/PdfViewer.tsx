@@ -101,7 +101,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights: boxHighligh
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragState = useRef({ isDragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
-  const extractedTextRef = useRef<{ pages: string[]; pdfUrl: string } | null>(null);
+  const extractedTextRef = useRef<{ pages: string[]; items: string[][]; pdfUrl: string } | null>(null);
   const extractionRunIdRef = useRef(0);
   const [visiblePage, setVisiblePage] = useState(1);
   const [pageDimensions, setPageDimensions] = useState<Array<{ width: number; aspectRatio: number }>>([]);
@@ -129,7 +129,7 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights: boxHighligh
   // text is extracted (textCacheVersion versions extractedTextRef).
   const convertedIndex = useMemo(() => {
     const cached = extractedTextRef.current;
-    return syntheticBoxes && cached && cached.pdfUrl === validPdfUrl ? convertedPageIndex(cached.pages) : null;
+    return syntheticBoxes && cached && cached.pdfUrl === validPdfUrl ? convertedPageIndex(cached.items) : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syntheticBoxes, validPdfUrl, textCacheVersion]);
   const { highlightSnippet, highlightFocus } = useMemo(() => {
@@ -363,18 +363,17 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights: boxHighligh
     (async () => {
       try {
         const pages: string[] = [];
+        const pageItems: string[][] = [];
         for (let p = 1; p <= n; p++) {
           const page = await pdf.getPage(p);
           const textContent = await page.getTextContent();
-          const pageText = textContent.items
-            .map((item) => (isPdfTextItemLike(item) ? item.str : ''))
-            .join(' ')
-            .toLowerCase();
-          pages.push(pageText);
+          const items = textContent.items.map((item) => (isPdfTextItemLike(item) ? item.str : ''));
+          pages.push(items.join(' ').toLowerCase());
+          pageItems.push(items);
         }
 
         if (runId !== extractionRunIdRef.current) return;
-        extractedTextRef.current = { pages, pdfUrl: validPdfUrl };
+        extractedTextRef.current = { pages, items: pageItems, pdfUrl: validPdfUrl };
         setTextCacheVersion((v) => v + 1);
       } catch (err) {
         if (runId !== extractionRunIdRef.current) return;
