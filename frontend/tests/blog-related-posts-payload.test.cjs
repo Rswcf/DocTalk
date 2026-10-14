@@ -10,22 +10,27 @@ const ts = require('typescript');
 // HTML carried the whole markdown of three other posts (2026-10-14). Only the
 // fields the related-post card renders may cross to the client.
 
-function loadTs(relPath) {
+function loadTs(relPath, stubs = {}) {
   const filename = path.resolve(__dirname, relPath);
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+      esModuleInterop: true,
+      jsx: ts.JsxEmit.ReactJSX,
+    },
     fileName: filename,
   }).outputText;
   const mod = new Module(filename, module);
   mod.filename = filename;
   mod.paths = Module._nodeModulePaths(path.dirname(filename));
+  const realRequire = mod.require.bind(mod);
+  mod.require = (request) => (request in stubs ? stubs[request] : realRequire(request));
   mod._compile(compiled, filename);
   return mod.exports;
 }
 
 const FRONTEND = path.resolve(__dirname, '..');
-const PAGE = path.join(FRONTEND, 'src/app/blog/[slug]/page.tsx');
-const CLIENT = path.join(FRONTEND, 'src/app/blog/[slug]/BlogPostClient.tsx');
 
 function loadBlog() {
   // lib/blog.ts fixes its content directory from the working directory at load.
@@ -64,13 +69,49 @@ test('getRelatedPosts keeps the selection: same category, not itself, first 3 by
   }
 });
 
-test('the post page passes related summaries, never full posts, to the client', () => {
-  const page = fs.readFileSync(PAGE, 'utf8');
-  assert.match(page, /const related = getRelatedPosts\(post\);/);
-  assert.match(page, /relatedPosts=\{related\}/);
+// Renders the real page with BlogPostClient stubbed and reads the props it
+// would serialise, so any way of putting full posts back into them fails.
+test('the post page hands the client only related summaries', () => {
+  const { blog, posts } = loadBlog();
+  function BlogPostClientStub() {
+    return null;
+  }
+  const { default: BlogPostPage } = loadTs('../src/app/blog/[slug]/page.tsx', {
+    '../../../lib/blog': blog,
+    './BlogPostClient': BlogPostClientStub,
+    'next/navigation': { notFound: () => { throw new Error('notFound'); } },
+    '../../../lib/seo': {
+      buildArticleJsonLd: () => ({}),
+      buildMarketingMetadata: () => ({}),
+      DEFAULT_SHARE_ALT: '',
+      resolveShareImage: () => '',
+    },
+    '../../../lib/blogSchema': {
+      buildFaqPage: () => ({}),
+      buildRankedItemList: () => ({}),
+      extractFaq: () => [],
+      extractRankedItems: () => [],
+      jsonLdString: () => '',
+    },
+  });
 
-  const client = fs.readFileSync(CLIENT, 'utf8');
-  assert.match(client, /relatedPosts: RelatedPostSummary\[\];/);
-  assert.match(client, /function RelatedPosts\(\{ posts \}: \{ posts: RelatedPostSummary\[\] \}\)/);
-  assert.doesNotMatch(client, /relatedPosts: BlogPost\[\]/);
+  const findClient = (node) => {
+    if (!node || typeof node !== 'object') return null;
+    if (Array.isArray(node)) return node.map(findClient).find(Boolean) || null;
+    if (node.type === BlogPostClientStub) return node;
+    return findClient(node.props && node.props.children);
+  };
+
+  let cards = 0;
+  for (const post of posts) {
+    const client = findClient(BlogPostPage({ params: { slug: post.slug } }));
+    assert.ok(client, `${post.slug}: BlogPostClient not rendered`);
+    const { relatedPosts } = client.props;
+    assert.deepEqual(relatedPosts, blog.getRelatedPosts(post), post.slug);
+    for (const card of relatedPosts) {
+      assert.deepEqual(Object.keys(card).sort(), ['description', 'slug', 'title'], post.slug);
+      cards += 1;
+    }
+  }
+  assert.ok(cards > 0, 'no post has related posts, the check proves nothing');
 });
