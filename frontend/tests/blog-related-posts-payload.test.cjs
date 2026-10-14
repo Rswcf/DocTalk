@@ -86,26 +86,25 @@ test('the post page hands the client only related summaries', () => {
       DEFAULT_SHARE_ALT: '',
       resolveShareImage: () => '',
     },
-    '../../../lib/blogSchema': {
-      buildFaqPage: () => ({}),
-      buildRankedItemList: () => ({}),
-      extractFaq: () => [],
-      extractRankedItems: () => [],
-      jsonLdString: () => '',
-    },
+    // The real helpers, so the FAQ and ranked-list branches run for the posts that have them.
+    '../../../lib/blogSchema': loadTs('../src/lib/blogSchema.ts', {
+      './blogHeadings': loadTs('../src/lib/blogHeadings.ts'),
+    }),
   });
 
-  const findClient = (node) => {
-    if (!node || typeof node !== 'object') return null;
-    if (Array.isArray(node)) return node.map(findClient).find(Boolean) || null;
-    if (node.type === BlogPostClientStub) return node;
-    return findClient(node.props && node.props.children);
+  const findClients = (node) => {
+    if (!node || typeof node !== 'object') return [];
+    if (Array.isArray(node)) return node.flatMap(findClients);
+    if (node.type === BlogPostClientStub) return [node];
+    return findClients(node.props && node.props.children);
   };
 
   let cards = 0;
   for (const post of posts) {
-    const client = findClient(BlogPostPage({ params: { slug: post.slug } }));
-    assert.ok(client, `${post.slug}: BlogPostClient not rendered`);
+    const clients = findClients(BlogPostPage({ params: { slug: post.slug } }));
+    assert.equal(clients.length, 1, `${post.slug}: expected one BlogPostClient`);
+    const [client] = clients;
+    assert.deepEqual(Object.keys(client.props).sort(), ['post', 'relatedPosts'], post.slug);
     const { relatedPosts } = client.props;
     assert.deepEqual(relatedPosts, blog.getRelatedPosts(post), post.slug);
     for (const card of relatedPosts) {
