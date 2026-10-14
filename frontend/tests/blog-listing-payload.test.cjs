@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const Module = require('node:module');
 const test = require('node:test');
+const { isValidElement } = require('react');
 const ts = require('typescript');
 
 // A client component prop is serialised into the page's RSC payload. The /blog
@@ -53,15 +54,21 @@ function pick(post, fields) {
   return Object.fromEntries(fields.map((field) => [field, post[field]]));
 }
 
-// Walks every prop, not only children, so a client element placed in another
-// prop (a Suspense fallback, say) is found too.
-function findElements(node, type, seen = new Set()) {
-  if (!node || typeof node !== 'object' || seen.has(node)) return [];
-  seen.add(node);
-  if (Array.isArray(node)) return node.flatMap((child) => findElements(child, type, seen));
-  const own = node.type === type ? [node] : [];
-  const values = node.$$typeof ? Object.values(node.props || {}) : Object.values(node);
-  return own.concat(values.flatMap((value) => findElements(value, type, seen)));
+// Walks every prop, not only children, and every array, Set or Map, so a client
+// element placed anywhere in the returned tree (a Suspense fallback, say) is
+// found, once per place it occurs. `path` only stops cycles.
+function findElements(node, type, path = new Set()) {
+  if (!node || typeof node !== 'object' || path.has(node)) return [];
+  path.add(node);
+  const element = isValidElement(node);
+  let values;
+  if (element) values = Object.values(node.props || {});
+  else if (typeof node[Symbol.iterator] === 'function') values = Array.from(node);
+  else values = Object.values(node);
+  const own = element && node.type === type ? [node] : [];
+  const found = own.concat(values.flatMap((value) => findElements(value, type, path)));
+  path.delete(node);
+  return found;
 }
 
 // Renders the real page with its client component stubbed and reads the props
