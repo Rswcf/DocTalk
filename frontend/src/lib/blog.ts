@@ -87,6 +87,37 @@ export function getPostsByCategory(category: string): BlogPost[] {
   return getAllPosts().filter((p) => p.category === category);
 }
 
+// What a /blog index card renders, for the same reason as RelatedPostSummary:
+// full posts put the whole markdown of every post into the index page's HTML.
+export type BlogPostSummary = Pick<
+  BlogPost,
+  'slug' | 'title' | 'description' | 'category' | 'date' | 'readingMinutes'
+>;
+
+export function getPostSummaries(): BlogPostSummary[] {
+  return getAllPosts().map(({ slug, title, description, category, date, readingMinutes }) => ({
+    slug,
+    title,
+    description,
+    category,
+    date,
+    readingMinutes,
+  }));
+}
+
+// A category page card shows the page's own category label, not the post's.
+export type CategoryPostSummary = Omit<BlogPostSummary, 'category'>;
+
+export function getCategoryPostSummaries(category: string): CategoryPostSummary[] {
+  return getPostsByCategory(category).map(({ slug, title, description, date, readingMinutes }) => ({
+    slug,
+    title,
+    description,
+    date,
+    readingMinutes,
+  }));
+}
+
 export function getAllCategories(): string[] {
   const posts = getAllPosts();
   const cats = new Set<string>(KNOWN_BLOG_CATEGORIES);

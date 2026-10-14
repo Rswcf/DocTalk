@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getAllPosts } from '../../lib/blog';
+import { getPostSummaries } from '../../lib/blog';
 import BlogIndexClient from './BlogIndexClient';
 import { buildMarketingMetadata } from '../../lib/seo';
 
@@ -15,7 +15,7 @@ export const metadata: Metadata = buildMarketingMetadata({
 });
 
 export default function BlogPage() {
-  const posts = getAllPosts();
+  const posts = getPostSummaries();
 
   return (
     <>
