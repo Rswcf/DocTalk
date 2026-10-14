@@ -8,6 +8,28 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-10-14
+
+Wikipedia URL import works from the production server, storage requests no
+longer stall after idle, and slide view highlights a slide's first bullet.
+
+### Fixed
+- Importing a Wikipedia article by URL still failed in production with HTTP
+  403: Wikimedia refuses a cloud server that sends a generic browser-like
+  User-Agent. URL import now identifies itself as
+  `DocTalk/<version> (https://www.doctalk.site; support@doctalk.site)`, as the
+  Wikimedia User-Agent policy asks. SSRF protections are unchanged.
+- The first object-storage request after 30–50 minutes of idle could hang for
+  the whole read timeout (300 s seen twice on the parse worker): the network
+  path dropped the pooled connection silently. Both storage connection pools
+  now use TCP keepalive and, on Linux, `TCP_USER_TIMEOUT`, so a dead
+  connection is detected and replaced. The worker transfer read timeout is
+  120 s instead of 300 s.
+- PowerPoint slide view: citing a slide's first bullet showed "Page location
+  only", because the converted PDF has a separate bullet glyph between the
+  slide title and the sentence. Text items made only of list-marker glyphs are
+  now ignored when the cited passage is matched in the slide view.
+
 ## [0.36.0] - 2026-10-12
 
 Citations are cleaner in academic PDFs, Wikipedia pages import again, and
