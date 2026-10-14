@@ -122,6 +122,32 @@ async def main():
                     EVENTS, start, OWNER, end, LISTICLES)
                 days = (end - start).total_seconds() / 86400
                 print(f"{label}: {n} events over {days:.1f} d = {n / days * 7:.2f}/week")
+            # Fable ruling 2026-10-14 Q2: the 11-07 report names each qualifying event's funnel step. Blog pages
+            # send landing_cta_clicked (source blog_about / blog_cta / blog_inline) only after the blog CTA
+            # instrument shipped (actions-log), so a CTA row before that time cannot exist; sign-in rows compare
+            # with the 0 baseline.
+            print("\n-- same metric by event_name and source (each window)")
+            print("window\tevent_name\tsource\tn")
+            for label, start, end in (("baseline", T_RELEASE_A, T_RELEASE_B), ("after_B", T_RELEASE_B, now)):
+                rows = await con.fetch(f"""
+                  select e.event_name ev, coalesce(e.source, '(none)') src, count(*) n {BASE}
+                    and e.created_at < $4
+                    and (coalesce(e.metadata_json->>'ref_host', '') ~* '(^|\\.)chatgpt\\.com$'
+                         or coalesce(e.metadata_json->>'utm_source', '') ~* '^chatgpt\\.com$')
+                    and e.metadata_json->>'landing_path' = any($5::text[])
+                  group by 1, 2 order by 1, 2""",
+                    EVENTS, start, OWNER, end, LISTICLES)
+                counts = {(r["ev"], r["src"]): r["n"] for r in rows}
+                for ev in EVENTS:
+                    srcs = sorted(s for e, s in counts if e == ev) or ["(any)"]
+                    for s in srcs:
+                        print(f"{label}\t{ev}\t{s}\t{counts.get((ev, s), 0)}")
+            print("\n-- context: any channel landing on a listicle, by event_name and source (whole window)")
+            rows = await con.fetch(f"""
+              select e.event_name ev, coalesce(e.source, '(none)') src, {CHANNEL} ch, count(*) n {BASE}
+                and e.metadata_json->>'landing_path' = any($4::text[])
+              group by 1, 2, 3 order by 1, 2, 3""", EVENTS, T_RELEASE_A, OWNER, LISTICLES)
+            table(rows, ["ev", "src", "ch", "n"])
             n_any = await con.fetchval(f"""
               select count(*) {BASE}
                 and (coalesce(e.metadata_json->>'ref_host', '') ~* '(^|\\.)chatgpt\\.com$'
