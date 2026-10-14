@@ -2,7 +2,7 @@
 title: "7 Best AI PDF Tools in 2026: A Detailed Comparison"
 description: "The top AI PDF chat tools of 2026 compared on formats, citations and current pricing: DocTalk, ChatPDF, AskYourPDF, Gemini Notebook (formerly NotebookLM), Humata, PDF.ai and ChatDOC. Prices checked 30 September 2026."
 date: "2026-02-18"
-updated: "2026-10-10"
+updated: "2026-10-14"
 author: "DocTalk Team"
 category: "comparisons"
 tags: ["comparison", "ai tools", "pdf", "chatpdf", "notebooklm", "review"]
@@ -31,7 +31,7 @@ We compared each tool on five points:
 4. **Free tier and price** — what you can do for free, and what paid plans cost.
 5. **Extras** — team features, browser extensions, audio summaries and so on.
 
-Prices, limits and supported formats come from each vendor's own pricing and help pages, read on 30 September 2026. Where we relied on third-party reviews instead, we say so. Plans change often, so check the vendor before you buy.
+Prices, limits and supported formats come from each vendor's own pricing and help pages, read on 30 September 2026; formats and citation features were checked again on 10 October 2026. Where we relied on third-party reviews instead, we say so. Plans change often, so check the vendor before you buy.
 
 ## The 7 Best AI PDF Tools
 
@@ -80,12 +80,12 @@ For a closer look, see [DocTalk vs ChatPDF](/compare/chatpdf).
 
 ### 3. [AskYourPDF](https://askyourpdf.com) — Best for Researchers
 
-**What it does:** document chat for academic workflows, with an API; it is also reported to offer a Chrome extension and a Zotero integration.
+**What it does:** document chat for academic workflows, with an API. It runs on the web, iOS and Android, and as a Chrome extension, a ChatGPT GPT and a Zotero plugin.
 
-**Why it stands out:** paid plans allow very long documents, and third-party reviews describe a Zotero integration for querying a reference library.
+**Why it stands out:** paid plans allow very long documents, and a Zotero plugin brings it to researchers who keep their papers there.
 
 **Key features:**
-- Chrome extension and Zotero integration (per third-party reviews)
+- Chrome extension and Zotero plugin
 - API for developers
 - Up to 2,500 pages per document on Premium and 6,000 on Pro
 
@@ -93,7 +93,7 @@ For a closer look, see [DocTalk vs ChatPDF](/compare/chatpdf).
 
 **Best for:** PhD students and researchers with large paper collections.
 
-**Limitations:** tight free plan; references are page-level text citations rather than highlighted passages (per third-party reviews).
+**Limitations:** tight free plan; each answer cites the page it came from and you click the citation to check it, but AskYourPDF does not say it highlights the passage.
 
 ### 4. [Gemini Notebook](https://notebook.google) (formerly NotebookLM) — Best Free Option
 
@@ -130,7 +130,7 @@ See our [DocTalk vs NotebookLM](/compare/notebooklm) comparison.
 
 **Best for:** small teams, consultancies and research groups sharing documents.
 
-**Limitations:** small free allowance; we could not confirm passage-level highlighting.
+**Limitations:** small free allowance; Humata says it "highlights citations" but does not say what is highlighted or where.
 
 ### 6. [PDF.ai](https://pdf.ai) — Simplest Interface
 
@@ -147,7 +147,7 @@ See our [DocTalk vs NotebookLM](/compare/notebooklm) comparison.
 
 **Best for:** occasional PDF questions with no setup.
 
-**Limitations:** PDF-focused (third-party reviews report no native Word or PowerPoint chat); small free plan.
+**Limitations:** PDF only ("You can only upload PDF (.pdf) files at the moment", per its FAQ); small free plan.
 
 ### 7. [ChatDOC](https://chatdoc.com) — Best for Tables and Data
 
@@ -160,7 +160,7 @@ See our [DocTalk vs NotebookLM](/compare/notebooklm) comparison.
 - Pro adds Word, scanned files, EPUB, Markdown, text and web pages, plus formula recognition and file translation
 - Unlimited OCR on Pro
 
-**Pricing:** Free: 5 files a day (10 in total), 20 questions a day, up to 300 pages and 60 MB per file, PDF only. Pro: $8.99 per 30 days, or $89.90 per 360 days.
+**Pricing:** Free: 5 files a day (10 in total), 20 questions a day, up to 300 pages and 60 MB per file, PDF only. Pro: $8.99 per 30 days, or $89.90 per 360 days. The free limits are from ChatDOC's homepage pricing table on 10 October 2026; its own guide and FAQ say 2 files per 24 hours and 20 pages per file.
 
 **Best for:** data-heavy PDFs.
 
@@ -168,16 +168,16 @@ See our [DocTalk vs NotebookLM](/compare/notebooklm) comparison.
 
 ## Master Comparison Table
 
-Checked 30 September 2026 on each vendor's own site unless noted.
+Checked 30 September 2026 on each vendor's own site unless noted; formats and citation features checked again 10 October 2026.
 
 | Feature | DocTalk | ChatPDF | AskYourPDF | Gemini Notebook | Humata | PDF.ai | ChatDOC |
 |---|---|---|---|---|---|---|---|
 | **PDF** | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| **Word** | Yes | Yes | —¹ | Yes | —¹ | No¹ | Pro |
-| **PowerPoint** | Yes | Yes | Yes¹ | Yes | —¹ | No¹ | — |
+| **Word** | Yes | Yes | Yes | Yes | —¹ | No | Pro |
+| **PowerPoint** | Yes | Yes | — | Yes | —¹ | No | — |
 | **Excel** | Yes | No | No | Sheets/CSV | —¹ | No | — |
-| **Web URL** | Yes | Yes | — | Yes | — | No | Pro |
-| **How you check** | Passage highlighted | Scrolls to source | Page reference¹ | Inline citation | Link to file | Text reference¹ | TapSource |
+| **Web URL** | Yes | Yes | Yes | Yes | — | No | Pro |
+| **How you check** | Passage highlighted | Scrolls to source | Page citation, click to check | Inline citation, jumps to the quote | Link to file; says it highlights | Cited sources | Page number, click to jump |
 | **Free tier** | 500 starter, then 300/mo | 2 docs/day | 1 doc/day | 100 notebooks | 60 pages/mo | 1 upload/mo | 5 files/day |
 | **Paid from** | $9.99/mo | Not published | $11.99/mo | Google AI plans | $9.99/mo | $10/mo (yearly) | $8.99/30 days |
 | **No-signup demo** | Yes | — | — | — | — | — | — |
@@ -186,7 +186,7 @@ Checked 30 September 2026 on each vendor's own site unless noted.
 
 ## How to Choose
 
-- **You need to prove where an answer came from** (legal, financial, academic): DocTalk highlights the exact passage and gives machine-checked quotes with the page.
+- **You need to prove where an answer came from** (legal, financial, academic): DocTalk highlights the cited passage and gives machine-checked quotes with the page.
 - **You work across Word, PowerPoint and Excel:** DocTalk reads all three; ChatPDF and Gemini Notebook read Word and PowerPoint but not .xlsx.
 - **You want free:** Gemini Notebook has the largest free allowance. DocTalk has a [no-signup demo](/demo) and a monthly free allowance.
 - **You manage papers in Zotero:** AskYourPDF.
@@ -198,7 +198,7 @@ Checked 30 September 2026 on each vendor's own site unless noted.
 
 There is a real difference between "see page 12", a link to the file, and a highlight on the exact passage the answer used. With a page number you still scan the page; with a highlighted passage you read a few lines and decide. If you ask many questions about documents where accuracy matters — contracts, filings, papers — that difference adds up.
 
-The strongest tools here each take a different route: DocTalk highlights the cited passage and checks quotes against the source, ChatPDF scrolls to the source in a side-by-side view, and ChatDOC links individual data points.
+The strongest tools here each take a different route: DocTalk highlights the cited passage and checks quotes against the source, ChatPDF scrolls to the source in a side-by-side view, and ChatDOC puts page numbers on every answer that jump to the source when you click them.
 
 ## Pricing Reality Check
 
