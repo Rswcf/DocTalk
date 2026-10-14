@@ -53,15 +53,20 @@ function pick(post, fields) {
   return Object.fromEntries(fields.map((field) => [field, post[field]]));
 }
 
-function findElements(node, type) {
-  if (!node || typeof node !== 'object') return [];
-  if (Array.isArray(node)) return node.flatMap((child) => findElements(child, type));
-  if (node.type === type) return [node];
-  return findElements(node.props && node.props.children, type);
+// Walks every prop, not only children, so a client element placed in another
+// prop (a Suspense fallback, say) is found too.
+function findElements(node, type, seen = new Set()) {
+  if (!node || typeof node !== 'object' || seen.has(node)) return [];
+  seen.add(node);
+  if (Array.isArray(node)) return node.flatMap((child) => findElements(child, type, seen));
+  const own = node.type === type ? [node] : [];
+  const values = node.$$typeof ? Object.values(node.props || {}) : Object.values(node);
+  return own.concat(values.flatMap((value) => findElements(value, type, seen)));
 }
 
 // Renders the real page with its client component stubbed and reads the props
-// it would serialise, so any way of putting full posts back into them fails.
+// every instance of that client would serialise. Full posts handed to some other
+// client component (a context provider, say) are outside what this test sees.
 test('the blog index hands the client only post summaries', () => {
   const { blog, posts } = loadBlog();
   assert.ok(posts.length > 0, 'no blog posts found');
