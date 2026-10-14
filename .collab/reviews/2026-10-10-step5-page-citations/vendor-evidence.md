@@ -203,6 +203,8 @@ Formats: "Drag a PDF, DOCX, EPUB, or TXT file into the AskYourPDF chat reader, o
 
 Integrations: "Web, iOS, Android, Chrome extension, ChatGPT GPT, and the Zotero plugin". Source: https://askyourpdf.com/chat-with-pdf
 
+**Addendum 2026-10-14:** this section read only `/chat-with-pdf` and the static pricing HTML. AskYourPDF's `/pdf-ai` and `/chat-with-documents` pages also list PPTX, RTF and CSV and say the source is highlighted, and the pricing page has a monthly-billed price (Premium $14.99, Pro $19.99). So "The monthly-billed price is not shown" above and §3's "PPT/PPTX appear only for the homepage *website chatbot* product" are wrong as of 2026-10-14. Evidence: `.collab/reviews/2026-10-14-notebooklm-askyourpdf/evidence.md`.
+
 ### 2.7 ChatPDF (chatpdf.com)
 
 **Classification:**

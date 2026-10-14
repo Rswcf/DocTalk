@@ -1,0 +1,26 @@
+The main corrections are supported. One remaining comparison claim needs fixing.
+
+1. **SHOULD — [notebooklm-alternatives-2026.md:140](/Users/mayijie/Projects/Code/010_DocTalk/.claude/worktrees/magical-jepsen-038d11/frontend/content/blog/notebooklm-alternatives-2026.md:140), also :148:** AskYourPDF’s audio cell says “No”; the bullet says no listed alternative offers audio overviews. Additional vendor evidence makes that denial unsupported: its [PodAnywhere tutorial](https://askyourpdf.com/blog/using-podanywhere-by-askyourpdf-chrome-extension) documents PDF-to-podcast conversion, and its [published extension](https://chromewebstore.google.com/detail/podcastanywhere-by-askyou/ebmciflehjbionjhpaeohnbicccdcgbj) advertises document-to-podcast functionality. **Fix:** use “Vendor documents PDF-to-podcast via PodAnywhere” and remove the blanket denial at :148. Add these sources to `evidence.md`. This establishes a vendor claim, not tested equivalence to Gemini Notebook.
+
+2. **NIT — [notebooklm-alternatives-2026.md:87](/Users/mayijie/Projects/Code/010_DocTalk/.claude/worktrees/magical-jepsen-038d11/frontend/content/blog/notebooklm-alternatives-2026.md:87):** “Own pages disagree” overstates what different, nonexclusive lists establish. None of the quoted pages explicitly denies the additional formats. **Fix:** replace with “AskYourPDF’s own pages list different sets of supported formats.” Keep the lists and table’s “Yes / Yes” and “CSV”.
+
+3. **NIT — [notebooklm-alternatives-2026.md:85](/Users/mayijie/Projects/Code/010_DocTalk/.claude/worktrees/magical-jepsen-038d11/frontend/content/blog/notebooklm-alternatives-2026.md:85):** The retained “began as a ChatGPT plugin” history is not established by `evidence.md`. Current integrations do not prove launch history. **Fix:** remove that clause or record a vendor source establishing it. The API exists in the older §2.6 evidence, but its supporting source should also be carried into the new evidence record.
+
+The monthly/yearly prices, limits, apps, format cells and attributed citation/highlight wording otherwise match `evidence.md`. The title, ranking, large-PDF positioning, short answer and FAQ do not become false or assert exclusivity. The description’s September date remains historically compatible, though it omits the later recheck.
+
+Verification: JSON-LD tests **7/7 passed**, including **5 ranked items**; all **9 table rows have 7 columns**; four ¹ references remain only in Humata/PDF.ai cells; `updated` is `2026-10-14`. Most feature-page live fetches failed, so those checks rely on the supplied evidence. No files modified; no git commands run.
+
+SHIP-WITH-FIXES
+The main corrections are supported. One remaining comparison claim needs fixing.
+
+1. **SHOULD — [notebooklm-alternatives-2026.md:140](/Users/mayijie/Projects/Code/010_DocTalk/.claude/worktrees/magical-jepsen-038d11/frontend/content/blog/notebooklm-alternatives-2026.md:140), also :148:** AskYourPDF’s audio cell says “No”; the bullet says no listed alternative offers audio overviews. Additional vendor evidence makes that denial unsupported: its [PodAnywhere tutorial](https://askyourpdf.com/blog/using-podanywhere-by-askyourpdf-chrome-extension) documents PDF-to-podcast conversion, and its [published extension](https://chromewebstore.google.com/detail/podcastanywhere-by-askyou/ebmciflehjbionjhpaeohnbicccdcgbj) advertises document-to-podcast functionality. **Fix:** use “Vendor documents PDF-to-podcast via PodAnywhere” and remove the blanket denial at :148. Add these sources to `evidence.md`. This establishes a vendor claim, not tested equivalence to Gemini Notebook.
+
+2. **NIT — [notebooklm-alternatives-2026.md:87](/Users/mayijie/Projects/Code/010_DocTalk/.claude/worktrees/magical-jepsen-038d11/frontend/content/blog/notebooklm-alternatives-2026.md:87):** “Own pages disagree” overstates what different, nonexclusive lists establish. None of the quoted pages explicitly denies the additional formats. **Fix:** replace with “AskYourPDF’s own pages list different sets of supported formats.” Keep the lists and table’s “Yes / Yes” and “CSV”.
+
+3. **NIT — [notebooklm-alternatives-2026.md:85](/Users/mayijie/Projects/Code/010_DocTalk/.claude/worktrees/magical-jepsen-038d11/frontend/content/blog/notebooklm-alternatives-2026.md:85):** The retained “began as a ChatGPT plugin” history is not established by `evidence.md`. Current integrations do not prove launch history. **Fix:** remove that clause or record a vendor source establishing it. The API exists in the older §2.6 evidence, but its supporting source should also be carried into the new evidence record.
+
+The monthly/yearly prices, limits, apps, format cells and attributed citation/highlight wording otherwise match `evidence.md`. The title, ranking, large-PDF positioning, short answer and FAQ do not become false or assert exclusivity. The description’s September date remains historically compatible, though it omits the later recheck.
+
+Verification: JSON-LD tests **7/7 passed**, including **5 ranked items**; all **9 table rows have 7 columns**; four ¹ references remain only in Humata/PDF.ai cells; `updated` is `2026-10-14`. Most feature-page live fetches failed, so those checks rely on the supplied evidence. No files modified; no git commands run.
+
+SHIP-WITH-FIXES
