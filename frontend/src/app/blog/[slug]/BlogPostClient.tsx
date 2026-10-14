@@ -9,6 +9,7 @@ import type { BlogPost } from '../../../lib/blog';
 import { useLocale } from '../../../i18n';
 import { formatDateForLocale, getBlogCategoryLabel } from '../../../lib/publicI18n';
 import MarketingShell from '../../../components/marketing/MarketingShell';
+import { isDemoHref, trackBlogDemoClick } from '../../../lib/blogCta';
 import {
   extractHeadingIdsByOffset,
   headingTextFromMarkdown,
@@ -286,7 +287,11 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                     const isInternal = href?.startsWith('/');
                     if (isInternal) {
                       return (
-                        <Link href={href!} {...props}>
+                        <Link
+                          href={href!}
+                          {...props}
+                          onClick={isDemoHref(href) ? () => trackBlogDemoClick('blog_inline') : undefined}
+                        >
                           {children}
                         </Link>
                       );
@@ -403,7 +408,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 {t('blog.post.aboutDescription')}
               </p>
               <div className="flex flex-wrap items-center" style={{ gap: '16px' }}>
-                <Link href="/demo" className="ed-cta">
+                <Link href="/demo" className="ed-cta" onClick={() => trackBlogDemoClick('blog_about')}>
                   {t('blog.post.tryFreeDemo')}
                   <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
@@ -428,7 +433,7 @@ export default function BlogPostClient({ post, relatedPosts }: BlogPostClientPro
                 {t('blog.post.cta.description')}
               </p>
               <div style={{ marginTop: '24px' }}>
-                <Link href="/demo" className="ed-cta">
+                <Link href="/demo" className="ed-cta" onClick={() => trackBlogDemoClick('blog_cta')}>
                   {t('blog.post.cta.launchDemo')}
                   <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
