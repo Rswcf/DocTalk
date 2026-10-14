@@ -5,7 +5,7 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ArrowLeft, ArrowRight, Calendar, Clock } from 'lucide-react';
-import type { BlogPost } from '../../../lib/blog';
+import type { BlogPost, RelatedPostSummary } from '../../../lib/blog';
 import { useLocale } from '../../../i18n';
 import { formatDateForLocale, getBlogCategoryLabel } from '../../../lib/publicI18n';
 import MarketingShell from '../../../components/marketing/MarketingShell';
@@ -131,7 +131,7 @@ function InlineTOC({ items }: { items: TocItem[] }) {
   );
 }
 
-function RelatedPosts({ posts }: { posts: BlogPost[] }) {
+function RelatedPosts({ posts }: { posts: RelatedPostSummary[] }) {
   const { t } = useLocale();
   if (posts.length === 0) return null;
   return (
@@ -163,7 +163,7 @@ function RelatedPosts({ posts }: { posts: BlogPost[] }) {
 
 interface BlogPostClientProps {
   post: BlogPost;
-  relatedPosts: BlogPost[];
+  relatedPosts: RelatedPostSummary[];
 }
 
 export default function BlogPostClient({ post, relatedPosts }: BlogPostClientProps) {

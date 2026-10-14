@@ -71,6 +71,18 @@ export function getPostBySlug(slug: string): BlogPost | null {
   };
 }
 
+// What a related-post card renders. Only these fields go to the client: a
+// client component prop is serialised into the page's RSC payload, and full
+// posts put the whole markdown of three other posts into every post's HTML.
+export type RelatedPostSummary = Pick<BlogPost, 'slug' | 'title' | 'description'>;
+
+export function getRelatedPosts(post: BlogPost, limit = 3): RelatedPostSummary[] {
+  return getAllPosts()
+    .filter((p) => p.category === post.category && p.slug !== post.slug)
+    .slice(0, limit)
+    .map(({ slug, title, description }) => ({ slug, title, description }));
+}
+
 export function getPostsByCategory(category: string): BlogPost[] {
   return getAllPosts().filter((p) => p.category === category);
 }
