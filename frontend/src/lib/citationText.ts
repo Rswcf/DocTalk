@@ -120,7 +120,8 @@ export function uniqueCitationIndexes(citations: Citation[]): Citation[] {
 
 // chat_service._citation_payload sends `context_text = "[page N] " + chunk.text`
 // (or "[page N–M] "), cut at 900 Python code points. `text_snippet` is
-// "{section_title}: " + chunk.text cut at 100, so it rarely matches page text.
+// chunk.text cut at 100, too short to locate a chunk; citations stored before
+// 0.36.2 begin with "{section_title}: ".
 const CONTEXT_PAGE_PREFIX = /^\[page (\d+)(?:–(\d+))?\] /;
 const CONTEXT_TEXT_LIMIT = 900;
 

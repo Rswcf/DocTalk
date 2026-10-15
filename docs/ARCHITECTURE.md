@@ -981,7 +981,9 @@ belongs to its document, click and citation: a document switch, or a citation
 that changes while the bodies mount, drops it, so it never scrolls another
 target. TXT pages take the same path but render as plain text (`lib/plainEvidence.ts`): Markdown and HTML
 characters stay literal, and the marks sit on the stored text one to one. Only a
-PDF whose stored file is missing still uses the old snippet prefix match.
+PDF whose stored file is missing still uses the older snippet match
+(`lib/snippetMatch.ts`: the citation's `text_snippet`, progressively shorter
+prefixes, searched in the page text).
 
 **PDF Search**: Ctrl+F triggers an in-viewer search bar. Text is extracted via `pdfjs page.getTextContent()`, matches are highlighted using `customTextRenderer` with `<mark>` tags, and prev/next navigation scrolls between matches.
 

@@ -219,7 +219,7 @@ def citation_like(chunk) -> dict[str, Any]:
     page_end = chunk.page_end if (chunk.page_end and chunk.page_end != chunk.page_start) else None
     prefix = f"[page {chunk.page_start}{'–' + str(page_end) if page_end else ''}] " if chunk.page_start else ""
     payload: dict[str, Any] = {
-        "text_snippet": ((f"{chunk.section_title}: " if chunk.section_title else "") + text)[:100],
+        "text_snippet": text[:100],
         "context_text": (prefix + text)[:900],
         "claim": claim,
     }
