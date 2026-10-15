@@ -8,6 +8,26 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.36.2] - 2026-10-15
+
+Shared answers and exports quote the cited source as written.
+
+### Fixed
+- A citation's quoted text began with the section heading
+  ("4.2 Power Grid: The turbines…"), which is not in the source. The shared
+  answer page, its preview and the Markdown/Word/PDF exports printed it inside
+  quotation marks. Citations now carry the chunk's own text. Citations saved
+  before this release keep their stored text.
+- On a PDF whose original file is missing, clicking a new citation now
+  highlights the cited passage in the extracted text.
+- A continued answer that cites the same passage before and after this release
+  shows it as one source, not two.
+
+### Changed
+- The chat citation payload carries `section_title` as its own field (text
+  passages only). The answer check still counts the heading as evidence, and
+  no longer counts a number that the 100-character snippet cut in half.
+
 ## [0.36.1] - 2026-10-14
 
 Wikipedia URL import works from the production server, storage requests no

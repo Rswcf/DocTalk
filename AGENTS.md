@@ -102,10 +102,10 @@ Both agents (Claude + Codex) should read these when working in the matching area
 
 ## Codex collaboration (when Claude delegates)
 
-Pass `-m gpt-5.5` explicitly (since 2026-09-30 the default resolves to `gpt-6.1-sol`, rejected for ChatGPT accounts; `gpt-5.3-codex` rejected since 2026-06). Use `--sandbox workspace-write` (not deprecated `--full-auto`). Codex sandbox **cannot run git** — Claude commits.
+Pass `-m gpt-6-astra` explicitly (since 2026-10-14 the ChatGPT account also rejects `gpt-5.5` and `gpt-5.4`, as it does the default `gpt-6.1-sol` and `gpt-5.3-codex`; `codex debug models` lists what it accepts). Use `--sandbox workspace-write` (not deprecated `--full-auto`). Codex sandbox **cannot run git** — Claude commits.
 
 ```bash
-cat prompt.md | codex exec -m gpt-5.5 --sandbox workspace-write \
+cat prompt.md | codex exec -m gpt-6-astra --sandbox workspace-write \
   -C /Users/mayijie/Projects/Code/010_DocTalk
 ```
 
