@@ -18,6 +18,7 @@ type CitationEventPayload = CitationPayload & {
   confidence_score?: number;
   context_text?: string;
   retrieval_modality?: string;
+  table_id?: string;
 };
 type ErrorPayload = { code: string; message: string; status?: number };
 type DonePayload = {
@@ -97,6 +98,7 @@ async function _processSSEStream(
                 confidenceScore: typeof p.confidence_score === 'number' ? p.confidence_score : undefined,
                 contextText: typeof p.context_text === 'string' ? p.context_text : undefined,
                 retrievalModality: typeof p.retrieval_modality === 'string' ? p.retrieval_modality : undefined,
+                ...(typeof p.table_id === 'string' && p.table_id ? { tableId: p.table_id } : {}),
               };
               onCitation(c);
               break; }

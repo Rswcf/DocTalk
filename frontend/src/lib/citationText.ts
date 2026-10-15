@@ -89,8 +89,9 @@ export function citationSourceKey(citation: Citation): string {
   // A text hit is its chunk: the snippet is that chunk's text, and its shape
   // changed in 0.36.2 (no "{section_title}: " prefix), so a continued answer
   // can cite one chunk in both shapes at one offset. Table and summary hits
-  // share an anchor chunk with other sources and keep the snippet in the key.
-  const textHit = Boolean(citation.chunkId) && (citation.retrievalModality ?? 'text') === 'text';
+  // share an anchor chunk with other sources and keep the snippet in the key;
+  // a table id marks a table hit even where an older record has no modality.
+  const textHit = Boolean(citation.chunkId) && !citation.tableId && (citation.retrievalModality ?? 'text') === 'text';
   return JSON.stringify([
     citation.refIndex, citation.documentId, citation.documentFilename, citation.chunkId,
     citation.page, citation.pageEnd, textHit ? null : citation.textSnippet,

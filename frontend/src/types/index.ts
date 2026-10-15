@@ -23,6 +23,7 @@ export interface Citation {
   confidenceScore?: number; // Qdrant similarity score 0.0-1.0
   contextText?: string; // extended context (~300 chars) for hover preview
   retrievalModality?: string; // text/table/summary
+  tableId?: string; // table hits: the table this citation points at (older records may lack retrievalModality)
 }
 
 export interface ChatArtifactDownload {

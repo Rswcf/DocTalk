@@ -162,3 +162,23 @@ def test_a_native_pdf_block_covering_its_page_gets_the_full_page_box() -> None:
     for citation in (_citation_from_chunk(1, stored), _brief_ref_payload(stored)):
         assert citation["bboxes"] == [{"page": 1, "x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}]
         assert chunk.text.startswith(citation["text_snippet"])
+
+
+def test_verifier_still_reads_the_heading_in_a_citation_stored_before_0_36_2() -> None:
+    # Codex r2 #2: a stored citation carries its heading only in the snippet's
+    # "{section_title}: " prefix; continuation re-verifies it. It must still count.
+    answer = "Section 4.2 covers the power grid of the valley."
+    body = "Turbines spin beside the Selka weir. The generator powers local homes."
+    legacy = {
+        "ref_index": 1,
+        "chunk_id": str(uuid.uuid4()),
+        "offset": len(answer),
+        "text_snippet": f"{SECTION}: {body}"[:100],
+        "context_text": f"[page 3] {body}",
+    }
+    fresh = _citation_payload(1, _chat_chunk(text=body), len(answer))
+
+    for citations in ([legacy], [fresh], [legacy, fresh]):
+        report = claim_verifier_service.verify(answer, citations, {1}, retrieved_count=1)
+        assert report.numeric_mismatch_citation_count == 0
+        assert report.low_overlap_citation_count == 0

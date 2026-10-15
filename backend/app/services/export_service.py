@@ -95,8 +95,13 @@ def _prepare_export(messages: List[Any], *, markdown: bool = False) -> tuple[lis
         def marker(c):
             # Same identity as the frontend's citationSourceKey: a text hit is
             # its chunk (its snippet lost the section-title prefix in 0.36.2);
-            # table and summary hits share an anchor chunk and keep the snippet.
-            text_hit = bool(c.get("chunk_id")) and str(c.get("retrieval_modality") or "text") == "text"
+            # table and summary hits share an anchor chunk and keep the snippet
+            # (a table_id marks a table hit even where a record has no modality).
+            text_hit = (
+                bool(c.get("chunk_id"))
+                and not c.get("table_id")
+                and str(c.get("retrieval_modality") or "text") == "text"
+            )
             key = tuple(str(c.get(field) or "") for field in (
                 "ref_index", "document_id", "document_filename", "chunk_id",
                 "page", "page_end",

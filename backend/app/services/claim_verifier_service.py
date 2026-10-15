@@ -11,6 +11,8 @@ _NUMBER_RE = re.compile(r"\b\d+(?:[.,]\d+)*(?:%|x|X)?\b")
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 _BULLET_OR_HEADING_RE = re.compile(r"^\s*(?:#{1,6}\s+|\*\*[^*]+\*\*:?\s*$)")
 _NUMBERED_LIST_PREFIX_RE = re.compile(r"^\s*\d{1,3}[.)]\s+")
+# chat_service._citation_payload prefixes context_text with the cited page(s).
+_CONTEXT_PAGE_PREFIX_RE = re.compile(r"^\[page \d+(?:–\d+)?\] ")
 _GENERIC_WORDS = {
     "about",
     "also",
@@ -154,13 +156,20 @@ def _unit_for_offset(units: list[ClaimUnit], offset: int) -> ClaimUnit | None:
 
 
 def _citation_context(citation: dict) -> str:
-    # The snippet is the start of the same chunk text that table_context and
-    # context_text carry in full. Read it only when neither is present: its cut
-    # can split a number ("9000" -> "900") into evidence the source never had.
-    full = [citation.get("table_context"), citation.get("context_text")]
-    snippet = None if any(str(part or "").strip() for part in full) else citation.get("text_snippet")
-    parts = [*full, snippet, citation.get("section_title")]
-    return " ".join(str(part or "") for part in parts)
+    # Since 0.36.2 the snippet is the start of the chunk text that table_context
+    # and context_text carry too, cut at 100 characters: as evidence it adds only
+    # its cut, which can split a number ("9000" -> "900") into evidence the
+    # source never had. So it is skipped when one of them starts with it. Any
+    # other snippet still counts: a citation without those fields, or one stored
+    # before 0.36.2, whose "{section_title}: " prefix is its only copy of the
+    # heading (no section_title field).
+    full = [str(citation.get("table_context") or ""), str(citation.get("context_text") or "")]
+    snippet = str(citation.get("text_snippet") or "")
+    bodies = (full[0], _CONTEXT_PAGE_PREFIX_RE.sub("", full[1], count=1))
+    if snippet and any(body.startswith(snippet) for body in bodies):
+        snippet = ""
+    parts = [*full, snippet, str(citation.get("section_title") or "")]
+    return " ".join(parts)
 
 
 def _safe_int(value: object, default: int = 0) -> int:

@@ -82,6 +82,7 @@ export function mapCitationPayload(c: any): Citation {
     confidenceScore: typeof c.confidence_score === 'number' ? c.confidence_score : (typeof c.confidenceScore === 'number' ? c.confidenceScore : undefined),
     contextText: typeof c.context_text === 'string' ? c.context_text : (typeof c.contextText === 'string' ? c.contextText : undefined),
     retrievalModality: typeof c.retrieval_modality === 'string' ? c.retrieval_modality : (typeof c.retrievalModality === 'string' ? c.retrievalModality : undefined),
+    ...(typeof (c.table_id ?? c.tableId) === 'string' && (c.table_id ?? c.tableId) ? { tableId: c.table_id ?? c.tableId } : {}),
   };
 }
 

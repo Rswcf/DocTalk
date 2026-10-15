@@ -451,5 +451,76 @@
       "plant.pdf",
       "plant.pdf"
     ]
+  },
+  {
+    "name": "a table hit stored without retrieval_modality is still not merged with a text hit",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Output is 900 kW. More.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 17,
+            "page": 3,
+            "chunk_id": "anchor",
+            "document_filename": "plant.pdf",
+            "text_snippet": "The plant reports its output by site."
+          },
+          {
+            "ref_index": 1,
+            "offset": 17,
+            "page": 3,
+            "chunk_id": "anchor",
+            "document_filename": "plant.pdf",
+            "table_id": "t1",
+            "text_snippet": "Table p.3 #1 (camelot, confidence 0.90)"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Output is 900 kW.[^1][^2] More."
+    ],
+    "sources": [
+      "plant.pdf",
+      "plant.pdf"
+    ]
+  },
+  {
+    "name": "two tables on one anchor chunk stored without retrieval_modality stay two sources",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Output is 900 kW. More.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 17,
+            "page": 3,
+            "chunk_id": "anchor",
+            "document_filename": "plant.pdf",
+            "table_id": "t1",
+            "text_snippet": "Table p.3 #1 (camelot, confidence 0.90)"
+          },
+          {
+            "ref_index": 1,
+            "offset": 17,
+            "page": 3,
+            "chunk_id": "anchor",
+            "document_filename": "plant.pdf",
+            "table_id": "t2",
+            "text_snippet": "Table p.3 #2 (camelot, confidence 0.88)"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Output is 900 kW.[^1][^2] More."
+    ],
+    "sources": [
+      "plant.pdf",
+      "plant.pdf"
+    ]
   }
 ]

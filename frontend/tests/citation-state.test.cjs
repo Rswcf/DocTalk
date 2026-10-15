@@ -26,7 +26,7 @@ test('honest page ranges retain both pages and repeated clicks create new naviga
  assert.equal(store.getState().scrollNonce,nonce+1);
  assert.equal(store.getState().citationTarget.messageId,undefined,'quote/tool navigation cannot retain old answer origin');
 });
-test('a map-reduce summary citation is never searched for in the page text',()=>{
+test('a map-reduce summary citation never sets highlightSnippet (its snippet is coverage text)',()=>{
  store.getState().navigateToCitation(citation);
  assert.equal(store.getState().highlightSnippet,'Source');
  store.getState().navigateToCitation({...citation,retrievalModality:'summary',textSnippet:'Section group 1 map summary coverage:\n- target sections: Introduction and Background of the Study'});
