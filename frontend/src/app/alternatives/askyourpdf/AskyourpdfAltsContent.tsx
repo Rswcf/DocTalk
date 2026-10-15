@@ -23,7 +23,7 @@ export default async function AskyourpdfAltsContent({ locale }: { locale: string
 
   const quickCompare = [
     { name: t('altsAskyourpdf.tableFileFormats'), doctalk: t('altsAskyourpdf.table7Formats'), competitor: t('altsAskyourpdf.tablePdfOnly') },
-    { name: t('altsAskyourpdf.tableCitationHighlighting'), doctalk: true, competitor: t('comparison.linksToPage') },
+    { name: t('altsAskyourpdf.tableCitationHighlighting'), doctalk: true, competitor: t('comparison.vendorSaysYes') },
     { name: t('altsAskyourpdf.tableLanguages'), doctalk: '11', competitor: t('comparison.notVerified') },
     { name: t('altsAskyourpdf.tableFreeTier'), doctalk: t('altsAskyourpdf.tableFreeTierDoctalk'), competitor: t('altsAskyourpdf.tableFreeTierCompetitor') },
     { name: t('altsAskyourpdf.tableStartingPrice'), doctalk: '$9.99/mo', competitor: t('altsAskyourpdf.tableStartingPriceCompetitor') },

@@ -2,7 +2,7 @@
 title: "7 Best AI PDF Tools in 2026: A Detailed Comparison"
 description: "The top AI PDF chat tools of 2026 compared on formats, citations and current pricing: DocTalk, ChatPDF, AskYourPDF, Gemini Notebook (formerly NotebookLM), Humata, PDF.ai and ChatDOC. Prices checked 30 September 2026."
 date: "2026-02-18"
-updated: "2026-10-14"
+updated: "2026-10-15"
 author: "DocTalk Team"
 category: "comparisons"
 tags: ["comparison", "ai tools", "pdf", "chatpdf", "notebooklm", "review"]
@@ -31,7 +31,7 @@ We compared each tool on five points:
 4. **Free tier and price** — what you can do for free, and what paid plans cost.
 5. **Extras** — team features, browser extensions, audio summaries and so on.
 
-Prices, limits and supported formats come from each vendor's own pricing and help pages, read on 30 September 2026; formats and citation features were checked again on 10 October 2026. Where we relied on third-party reviews instead, we say so. Plans change often, so check the vendor before you buy.
+Prices, limits and supported formats come from each vendor's own pricing and help pages, read on 30 September 2026; formats and citation features were checked again on 10 October 2026, and AskYourPDF's prices and features on 15 October 2026. Where we relied on third-party reviews instead, we say so. Plans change often, so check the vendor before you buy.
 
 ## The 7 Best AI PDF Tools
 
@@ -80,7 +80,7 @@ For a closer look, see [DocTalk vs ChatPDF](/compare/chatpdf).
 
 ### 3. [AskYourPDF](https://askyourpdf.com) — Best for Researchers
 
-**What it does:** document chat for academic workflows, with an API. It runs on the web, iOS and Android, and as a Chrome extension, a ChatGPT GPT and a Zotero plugin.
+**What it does:** document chat for academic workflows, with an API. It runs on the web, iOS and Android, and as a Chrome extension, a ChatGPT GPT and a Zotero plugin. Its own pages list different sets of formats: its PDF AI and document-chat pages list DOCX, EPUB, PPTX, RTF, TXT and CSV files, while its chat-with-PDF page lists DOCX, EPUB and TXT files or a pasted URL.
 
 **Why it stands out:** paid plans allow very long documents, and a Zotero plugin brings it to researchers who keep their papers there.
 
@@ -88,12 +88,13 @@ For a closer look, see [DocTalk vs ChatPDF](/compare/chatpdf).
 - Chrome extension and Zotero plugin
 - API for developers
 - Up to 2,500 pages per document on Premium and 6,000 on Pro
+- AskYourPDF says each answer cites "the exact paragraph or page", that clicking the citation jumps to the source, and that the source is highlighted
 
-**Pricing:** Free: 1 document a day (100 pages, 15 MB), 50 questions a day. Premium: $11.99/month. Pro: $14.99/month. Enterprise: custom.
+**Pricing:** Free: 1 document a day (100 pages, 15 MB), 50 questions a day. Premium: $14.99/month, or $11.99/month billed yearly. Pro: $19.99/month, or $14.99/month billed yearly. Enterprise: custom.
 
 **Best for:** PhD students and researchers with large paper collections.
 
-**Limitations:** tight free plan; each answer cites the page it came from and you click the citation to check it, but AskYourPDF does not say it highlights the passage.
+**Limitations:** tight free plan, and no Excel files: its pages list CSV but not .xlsx.
 
 ### 4. [Gemini Notebook](https://notebook.google) (formerly NotebookLM) — Best Free Option
 
@@ -168,18 +169,18 @@ See our [DocTalk vs NotebookLM](/compare/notebooklm) comparison.
 
 ## Master Comparison Table
 
-Checked 30 September 2026 on each vendor's own site unless noted; formats and citation features checked again 10 October 2026.
+Checked 30 September 2026 on each vendor's own site unless noted; formats and citation features checked again 10 October 2026, and AskYourPDF 15 October 2026.
 
 | Feature | DocTalk | ChatPDF | AskYourPDF | Gemini Notebook | Humata | PDF.ai | ChatDOC |
 |---|---|---|---|---|---|---|---|
 | **PDF** | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | **Word** | Yes | Yes | Yes | Yes | —¹ | No | Pro |
-| **PowerPoint** | Yes | Yes | — | Yes | —¹ | No | — |
-| **Excel** | Yes | No | No | Sheets/CSV | —¹ | No | — |
+| **PowerPoint** | Yes | Yes | Yes | Yes | —¹ | No | — |
+| **Excel** | Yes | No | CSV | Sheets/CSV | —¹ | No | — |
 | **Web URL** | Yes | Yes | Yes | Yes | — | No | Pro |
-| **How you check** | Passage highlighted | Scrolls to source | Page citation, click to check | Inline citation, jumps to the quote | Cited links to files; "Highlights citations" (unspecified) | Cited sources | Page number, click to jump |
+| **How you check** | Passage highlighted | Scrolls to source | Paragraph or page cited; vendor says a click jumps there and highlights it | Inline citation, jumps to the quote | Cited links to files; "Highlights citations" (unspecified) | Cited sources | Page number, click to jump |
 | **Free tier** | 500 starter, then 300/mo | 2 docs/day | 1 doc/day | 100 notebooks | 60 pages/mo | 1 upload/mo | 5 files/day (homepage; guide/FAQ say 2/day) |
-| **Paid from** | $9.99/mo | Not published | $11.99/mo | Google AI plans | $9.99/mo | $10/mo (yearly) | $8.99/30 days |
+| **Paid from** | $9.99/mo | Not published | $11.99/mo (yearly) | Google AI plans | $9.99/mo | $10/mo (yearly) | $8.99/30 days |
 | **No-signup demo** | Yes | — | — | — | — | — | — |
 
 ¹ From third-party reviews, not the vendor's own page. "—" means we could not confirm it either way.

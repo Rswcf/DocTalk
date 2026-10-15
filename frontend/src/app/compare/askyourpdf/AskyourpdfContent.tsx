@@ -21,7 +21,7 @@ export default async function AskyourpdfContent({ locale }: { locale: string }) 
 
   const features = [
     { name: t('compareAskyourpdf.featureSupportedFormats'), doctalk: t('compareAskyourpdf.featureSupportedFormatsDocTalk'), competitor: t('compareAskyourpdf.featureSupportedFormatsCompetitor') },
-    { name: t('compareAskyourpdf.featureCitationHighlighting'), doctalk: true, competitor: t('comparison.linksToPage') },
+    { name: t('compareAskyourpdf.featureCitationHighlighting'), doctalk: true, competitor: t('comparison.vendorSaysYes') },
     { name: t('compareAskyourpdf.featureChromeExtension'), doctalk: false, competitor: true },
     { name: t('compareAskyourpdf.featureZoteroPlugin'), doctalk: false, competitor: true },
     { name: t('compareAskyourpdf.featureApiAccess'), doctalk: false, competitor: true },

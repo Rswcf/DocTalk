@@ -2,7 +2,7 @@
 title: "7 Best ChatPDF Alternatives in 2026 (Free and Paid)"
 description: "ChatPDF alternatives compared on formats, citations and current pricing: DocTalk, AskYourPDF, PDF.ai, Humata, Gemini Notebook (formerly NotebookLM), Consensus and Claude. Prices checked 30 September 2026."
 date: "2026-03-18"
-updated: "2026-10-14"
+updated: "2026-10-15"
 author: "DocTalk Team"
 category: "comparisons"
 tags: ["chatpdf", "comparison", "alternatives", "ai tools", "pdf", "document chat"]
@@ -22,7 +22,7 @@ keywords: ["chatpdf alternative", "chatpdf alternatives 2026", "best chatpdf alt
 
 ChatPDF introduced millions of people to a simple idea in 2023: upload a PDF, ask questions, get answers. It is still a good tool for that. This guide compares seven alternatives on the things that decide daily use — which files they read, how you check an answer, the free tier, and what you pay.
 
-**How we compiled this:** every price and limit below comes from the vendor's own pricing or help page, read on 30 September 2026, unless we say otherwise; formats and citation features were checked again on 10 October 2026. Plans change often, so check the vendor's page before you buy.
+**How we compiled this:** every price and limit below comes from the vendor's own pricing or help page, read on 30 September 2026, unless we say otherwise; formats and citation features were checked again on 10 October 2026, and AskYourPDF's prices and features on 15 October 2026. Plans change often, so check the vendor's page before you buy.
 
 ## Why People Look for ChatPDF Alternatives
 
@@ -64,7 +64,7 @@ If you only need quick answers from a few files a day, ChatPDF may still be the 
 
 ### 2. AskYourPDF — Best for Research Integration
 
-[AskYourPDF](https://askyourpdf.com) began as a ChatGPT plugin and is now a standalone app and API. It runs on the web, iOS and Android, and as a Chrome extension, a ChatGPT GPT and a Zotero plugin.
+[AskYourPDF](https://askyourpdf.com) is a standalone app with a developer API. It runs on the web, iOS and Android, and as a Chrome extension, a ChatGPT GPT and a Zotero plugin. Its own pages list different sets of formats: its PDF AI and document-chat pages list DOCX, EPUB, PPTX, RTF, TXT and CSV files, while its chat-with-PDF page lists DOCX, EPUB and TXT files or a pasted URL.
 
 **What sets it apart:** very large page allowances on paid plans and a Zotero plugin for researchers.
 
@@ -72,12 +72,13 @@ If you only need quick answers from a few files a day, ChatPDF may still be the 
 - Zotero plugin and Chrome extension
 - Developer API
 - Very large page allowances on paid plans (2,500 pages per document on Premium, 6,000 on Pro)
+- AskYourPDF says each answer cites "the exact paragraph or page", that clicking the citation jumps to the source, and that the source is highlighted
 
 **Cons:**
 - Tight free plan: 1 document a day, up to 100 pages and 15 MB, 50 questions a day
-- Each answer cites the page it came from and you click the citation to check it; AskYourPDF does not say it highlights the passage
+- No Excel files: its pages list CSV but not .xlsx
 
-**Pricing:** Free (limits above). Premium: $11.99/month. Pro: $14.99/month. Enterprise: custom.
+**Pricing:** Free (limits above). Premium: $14.99/month, or $11.99/month billed yearly. Pro: $19.99/month, or $14.99/month billed yearly. Enterprise: custom.
 
 **Best for:** Zotero users and heavy PDF readers. See our [DocTalk vs AskYourPDF comparison](/compare/askyourpdf).
 
@@ -187,13 +188,13 @@ People searching for "Chatty PDF" are often looking for ChatPDF, but [ChattyPDF]
 
 ## Comparison Table
 
-Prices and limits as published by each vendor, checked 30 September 2026; formats and citation features checked again 10 October 2026.
+Prices and limits as published by each vendor, checked 30 September 2026; formats and citation features checked again 10 October 2026, and AskYourPDF 15 October 2026.
 
 | Tool | Reads | How you check an answer | Free tier | Paid from |
 |---|---|---|---|---|
 | **DocTalk** | PDF, DOCX, PPTX, XLSX, TXT, MD, URL | Click citation → passage highlighted; machine-checked quotes with page | 500 starter credits, then 300/mo | $9.99/mo |
 | **ChatPDF** | PDF, DOC/DOCX, PPT/PPTX, MD, TXT | Clickable citations that scroll to the source | 2 documents/day | Not published |
-| **AskYourPDF** | PDF, DOCX, EPUB, TXT, URL | Page citation, click to check | 1 doc/day, 50 questions | $11.99/mo |
+| **AskYourPDF** | PDF, DOCX, EPUB, PPTX, RTF, TXT, CSV, URL | Paragraph or page cited; vendor says a click jumps there and highlights it | 1 doc/day, 50 questions | $11.99/mo (yearly) |
 | **PDF.ai** | PDF | Cited sources | 1 upload/mo, 100 questions | $10/mo (yearly) |
 | **Humata** | Uploaded files | Links to cited source files | 60 pages/mo | $9.99/mo |
 | **Gemini Notebook** | Docs, PDF, PPTX, Sheets/CSV, web, YouTube, audio… | Inline citations; select one to jump to the quote | 100 notebooks, 50 sources each | Google AI plans |

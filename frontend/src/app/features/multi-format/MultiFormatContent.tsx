@@ -106,15 +106,19 @@ export default async function MultiFormatContent({ locale }: { locale: string })
   // format list omits the format; anything else is "Not verified".
   // Sources: .collab/reviews/2026-10-10-step5-page-citations/vendor-evidence.md,
   // .collab/reviews/2026-10-01-listicle-refresh/competitor-facts-2026-09-30.md.
+  // AskYourPDF (re-read 2026-10-15, .collab/reviews/2026-10-14-notebooklm-askyourpdf/evidence.md):
+  // its /pdf-ai and /chat-with-documents pages list PPTX (its /chat-with-pdf page
+  // does not), no page lists .xlsx, and /pdf-ai says the cited source is
+  // highlighted, which the table shows as a vendor claim, not as a checkmark.
   const notVerified = t('comparison.notVerified');
   const comparisonRows = [
     { format: t('featuresMultiFormat.compPdf'), doctalk: true, chatpdf: true, askyourpdf: true, notebooklm: true },
     { format: t('featuresMultiFormat.compDocx'), doctalk: true, chatpdf: true, askyourpdf: true, notebooklm: true },
-    { format: t('featuresMultiFormat.compPptx'), doctalk: true, chatpdf: true, askyourpdf: false, notebooklm: true },
+    { format: t('featuresMultiFormat.compPptx'), doctalk: true, chatpdf: true, askyourpdf: true, notebooklm: true },
     { format: t('featuresMultiFormat.compXlsx'), doctalk: true, chatpdf: false, askyourpdf: false, notebooklm: false },
     { format: t('featuresMultiFormat.compTxtMd'), doctalk: true, chatpdf: true, askyourpdf: 'TXT', notebooklm: true },
     { format: t('featuresMultiFormat.compUrl'), doctalk: true, chatpdf: true, askyourpdf: true, notebooklm: true },
-    { format: t('featuresMultiFormat.compCitationHighlight'), doctalk: true, chatpdf: notVerified, askyourpdf: notVerified, notebooklm: notVerified },
+    { format: t('featuresMultiFormat.compCitationHighlight'), doctalk: true, chatpdf: notVerified, askyourpdf: t('comparison.vendorSaysYes'), notebooklm: notVerified },
   ];
 
   const faqItems = [

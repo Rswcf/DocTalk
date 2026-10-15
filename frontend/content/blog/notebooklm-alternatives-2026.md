@@ -2,7 +2,7 @@
 title: "5 Best NotebookLM Alternatives in 2026"
 description: "NotebookLM is now Gemini Notebook. Five alternatives compared on formats, how you check an answer, and current pricing: DocTalk, ChatPDF, AskYourPDF, Humata and PDF.ai. Prices checked 30 September 2026."
 date: "2026-03-18"
-updated: "2026-10-14"
+updated: "2026-10-15"
 author: "DocTalk Team"
 category: "comparisons"
 tags: ["notebooklm", "gemini notebook", "alternatives", "comparison", "ai tools", "google", "document chat"]
@@ -18,7 +18,7 @@ keywords: ["notebooklm alternative", "notebooklm alternatives 2026", "google not
 > - **ChatPDF** reads Word, PowerPoint, Markdown and text files as well as PDFs, and its citations scroll to the source.
 > - **AskYourPDF**, **Humata** and **PDF.ai** changed their plans; the prices below are current.
 
-**How we compiled this:** prices, limits and supported formats come from each vendor's own pricing and help pages, read on 30 September 2026; AskYourPDF's prices and features were checked again on 14 October 2026. Where we relied on third-party reviews, we say so. Plans change often, so check before you buy.
+**How we compiled this:** prices, limits and supported formats come from each vendor's own pricing and help pages, read on 30 September 2026; AskYourPDF's prices and features were checked again on 14 October 2026, and the formats and citation features of PDF.ai, Humata and Gemini Notebook on 15 October 2026. Where we relied on third-party reviews, we say so. Plans change often, so check before you buy.
 
 ## What Gemini Notebook (NotebookLM) Does Well
 
@@ -40,7 +40,7 @@ Any replacement should match these strengths, or have a good reason not to:
 
 **Excel files.** There is no native .xlsx upload; you work through Google Sheets or CSV instead.
 
-**Checking an answer in the original layout.** Gemini Notebook cites the source text inline. If you need to see the passage highlighted on the page of the original PDF — for tables, figures, legal clauses or a thesis quote — a document-first tool fits better.
+**Checking an answer in the original layout.** Gemini Notebook cites the source text inline, and selecting a citation takes you to the quote in context. If you need to see the passage highlighted on the page of the original PDF — for tables, figures, legal clauses or a thesis quote — a document-first tool fits better.
 
 **Quotes you can reuse with a page number.** For academic or legal writing you may want quotes checked against the source and tied to the page they come from.
 
@@ -104,7 +104,7 @@ Any replacement should match these strengths, or have a good reason not to:
 
 **Key differences:**
 - Team plan with permissions and OCR
-- Answers link to the cited files
+- Answers link to the cited files; Humata says it "highlights citations" but does not say what is highlighted or where
 - Free plan: 60 pages a month
 
 **Pricing:** Free: 60 pages/month. Expert: $9.99/month (3 users, 500 pages/month). Team: $49 per user per month (5,000 pages/month). Enterprise: custom.
@@ -119,7 +119,7 @@ Any replacement should match these strengths, or have a good reason not to:
 
 **Key differences:**
 - Simple split-screen viewer and chat
-- PDF-focused (third-party reviews report no native Word or PowerPoint chat)
+- PDF only: "You can only upload PDF (.pdf) files at the moment" (PDF.ai FAQ)
 - Free plan: 1 upload and 100 questions a month
 
 **Pricing:** Hobby: free. Pro: $17/month, or $10/month billed yearly. Ultimate: $27/month, or $20/month yearly. Enterprise: $37 per user per month, or $30 yearly.
@@ -128,15 +128,15 @@ Any replacement should match these strengths, or have a good reason not to:
 
 ## Comparison Table
 
-Checked 30 September 2026 on each vendor's own site unless marked; AskYourPDF's prices and features checked again 14 October 2026.
+Checked 30 September 2026 on each vendor's own site unless marked; AskYourPDF's prices and features checked again 14 October 2026; PDF.ai's, Humata's and Gemini Notebook's formats and citation features 15 October 2026.
 
 | Feature | Gemini Notebook | DocTalk | ChatPDF | AskYourPDF | Humata | PDF.ai |
 |---|---|---|---|---|---|---|
 | **Free tier** | 100 notebooks, 50 sources each | 500 starter, then 300 credits/mo | 2 docs/day | 1 doc/day | 60 pages/mo | 1 upload/mo |
 | **Paid from** | Google AI plans | $9.99/mo | Not published | $11.99/mo (yearly) | $9.99/mo | $10/mo (yearly) |
-| **Word / PowerPoint** | Yes / Yes | Yes / Yes | Yes / Yes | Yes / Yes | —¹ | No¹ |
+| **Word / PowerPoint** | Yes / Yes | Yes / Yes | Yes / Yes | Yes / Yes | —¹ | No / No |
 | **Excel** | Sheets or CSV | Native .xlsx | No | CSV | —¹ | No |
-| **How you check an answer** | Inline citation | Passage highlighted in the file | Scrolls to source | Paragraph or page cited; vendor says a click jumps there and highlights it | Link to file | Text reference¹ |
+| **How you check an answer** | Inline citation, jumps to the quote | Passage highlighted in the file | Scrolls to source | Paragraph or page cited; vendor says a click jumps there and highlights it | Cited links to files; "Highlights citations" (unspecified) | Cited sources |
 | **Audio overviews** | Yes | No | No | Separate extension (PodcastAnywhere) | No | No |
 | **Google account needed** | Yes | No | No | No | No | No |
 
@@ -171,7 +171,7 @@ If you need free and many sources, Gemini Notebook itself is hard to beat. For v
 Yes. Gemini Notebook (formerly NotebookLM) accepts Word and PowerPoint files, but not native .xlsx — use Google Sheets or CSV for spreadsheets.
 
 ### Which NotebookLM alternative shows the source passage in the original document?
-DocTalk: click a citation and the document scrolls to the passage and highlights it. When DocTalk cannot pinpoint the passage, it shows the cited page instead. ChatPDF's citations also scroll to the source in a side-by-side view.
+DocTalk: click a citation and the document scrolls to the passage and highlights it. When DocTalk cannot pinpoint the passage, it shows the cited page instead. ChatPDF's citations also scroll to the source in a side-by-side view, and AskYourPDF says a click on a citation jumps to the source and highlights it.
 
 ## Final Thoughts
 

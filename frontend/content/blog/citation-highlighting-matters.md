@@ -2,7 +2,7 @@
 title: "Why Citation Highlighting Matters in AI Document Analysis"
 description: "AI tools that generate answers without source citations are a liability. Learn why citation highlighting is essential for trust, accuracy, and professional use of AI document analysis."
 date: "2026-03-18"
-updated: "2026-10-12"
+updated: "2026-10-15"
 author: "DocTalk Team"
 category: "ai-insights"
 tags: ["citations", "hallucination", "trust", "rag", "verification", "ai insights"]
@@ -121,11 +121,11 @@ A compliance officer asks about a policy document: "What are the reporting deadl
 | ChatDOC | Page number on each answer; click it to jump | Low | Yes — jumps to the section |
 | Adobe Acrobat AI Assistant | Highlights where it found the answer; page number in PDF Spaces | Low | Yes — highlighted in the document |
 | ChatPDF | Clickable citations that scroll to the source | Low | Yes — jumps to the source passage |
-| AskYourPDF | Citation back to the exact page; click to verify | Low to moderate | The page; highlighting not stated |
+| AskYourPDF | Citation to "the exact paragraph or page"; click to jump to the source | Low | Vendor says the source is highlighted |
 | Gemini Notebook (formerly NotebookLM) | Direct quotes; select one to jump to it | Low | Yes — the quote in context, no page number |
 | PDF.ai | Sources listed with each answer | Moderate | Not documented |
 
-Rows other than DocTalk describe what each vendor documents on its own pages, checked on 10 October 2026. For the quotes and links, see [which AI PDF readers cite the page number for every answer](/blog/ai-pdf-readers-page-number-citations-2026).
+Rows other than DocTalk describe what each vendor documents on its own pages, checked on 10 October 2026 (AskYourPDF on 15 October 2026). For the quotes and links, see [which AI PDF readers cite the page number for every answer](/blog/ai-pdf-readers-page-number-citations-2026).
 
 Click-to-navigate citations are now common. The differences that remain are whether the exact passage is highlighted, and whether the citation shows a page number you can put in a reference. A jump without a highlight still leaves you scanning; a quote without a page number still leaves you searching the PDF before you can cite it. See our [ChatPDF comparison](/compare/chatpdf) for a more detailed analysis.
 
