@@ -74,7 +74,7 @@ prices, formats, product names) 0 issues.
   (present/absent phrases, `dateModified` 2026-10-15 on the six posts); built zh/ja/ko/pt/hi `/compare/askyourpdf`
   show the new strings and none of the old.
 - Locale parity: 32 keys per locale changed or added in all 11; executor token check 0 issues.
-- `indexnow-urls.txt`: 80 URLs (it/ar/hi sub-pages left out: noindex).
+- `indexnow-urls.txt`: 82 URLs (it/ar/hi sub-pages left out: noindex).
 
 ## Not done (follow-ups)
 

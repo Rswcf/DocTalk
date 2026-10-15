@@ -79,3 +79,5 @@
 /blog/chat-with-excel-spreadsheet-ai
 /blog
 /blog/category/comparisons
+/blog/category/guides
+/blog/category/ai-insights
