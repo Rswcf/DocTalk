@@ -19,14 +19,17 @@ test('a snippet that is the chunk text matches where the passage starts', () => 
   assert.deepEqual(findSnippetInPage(PAGE, snippet), [at('Power lines'), snippet.length]);
 });
 
-test('a stored legacy "{section_title}: " snippet still matches the passage, not the title', () => {
-  const match = findSnippetInPage(PAGE, 'Power Grid: Power lines run on wooden poles along the valley road and are trimmed clear of b');
-  assert.equal(match[0], at('Power lines'));
-});
-
-test('a legacy section title that itself contains ": " is skipped too', () => {
-  const match = findSnippetInPage(PAGE, 'Chapter 4: Power Grid: The turbines produce about 900 kilowatts at peak flow in May.');
-  assert.equal(match[0], at('The turbines produce'));
+test('a stored legacy "{section_title}: " snippet is not guessed at', () => {
+  // Citations stored before 0.36.2 keep the title prefix. Cutting at a ": "
+  // can pick a tail that sits on an earlier, unrelated line (Codex r1 #4,
+  // 2026-10-15): this exact case matched [9, 52] while the chunk starts at 63.
+  const tail = 'Payment is due within sixty days of the invoice date.';
+  const body = 'The Seller requires immediate notice. ' + tail;
+  const page = 'Billing: ' + tail + '\n' + body;
+  assert.equal(findSnippetInPage(page, ('Terms: ' + tail + ': ' + body).slice(0, 100)), null);
+  assert.equal(findSnippetInPage(PAGE, 'Power Grid: Power lines run on wooden poles along the valley road and are trimmed clear of b'), null);
+  // The same chunk, cited as 0.36.2 sends it, lands on the chunk.
+  assert.deepEqual(findSnippetInPage(page, body.slice(0, 100)), [page.indexOf(body), body.length]);
 });
 
 test('a snippet whose own text contains ": " matches whole when the page has it', () => {
@@ -48,7 +51,7 @@ test('the old " — " title separator is still understood', () => {
   assert.equal(match[0], at('The turbines produce'));
 });
 
-test('no match, empty input and too-short remainders return null', () => {
+test('no match and empty input return null', () => {
   assert.equal(findSnippetInPage(PAGE, 'Water Supply: The northern reservoir holds 4.2 million litres.'), null);
   assert.equal(findSnippetInPage(PAGE, ''), null);
   assert.equal(findSnippetInPage('', 'Power lines run on wooden poles'), null);

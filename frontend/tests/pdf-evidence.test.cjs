@@ -68,3 +68,12 @@ test('coarse table markers join at the outer margin, without broadening match re
  assert.deepEqual(regions,before);
  assert.equal(findEvidenceRange([run('Uncited gap.',.42,.3,.03)],'Uncited gap.',regions),null);
 });
+test('a native page whose one block covers the page searches the chunk snippet, whole and unique only',()=>{
+ // _normalize_bbox clamps a block that covers or overflows its page to (0,0,1,1);
+ // PageWithHighlights then matches highlightSnippet (chunk text since 0.36.2).
+ const runs=[run('The turbines produce about 900 kilowatts at peak flow in May.'),run('Power lines run on wooden poles.',.1,.13)];
+ assert.ok(findEvidenceRange(runs,'The turbines produce about 900 kilowatts at peak flow in May.',[]));
+ assert.equal(findEvidenceRange(runs,'The turbines produce about 900 kilowatts at peak fl',[]),null);
+ assert.equal(findEvidenceRange(runs,'4.2 Power Grid: The turbines produce about 900 kilowatts',[]),null);
+ assert.equal(groupEvidenceRegions([{x:0,y:0,w:1,h:1,page:1}]).length,0);
+});

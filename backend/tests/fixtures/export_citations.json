@@ -382,5 +382,74 @@
       "one.pdf",
       "two.pdf"
     ]
+  },
+  {
+    "name": "continued across 0.36.2: one chunk cited with and without the section-title prefix",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Lines run on poles. More.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 19,
+            "page": 3,
+            "chunk_id": "grid",
+            "document_filename": "grid.pdf",
+            "text_snippet": "Power Grid: Power lines run on wooden poles"
+          },
+          {
+            "ref_index": 1,
+            "offset": 19,
+            "page": 3,
+            "chunk_id": "grid",
+            "document_filename": "grid.pdf",
+            "text_snippet": "Power lines run on wooden poles"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Lines run on poles.[^1] More."
+    ],
+    "sources": [
+      "grid.pdf"
+    ]
+  },
+  {
+    "name": "a table hit and a text hit on one anchor chunk stay two sources",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "Output is 900 kW. More.",
+        "citations": [
+          {
+            "ref_index": 1,
+            "offset": 17,
+            "page": 3,
+            "chunk_id": "anchor",
+            "document_filename": "plant.pdf",
+            "text_snippet": "The plant reports its output by site."
+          },
+          {
+            "ref_index": 1,
+            "offset": 17,
+            "page": 3,
+            "chunk_id": "anchor",
+            "document_filename": "plant.pdf",
+            "retrieval_modality": "table",
+            "table_id": "t1",
+            "text_snippet": "Table p.3 #1 (camelot, confidence 0.90)"
+          }
+        ]
+      }
+    ],
+    "answers": [
+      "Output is 900 kW.[^1][^2] More."
+    ],
+    "sources": [
+      "plant.pdf",
+      "plant.pdf"
+    ]
   }
 ]

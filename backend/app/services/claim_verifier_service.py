@@ -154,12 +154,12 @@ def _unit_for_offset(units: list[ClaimUnit], offset: int) -> ClaimUnit | None:
 
 
 def _citation_context(citation: dict) -> str:
-    parts = [
-        citation.get("table_context"),
-        citation.get("context_text"),
-        citation.get("text_snippet"),
-        citation.get("section_title"),
-    ]
+    # The snippet is the start of the same chunk text that table_context and
+    # context_text carry in full. Read it only when neither is present: its cut
+    # can split a number ("9000" -> "900") into evidence the source never had.
+    full = [citation.get("table_context"), citation.get("context_text")]
+    snippet = None if any(str(part or "").strip() for part in full) else citation.get("text_snippet")
+    parts = [*full, snippet, citation.get("section_title")]
     return " ".join(str(part or "") for part in parts)
 
 

@@ -110,3 +110,55 @@ def test_claim_verifier_still_counts_the_section_title_as_evidence() -> None:
 
     assert report.numeric_mismatch_citation_count == 0
     assert report.low_overlap_citation_count == 0
+
+
+# Ends with "...was" padded so that the 100-character snippet cut falls inside "9000".
+CUT_TEXT = (
+    "The turbines supply the school and clinic. Their total rated generating output was".ljust(97)
+    + "9000 kilowatts."
+)
+
+
+def test_verifier_does_not_read_a_number_split_by_the_snippet_cut() -> None:
+    # Codex r1 #6 (2026-10-15): text_snippet = chunk.text[:100] ends in "900" here.
+    # context_text holds the whole number, so "900 kW" must not pass as supported.
+    answer = "The turbine output is 900 kilowatts."
+    citation = _citation_payload(1, _chat_chunk(text=CUT_TEXT, section_title=""), len(answer))
+    assert citation["text_snippet"].endswith("900")
+
+    report = claim_verifier_service.verify(answer, [citation], {1}, retrieved_count=1)
+
+    assert report.numeric_mismatch_citation_count == 1
+
+
+def test_verifier_still_supports_the_whole_number_from_context_text() -> None:
+    answer = "The turbine output is 9000 kilowatts."
+    citation = _citation_payload(1, _chat_chunk(text=CUT_TEXT, section_title=""), len(answer))
+
+    report = claim_verifier_service.verify(answer, [citation], {1}, retrieved_count=1)
+
+    assert report.numeric_mismatch_citation_count == 0
+    assert report.low_overlap_citation_count == 0
+
+
+def test_a_native_pdf_block_covering_its_page_gets_the_full_page_box() -> None:
+    # Codex r1 #3 (2026-10-15): _normalize_bbox clamps to the page, so a block that
+    # covers its page is (0,0,1,1), the box PageWithHighlights reads as "no box" and
+    # answers with a text match of the citation's snippet. That path is reachable.
+    import fitz
+
+    from app.services.parse_service import ParseService
+
+    pdf = fitz.open()
+    page = pdf.new_page(width=228.97998046875, height=13.739999771118164)
+    page.insert_text((0, 10.75), "The turbines produce electricity for the entire valley.", fontsize=10)
+    service = ParseService()
+    chunk = service.chunk_document(service.extract_pages(pdf.tobytes()))[0]
+
+    assert {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}.items() <= chunk.bboxes[0].items()
+    stored = SimpleNamespace(id=uuid.uuid4(), document_id=uuid.uuid4(), chunk_index=0, page_start=chunk.page_start,
+                             page_end=chunk.page_end, bboxes=chunk.bboxes, text=chunk.text,
+                             section_title=chunk.section_title)
+    for citation in (_citation_from_chunk(1, stored), _brief_ref_payload(stored)):
+        assert citation["bboxes"] == [{"page": 1, "x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}]
+        assert chunk.text.startswith(citation["text_snippet"])
