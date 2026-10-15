@@ -54,6 +54,29 @@ def test_summary_citation_does_not_present_its_internal_label_as_a_section() -> 
     assert "section_title" not in payload
 
 
+def test_table_citation_does_not_present_its_table_label_as_a_section() -> None:
+    # retrieval_service labels table hits "Table p.N #k" in section_title; that is
+    # an internal label, and the verifier reads the table through table_context.
+    table_text = "Table p.3 #1 (camelot, confidence 0.90)\n| Site | Output |\n| Selka weir | 900 kW |"
+    payload = _citation_payload(
+        1,
+        _chat_chunk(text=table_text, section_title="Table p.3 #1", table_id=str(uuid.uuid4()),
+                    retrieval_modality="table"),
+        0,
+    )
+
+    assert payload["text_snippet"] == table_text[:100]
+    assert "section_title" not in payload
+    assert payload["table_context"] == table_text
+
+    answer = "The Selka weir site produces 900 kW."
+    payload["offset"] = len(answer)
+    report = claim_verifier_service.verify(answer, [payload], {1}, retrieved_count=1)
+
+    assert report.numeric_mismatch_citation_count == 0
+    assert report.low_overlap_citation_count == 0
+
+
 def test_extraction_diff_and_template_citations_have_no_section_prefix() -> None:
     chunk = Chunk(id=uuid.uuid4(), document_id=uuid.uuid4(), page_start=3, page_end=3,
                   section_title=SECTION, text=TEXT, bboxes=[])

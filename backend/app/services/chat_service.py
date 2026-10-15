@@ -273,14 +273,16 @@ def _citation_payload(
     is_summary = chunk.retrieval_modality == "summary"
     # The snippet is quoted on shared answers and exports and is searched for in
     # the reader's page text, so it is the chunk's own text only. The heading
-    # travels separately: the claim verifier still reads it as evidence.
+    # travels separately: the claim verifier still reads it as evidence. Summary
+    # and table hits carry an internal label there ("Table p.3 #1"), not a heading;
+    # a table's label is already in its table_context.
     citation_data: Dict[str, Any] = {
         "ref_index": ref_num,
         "chunk_id": str(chunk.id),
         "text_snippet": (chunk.text or "")[:100],
         "offset": offset,
     }
-    if chunk.section_title and not is_summary:
+    if chunk.section_title and not is_summary and not chunk.table_id:
         citation_data["section_title"] = chunk.section_title
     # Sentence-level focus: when the answer claim near this citation clearly maps
     # to one sentence of the chunk, attach it (verbatim) so the UI can highlight
