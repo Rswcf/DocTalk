@@ -76,6 +76,16 @@ prices, formats, product names) 0 issues.
 - Locale parity: 32 keys per locale changed or added in all 11; executor token check 0 issues.
 - `indexnow-urls.txt`: 82 URLs (it/ar/hi sub-pages left out: noindex).
 
+## Release
+
+- Frontend only (0 diff lines under backend/, version.json, infra/). main 8ce854f9 → ad2c8030 (CI 38671336665, 4/4);
+  backend /health 0.36.1 at 02:32:27Z and 02:33:00Z; stable 3faef683 → ad2c8030 at 02:33:07Z; Vercel Production success
+  02:34:30Z.
+- Live check (no-cache) four runs 02:35:07Z → 02:36:11Z, PASS all four, plus the r1 locale fixes live on zh/ja/ko/pt/hi.
+- IndexNow 02:36:16Z: 82 URLs, HTTP 200 OK.
+- Logged in `.collab/reviews/2026-09-30-seo-audit/evidence/actions-log.md` (2026-10-15 02:33:07Z) as the third
+  intervention on 2 of 3 C-9 units, with the 11-07 read notes.
+
 ## Not done (follow-ups)
 
 - `ai-pdf-readers-page-number-citations-2026.md` and `best-ai-tools-academic-research-2026.md` are frozen and were
