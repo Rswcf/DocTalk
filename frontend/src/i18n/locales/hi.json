@@ -2106,7 +2106,7 @@
   "compareAskyourpdf.verdictTitle": "निर्णय",
   "compareAskyourpdf.verdictParagraph1": "AskYourPDF ने एकीकरणों का एक व्यापक इकोसिस्टम बनाया है, जो इसे उन शोधकर्ताओं और डेवलपर्स के लिए शक्तिशाली बनाता है जो अपने कार्यप्रवाहों में दस्तावेज़ AI को एम्बेड करना चाहते हैं: एक Chrome एक्सटेंशन, एक Zotero प्लगइन, मोबाइल ऐप, एक ChatGPT GPT और एक API।",
   "compareAskyourpdf.verdictParagraph2": "DocTalk एक अलग दृष्टिकोण अपनाता है: एक वेब ऐप जो PDF, Word और PowerPoint के साथ-साथ Excel फ़ाइलें भी पढ़ता है, और आपके दस्तावेज़ में उद्धृत अंश को हाइलाइट करता है। यदि आपकी प्राथमिकता स्प्रेडशीट सहित मिश्रित दस्तावेज़ प्रारूपों से पता लगाने योग्य उत्तर प्राप्त करना है, तो DocTalk बेहतर विकल्प है।",
-  "compareAskyourpdf.verdictParagraph3": "यदि आपको Zotero, Chrome या अपने कोड के साथ एकीकरण चाहिए, तो AskYourPDF का मूल्यांकन करें। यदि आपको Excel समर्थन चाहिए, तो DocTalk बेहतर है। तुलना करने का सबसे अच्छा तरीका है",
+  "compareAskyourpdf.verdictParagraph3": "यदि आपको Zotero, Chrome या अपने कोड के साथ एकीकरण चाहिए, तो AskYourPDF का मूल्यांकन करें। यदि आपको Excel समर्थन चाहिए, तो DocTalk बेहतर है। तुलना करने के लिए,",
   "compareAskyourpdf.tryDocTalkLink": "मुफ्त में DocTalk आज़माएं",
   "compareAskyourpdf.verdictParagraph3Mid": "और उद्धरण हाइलाइटिंग को कार्रवाई में देखें। आपको हमारी इसमें भी रुचि हो सकती है",
   "compareAskyourpdf.chatpdfComparisonLink": "DocTalk बनाम ChatPDF",

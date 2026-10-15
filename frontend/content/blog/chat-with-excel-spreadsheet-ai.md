@@ -2,7 +2,7 @@
 title: "How to Analyze Excel Spreadsheets with AI: A Complete Guide"
 description: "Learn how to chat with Excel (XLSX) files using AI. Most AI document tools skip spreadsheets entirely. See how DocTalk extracts table data for cited, verifiable answers."
 date: "2026-03-18"
-updated: "2026-10-12"
+updated: "2026-10-15"
 author: "DocTalk Team"
 category: "guides"
 tags: ["excel", "xlsx", "spreadsheet", "ai chat", "tutorial", "multi-format", "data analysis"]
@@ -11,7 +11,7 @@ imageAlt: "An Excel spreadsheet being analyzed by AI with citations pointing to 
 keywords: ["analyze excel with ai", "ai spreadsheet analysis", "chat with excel ai", "xlsx ai tool", "ask ai about spreadsheet", "ai excel reader", "excel chatbot"]
 ---
 
-Here is a gap that most AI document tools quietly ignore: spreadsheets. You can find dozens of products that let you chat with a PDF. A handful support Word documents. But try uploading an Excel file to ChatPDF, AskYourPDF, or PDF.ai, and you will get an error message or a suggestion to convert to PDF first.
+Here is a gap that most AI document tools quietly ignore: spreadsheets. You can find dozens of products that let you chat with a PDF. A handful support Word documents. But try uploading an Excel file to ChatPDF or PDF.ai, and you will get an error message or a suggestion to convert to PDF first. AskYourPDF's published format lists include CSV but do not list Excel (.xlsx) files.
 
 That conversion destroys the very thing that makes spreadsheets useful — structured tabular data with rows, columns, and relationships between cells. A financial model converted to PDF is just a static image of numbers. You lose the ability to ask structured questions about the data.
 
