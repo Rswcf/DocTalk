@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { Inbox } from 'lucide-react';
-import type { BlogPost } from '../../lib/blog';
+import type { BlogPostSummary } from '../../lib/blog';
 import { useLocale } from '../../i18n';
 import { formatDateForLocale, getBlogCategoryLabel } from '../../lib/publicI18n';
 import MarketingShell from '../../components/marketing/MarketingShell';
 import EdPageHero from '../../components/marketing/EdPageHero';
 import EdSection from '../../components/marketing/EdSection';
 
-function PostCard({ post }: { post: BlogPost }) {
+function PostCard({ post }: { post: BlogPostSummary }) {
   const { locale, t } = useLocale();
 
   return (
@@ -38,7 +38,7 @@ function PostCard({ post }: { post: BlogPost }) {
 }
 
 interface BlogIndexClientProps {
-  posts: BlogPost[];
+  posts: BlogPostSummary[];
 }
 
 export default function BlogIndexClient({ posts }: BlogIndexClientProps) {

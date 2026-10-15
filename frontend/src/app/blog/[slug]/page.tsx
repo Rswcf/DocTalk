@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getAllPosts, getPostBySlug } from '../../../lib/blog';
+import { getAllPosts, getPostBySlug, getRelatedPosts } from '../../../lib/blog';
 import {
   buildFaqPage,
   buildRankedItemList,
@@ -63,10 +63,7 @@ export default function BlogPostPage({ params }: Props) {
   const post = getPostBySlug(params.slug);
   if (!post) notFound();
 
-  const allPosts = getAllPosts();
-  const related = allPosts
-    .filter((p) => p.category === post.category && p.slug !== post.slug)
-    .slice(0, 3);
+  const related = getRelatedPosts(post);
 
   const postUrl = `https://www.doctalk.site/blog/${post.slug}`;
   // FAQPage and ItemList come from the post's own markdown, so they always match

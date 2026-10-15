@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getPostsByCategory, CATEGORY_META, KNOWN_BLOG_CATEGORIES } from '../../../../lib/blog';
+import { getCategoryPostSummaries, CATEGORY_META, KNOWN_BLOG_CATEGORIES } from '../../../../lib/blog';
 import CategoryClient from './CategoryClient';
 import { buildMarketingMetadata } from '../../../../lib/seo';
 
@@ -30,7 +30,7 @@ export default function CategoryPage({ params }: Props) {
   const meta = CATEGORY_META[params.category];
   if (!meta) notFound();
 
-  const posts = getPostsByCategory(params.category);
+  const posts = getCategoryPostSummaries(params.category);
 
   return (
     <>

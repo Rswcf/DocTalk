@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import type { BlogPost } from '../../../../lib/blog';
+import type { CategoryPostSummary } from '../../../../lib/blog';
 import { useLocale } from '../../../../i18n';
 import { formatDateForLocale, getBlogCategoryLabel } from '../../../../lib/publicI18n';
 import MarketingShell from '../../../../components/marketing/MarketingShell';
@@ -13,7 +13,7 @@ interface CategoryClientProps {
   category: string;
   label: string;
   description: string;
-  posts: BlogPost[];
+  posts: CategoryPostSummary[];
 }
 
 const RELATED_LINK_KEYS: Record<string, { href: string; labelKey: string }[]> = {
