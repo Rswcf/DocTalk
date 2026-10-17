@@ -461,6 +461,7 @@
   "doc.page": "पृष्ठ",
   "doc.slide": "स्लाइड",
   "doc.sheet": "शीट",
+  "collections.sessionLoadError": "यह बातचीत लोड नहीं हो सकी। अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
   "collections.title": "संग्रह",
   "collections.create": "संग्रह बनाएं",
   "collections.name": "नाम",

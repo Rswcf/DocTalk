@@ -348,7 +348,11 @@ export function useChatStream({
         ({ text }) => { if (active()) updateLastMessage(text || ''); },
         (citation) => { if (active()) addCitationToLastMessage(citation); },
         reportStreamError,
-        (data) => { if (active()) { completed = true; handleStreamDone(data); } },
+        (data) => { if (active()) {
+          completed = true;
+          if (data.message_id) useDocTalkStore.getState().updateSessionDomainMode(sessionId, domainMode);
+          handleStreamDone(data);
+        } },
         () => { if (active()) handleTruncated(); },
         selectedMode,
         locale,

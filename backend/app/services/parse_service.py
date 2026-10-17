@@ -23,8 +23,10 @@ logger = logging.getLogger(__name__)
 # off-axis text or an arXiv stamp in the page margin is dropped from chunks (vertical
 # writing mode excepted). v4 = an all-caps heading needs four capital letters and must
 # not sit in a table row; a numbered line ("3 Model Architecture", its number set as a
-# separate line or not) at 1.1x the median font size is a heading.
-PARSE_PIPELINE_VERSION = 4
+# separate line or not) at 1.1x the median font size is a heading. v5 = prose-font
+# baseline, searchable heading text, and source-position chunk overlap/merging
+# without duplicate-only windows.
+PARSE_PIPELINE_VERSION = 5
 
 # A line that starts with an arXiv identifier is a submission stamp or a wrapped
 # reference, never a section title; inside the page margin band it is the stamp and is
@@ -568,8 +570,7 @@ class ParseService:
         if not all_clean_blocks:
             return []
 
-        font_sizes = [cb.font_size for cb in all_clean_blocks if cb.font_size > 0]
-        median_size = median(font_sizes) if font_sizes else 12.0
+        median_size = self._body_font_size(all_clean_blocks)
 
         # 3) Determine headings and build content sentences
         current_section_title: Optional[str] = None
@@ -578,11 +579,11 @@ class ParseService:
 
         for cb, is_heading in self._classify_headings(all_clean_blocks, median_size, page_widths):
             if is_heading:
-                # Heading: update current section title; do not include in content
+                # Headings are searchable source content too. Keep the complete text
+                # (not the truncated section metadata) in the sentence stream.
                 title = cb.text.strip()
                 # Avoid overly long titles
                 current_section_title = title[:200] if title else None
-                continue
 
             # Treat each block as a paragraph, split it into sentences
             for sent in self._split_into_sentences(cb.text):
@@ -601,6 +602,30 @@ class ParseService:
 
         start_idx = 0
         chunk_index = 0
+
+        # Preserve sentence positions through microchunk merging. Equal source
+        # wording can occur legitimately; text suffix matching would erase it.
+        spans: dict[int, tuple[int, int]] = {}
+
+        def build_chunk(start: int, end: int, index: int) -> ChunkInfo:
+            sel = sentences[start:end]
+            text = self._join_text_units([unit[0] for unit in sel])
+            positions = [unit[1] for unit in sel]
+            bboxes = [
+                self._normalize_bbox(pg, bb, *page_dims.get(pg, (1.0, 1.0)))
+                for _text, pg, bb, _section in sel
+            ]
+            spans[index] = (start, end)
+            return ChunkInfo(
+                text=text, chunk_index=index, page_start=min(positions),
+                page_end=max(positions), bboxes=bboxes,
+                section_title=sel[0][3], token_count=self._estimate_tokens(text),
+            )
+
+        def merge_windows(left: ChunkInfo, right: ChunkInfo) -> ChunkInfo:
+            start, left_end = spans[left.chunk_index]
+            right_start, end = spans[right.chunk_index]
+            return build_chunk(min(start, right_start), max(left_end, end), left.chunk_index)
 
         while start_idx < len(sentences):
             token_sum = 0
@@ -621,36 +646,10 @@ class ParseService:
                 end_idx = min(start_idx + 1, len(sentences))
                 token_sum = sum(sent_tokens[start_idx:end_idx])
 
-            # Aggregate text and bboxes
-            sel = sentences[start_idx:end_idx]
-            text = self._join_text_units([s for (s, _pg, _bb, _sec) in sel])
-            pages_range = [pg for (_t, pg, _bb, _sec) in sel]
-            page_start = min(pages_range) if pages_range else 1
-            page_end = max(pages_range) if pages_range else page_start
-
-            # Aggregate and normalize bboxes per sentence
-            bbox_dicts: List[dict] = []
-            for (_t, pg, bb, _sec) in sel:
-                w, h = page_dims.get(pg, (1.0, 1.0))
-                bbox_dicts.append(self._normalize_bbox(pg, bb, w, h))
-
-            # Track section title for this chunk as the last known heading before start_idx
-            # We approximate by scanning backwards to find the last heading block before start_idx
-            # Since we do not store headings separately per position, we reuse last_known_title
-            section_title = sel[0][3] if sel and sel[0][3] else None
-
-            chunks.append(
-                ChunkInfo(
-                    text=text,
-                    chunk_index=chunk_index,
-                    page_start=page_start,
-                    page_end=page_end,
-                    bboxes=bbox_dicts,
-                    section_title=section_title,
-                    token_count=self._estimate_tokens(text),
-                )
-            )
+            chunks.append(build_chunk(start_idx, end_idx, chunk_index))
             chunk_index += 1
+            if end_idx == len(sentences):
+                break  # No new source remains; overlapping suffixes add nothing.
 
             # Advance start index with overlap of 50 tokens
             # Compute how many sentences to step back to preserve ~50 tokens overlap
@@ -665,6 +664,13 @@ class ParseService:
                 k += 1
                 j -= 1
             next_start = max(end_idx - k, start_idx + 1)  # ensure progress
+            # A large overlapping sentence may fill the next window by itself.
+            # Reduce overlap until at least one unseen sentence can fit; never
+            # emit an intermediate window containing only previously seen text.
+            retained = sum(sent_tokens[next_start:end_idx])
+            while next_start < end_idx and retained + sent_tokens[end_idx] > self.TARGET_MAX_TOKENS:
+                retained -= sent_tokens[next_start]
+                next_start += 1
 
             start_idx = next_start
 
@@ -678,14 +684,14 @@ class ParseService:
                 if pending_micro:
                     prefix = pending_micro[0]
                     for micro in pending_micro[1:]:
-                        prefix = self._merge_adjacent_chunks(prefix, micro)
-                    c = self._merge_adjacent_chunks(prefix, c)
+                        prefix = merge_windows(prefix, micro)
+                    c = merge_windows(prefix, c)
                     pending_micro = []
                 filtered.append(c)
             elif filtered:
                 # Merge micro-chunk text into previous chunk
                 prev = filtered[-1]
-                filtered[-1] = self._merge_adjacent_chunks(prev, c)
+                filtered[-1] = merge_windows(prev, c)
             else:
                 pending_micro.append(c)
 
@@ -694,7 +700,7 @@ class ParseService:
             # whole document down to nothing.
             combined = pending_micro[0]
             for micro in pending_micro[1:]:
-                combined = self._merge_adjacent_chunks(combined, micro)
+                combined = merge_windows(combined, micro)
             filtered.append(combined)
 
         # Re-index chunk_index after filtering
@@ -743,8 +749,7 @@ class ParseService:
         if not all_clean_blocks:
             return []
 
-        font_sizes = [cb.font_size for cb in all_clean_blocks if cb.font_size > 0]
-        median_size = median(font_sizes) if font_sizes else 12.0
+        median_size = self._body_font_size(all_clean_blocks)
 
         elements: List[ElementInfo] = []
         current_section_title: Optional[str] = None
@@ -854,6 +859,22 @@ class ParseService:
         result.extend(order_column_band(trailing_band))
         return result
 
+    def _body_font_size(self, blocks: Sequence[CleanBlock]) -> float:
+        """Prefer prose over table cells when estimating the body font.
+
+        A dense small-font table must not outvote the surrounding sentences just
+        because the extractor emits one block per cell. Fall back to all blocks
+        for documents without sentence punctuation (forms, slides, headings).
+        """
+        prose_sizes = [
+            b.font_size for b in blocks
+            if b.font_size > 0 and not b.off_axis
+            and b.text.strip()[-1:] in self.SENTENCE_DELIMS
+            and any(ch.isalpha() for ch in b.text)
+        ]
+        sizes = prose_sizes or [b.font_size for b in blocks if b.font_size > 0]
+        return median(sizes) if sizes else 12.0
+
     def _classify_headings(
         self,
         blocks: Sequence[CleanBlock],
@@ -863,8 +884,8 @@ class ParseService:
         """Pair each reading-order block with its heading decision.
 
         A section number set as its own line is first joined to the title on its
-        baseline, so the pair is one heading ("3 Model Architecture") and neither
-        half is left in the chunk text.
+        baseline, so the pair is one heading ("3 Model Architecture") and the
+        combined source text remains searchable.
         """
         joined = self._attach_section_numbers(blocks, median_size, self._page_rows(blocks, page_widths))
         rows = self._page_rows(joined, page_widths)
@@ -947,7 +968,7 @@ class ParseService:
             return False
         if block.off_axis or _ARXIV_ID_LINE_RE.match(text):
             return False
-        if text[-1:] in self.SENTENCE_DELIMS and len(text) > 45:
+        if text[-1:] in self.SENTENCE_DELIMS:
             return False
         if not any(ch.isalpha() or "\u4e00" <= ch <= "\u9fff" for ch in text):
             return False
@@ -1192,17 +1213,6 @@ class ParseService:
             )
             text += (" " if needs_space else "") + part
         return text
-
-    def _merge_adjacent_chunks(self, left: ChunkInfo, right: ChunkInfo) -> ChunkInfo:
-        return ChunkInfo(
-            text=self._join_text_units([left.text, right.text]),
-            chunk_index=left.chunk_index,
-            page_start=left.page_start,
-            page_end=max(left.page_end, right.page_end),
-            bboxes=left.bboxes + right.bboxes,
-            section_title=left.section_title or right.section_title,
-            token_count=left.token_count + right.token_count,
-        )
 
     def _build_block_text_and_size(self, lines: Sequence[dict]) -> Tuple[str, float]:
         """Flatten spans into a paragraph text and estimate average font size.

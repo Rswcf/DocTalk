@@ -1746,6 +1746,12 @@ async def _handle_checkout_session_payment_completed(
     session: dict,
     db: AsyncSession,
 ):
+    # Cash credit packs require settled payment. Pending delayed payments and
+    # no_payment_required sessions never grant purchased credits.
+    if session.get("payment_status") != "paid":
+        logger.info("Skipping unsettled credit-pack checkout %s", session.get("id"))
+        return {"received": True}
+
     # Parse and validate client_reference_id (user_id)
     try:
         client_ref = session.get("client_reference_id")
@@ -1841,6 +1847,15 @@ async def _handle_checkout_session_completed(
     if mode == "payment":
         return await _handle_checkout_session_payment_completed(session, db)
     return {"received": True}
+
+
+async def _handle_checkout_session_async_payment_succeeded(
+    session: dict,
+    db: AsyncSession,
+):
+    if session.get("mode") != "payment":
+        return {"received": True}
+    return await _handle_checkout_session_payment_completed(session, db)
 
 
 @dataclass(frozen=True)
@@ -2224,8 +2239,23 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         logger.error("Webhook signature verification failed: %s", e)
         raise HTTPException(401, "Invalid signature")
 
+    # Signature verification proves the sender, not the Stripe environment.
+    # Unknown key formats cannot establish a safe mode and must fail closed.
+    key = settings.STRIPE_SECRET_KEY or ""
+    if key.startswith(("sk_live_", "rk_live_")):
+        expected_livemode = True
+    elif key.startswith(("sk_test_", "rk_test_")):
+        expected_livemode = False
+    else:
+        raise HTTPException(503, "Stripe environment not configured")
+    if type(event.get("livemode")) is not bool:
+        raise HTTPException(400, "Invalid event livemode")
+    if event["livemode"] is not expected_livemode:
+        raise HTTPException(400, "Stripe environment mismatch")
+
     handlers = {
         "checkout.session.completed": _handle_checkout_session_completed,
+        "checkout.session.async_payment_succeeded": _handle_checkout_session_async_payment_succeeded,
         "checkout.session.expired": _handle_checkout_session_expired,
         "invoice.payment_succeeded": _handle_invoice_payment_succeeded,
         "customer.subscription.deleted": _handle_subscription_deleted,

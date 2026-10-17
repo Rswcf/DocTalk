@@ -10,9 +10,10 @@ interface SessionListProps {
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
+  disabled?: boolean;
 }
 
-export default function SessionList({ sessions, activeSessionId, onSelectSession, onNewSession }: SessionListProps) {
+export default function SessionList({ sessions, activeSessionId, onSelectSession, onNewSession, disabled = false }: SessionListProps) {
   const { tOr } = useLocale();
 
   return (
@@ -28,6 +29,7 @@ export default function SessionList({ sessions, activeSessionId, onSelectSession
             type="button"
             key={s.session_id}
             onClick={() => onSelectSession(s.session_id)}
+            disabled={disabled}
             className={`flex w-full items-center gap-2 rounded-lg p-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg ${
               s.session_id === activeSessionId
                 ? 'bg-accent-light text-accent'
@@ -53,6 +55,7 @@ export default function SessionList({ sessions, activeSessionId, onSelectSession
         <button
           type="button"
           onClick={onNewSession}
+          disabled={disabled}
           className="flex w-full items-center justify-center gap-1 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:rounded-lg"
         >
           <Plus size={12} /> {tOr('collections.newChat', 'New chat')}

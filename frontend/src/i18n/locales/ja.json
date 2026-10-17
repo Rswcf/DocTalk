@@ -461,6 +461,7 @@
   "doc.page": "ページ",
   "doc.slide": "スライド",
   "doc.sheet": "シート",
+  "collections.sessionLoadError": "この会話を読み込めませんでした。接続を確認して、もう一度お試しください。",
   "collections.title": "コレクション",
   "collections.create": "コレクションを作成",
   "collections.name": "名前",

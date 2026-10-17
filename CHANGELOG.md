@@ -8,6 +8,14 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.36.3] - 2026-10-17
+
+### Fixed
+- Credit packs grant credits only after payment settles. Delayed successful payments use the same idempotent grant path. Signed webhook events from the wrong Stripe environment are rejected before business processing.
+- PDF parsing keeps heading text searchable, avoids duplicate sentence overlap and preserves source ranges when merging small chunks. Office extraction retains repeated source text and table content.
+- Citation display uses verified source focus consistently in chat history, shares and exports while retaining the source section and table identity.
+- Document and collection conversations restore the selected session and keep streamed answers attached to their originating session. The reading-time tool handles non-space-delimited text.
+
 ## [0.36.2] - 2026-10-15
 
 Shared answers and exports quote the cited source as written.

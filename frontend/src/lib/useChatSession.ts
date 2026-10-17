@@ -16,6 +16,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
   const {
     setSessions,
     setSessionId,
+    restoreSession,
     setMessages,
     setDemoMessagesUsed,
     setDemoRestoredUserMsgCount,
@@ -61,6 +62,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     setSessionId(null);
     setMessages([]);
     setSessions([]);
+    const selectionEpoch = useDocTalkStore.getState().domainModeEpoch;
     let cancelled = false;
 
     (async () => {
@@ -81,7 +83,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           // A New Chat from the session menu may have published a session
           // while this loaded; keep it (it installed its own accounting).
           if (useDocTalkStore.getState().sessionId) return;
-          setSessionId(storedDemoSession);
+          restoreSession(storedDemoSession, msgsData.messages, null, selectionEpoch);
           // Populate the sessions list (not []) so SessionDropdown shows the
           // adopted session instead of an empty "New Chat"-only placeholder.
           // getMessages doesn't return session metadata, so derive
@@ -164,8 +166,9 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           // The session menu lists the rows published above, so the user
           // may already have opened one while this loaded; keep it.
           if (useDocTalkStore.getState().sessionId) return;
-          setSessionId(latest.session_id);
-          setMessages(msgsData.messages);
+          const liveRow = useDocTalkStore.getState().sessions.find(row => row.session_id === latest.session_id);
+          const mode = liveRow ? liveRow.domain_mode : latest.domain_mode;
+          restoreSession(latest.session_id, msgsData.messages, mode, selectionEpoch);
           sessionReady = true;
         }
       } catch (e) {
@@ -181,7 +184,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           // conversation the user opened from the menu meanwhile is not.
           if (useDocTalkStore.getState().sessionId) return;
 
-          setSessionId(s.session_id);
+          restoreSession(s.session_id, [], null, selectionEpoch);
           if (s.demo_messages_used != null) {
             // Fresh session, empty transcript — nothing restored yet, so the
             // baseline is 0 and every subsequent local user message counts.
@@ -195,6 +198,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
           addSession({
             session_id: s.session_id,
             title: null,
+            domain_mode: null,
             message_count: 0,
             created_at: now,
             last_activity_at: now,
@@ -214,7 +218,7 @@ export function useChatSession(documentId: string | undefined): UseChatSessionRe
     return () => {
       cancelled = true;
     };
-  }, [documentId, documentStatus, setSessions, setSessionId, setMessages, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, addSession]);
+  }, [documentId, documentStatus, setSessions, setSessionId, restoreSession, setMessages, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, addSession]);
 
   return { sessionError };
 }

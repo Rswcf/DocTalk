@@ -35,6 +35,7 @@ export interface DocTalkStore {
   isStreaming: boolean;
   selectedMode: string;
   domainMode: string | null;
+  domainModeEpoch: number;
   sessions: SessionItem[];
 
   // Document summary (auto-generated)
@@ -111,6 +112,8 @@ export interface DocTalkStore {
   setSessionId: (id: string | null) => void;
   setSelectedMode: (id: string) => void;
   setDomainMode: (mode: string | null) => void;
+  restoreSession: (id: string | null, messages: Message[], mode: string | null | undefined, selectionEpoch: number) => void;
+  updateSessionDomainMode: (id: string, mode: string | null) => void;
   setMessages: (msgs: Message[]) => void;
   setSessions: (sessions: SessionItem[]) => void;
   addSession: (session: SessionItem) => void;
@@ -158,6 +161,7 @@ const initialState = {
     return stored;
   })(),
   domainMode: null as string | null,
+  domainModeEpoch: 0,
   sessions: [] as SessionItem[],
   documentSummary: null as string | null,
   suggestedQuestions: [] as string[],
@@ -303,7 +307,16 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
       // localStorage unavailable in private browsing
     }
   },
-  setDomainMode: (mode: string | null) => set({ domainMode: mode }),
+  setDomainMode: (mode: string | null) => set((state) => ({ domainMode: mode, domainModeEpoch: state.domainModeEpoch + 1 })),
+  restoreSession: (id, messages, mode, selectionEpoch) => set((state) => ({
+    sessionId: id, messages,
+    // User input made during the request wins, including explicit Default.
+    domainMode: state.domainModeEpoch === selectionEpoch
+      ? (mode === 'legal' || mode === 'academic' ? mode : null) : state.domainMode,
+  })),
+  updateSessionDomainMode: (id, mode) => set((state) => ({
+    sessions: state.sessions.map(row => row.session_id === id ? { ...row, domain_mode: mode } : row),
+  })),
   setSessions: (sessions: SessionItem[]) => set({ sessions }),
   addSession: (session: SessionItem) => set((state) => ({
     sessions: [session, ...state.sessions],
@@ -383,6 +396,7 @@ export const useDocTalkStore = create<DocTalkStore>((set, get) => ({
       // is used at most once, ever, so no pre-reset snapshot can ever
       // collide with a post-reset value again.
       demoAccountingEpoch: state.demoAccountingEpoch + 1,
+      domainModeEpoch: state.domainModeEpoch + 1,
     }));
   },
 }));

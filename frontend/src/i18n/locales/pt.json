@@ -495,6 +495,7 @@
   "collections.noCollections": "Nenhuma coleção ainda",
   "collections.removeDocument": "Remover",
   "collections.sourceDoc": "Fonte: {name}",
+  "collections.sessionLoadError": "Não foi possível carregar esta conversa. Verifique sua conexão e tente novamente.",
   "collections.title": "Coleções",
   "common.backToHome": "Voltar ao início",
   "common.cancel": "Cancelar",

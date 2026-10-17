@@ -88,19 +88,33 @@ def test_url_documents_strip_headings_like_md():
 # ------------------------------------------------------------------- chunker
 
 
-def test_titles_are_glued_into_chunk_text_when_every_page_has_one():
-    # Every DOCX page has an 18pt title block, so the median font size is 15
-    # and 18 is not a heading: the title joins the first body sentence.
-    _, chunks = _chunks("docx", fx.build_docx())
-    assert chunks[0].text.startswith("Study design The trial enrolled 412 adults")
-    assert chunks[0].section_title is None
-    assert any("Outcomes The primary outcome" in c.text for c in chunks)
+def test_docx_titles_remain_searchable_and_supply_section_metadata():
+    # Prose fonts now supply the body baseline. Titles retain metadata and
+    # source text; this short two-page document needs no duplicate tail window.
+    pages, chunks = _chunks("docx", fx.build_docx())
+    assert len(chunks) == 1
+    chunk = chunks[0]
+    assert chunk.text.startswith("Study design The trial enrolled 412 adults")
+    assert chunk.section_title == "Study design"
+    assert (chunk.page_start, chunk.page_end) == (1, 2)
+    assert "Outcomes The primary outcome" in chunk.text
+    for page in pages:
+        assert chunk.text.count(page.section_title) == 1
+    assert chunk.text.count(fx.REPEATED_SENTENCE) == 2
+    assert {box["page"] for box in chunk.bboxes} == {1, 2}
 
 
-def test_sheet_names_are_glued_onto_the_first_table_row():
+def test_sheet_names_and_table_rows_survive_one_complete_window():
     _, chunks = _chunks("xlsx", fx.build_xlsx())
-    assert chunks[0].text.startswith("Budget | Item | Q1 | Q2 |\n| --- | --- | --- |\n")
-    assert any(c.text.startswith("Headcount | Team | People |") for c in chunks)
+    assert len(chunks) == 1
+    chunk = chunks[0]
+    assert chunk.text.startswith("Budget | Item | Q1 | Q2 |\n| --- | --- | --- |\n")
+    # Headcount belongs inside the complete short window, rather than in a
+    # redundant suffix chunk that merely happened to start at the second sheet.
+    assert "Headcount | Team | People |\n| --- | --- |\n| Research | 12 |\n| Support | 7 |" in chunk.text
+    assert chunk.text.count("Budget") == chunk.text.count("Headcount") == 1
+    assert (chunk.page_start, chunk.page_end) == (1, 2)
+    assert {box["page"] for box in chunk.bboxes} == {1, 2}
 
 
 def test_table_rows_keep_their_newlines_in_chunk_text():
@@ -142,10 +156,14 @@ def test_citation_payload_formulas():
     first = data["chunks"][0]
     citation = first["citation"]
     assert citation["context_text"] == ("[page 1–2] " + first["text"])[:900]
-    assert len(citation["text_snippet"]) == 100
-    assert citation["text_snippet"].startswith("Study design The trial enrolled")
-    single = next(c for c in data["chunks"] if c["page_start"] == c["page_end"])
-    assert single["citation"]["context_text"].startswith(f"[page {single['page_start']}] ")
+    assert citation["text_snippet"] == (citation.get("focus_snippet") or first["text"])[:100]
+    assert not citation["text_snippet"].startswith("Study design: ")
+    # B2 emits one complete cross-page window, not redundant single-page tails.
+    # Exercise the single-page prefix on an independently chunked source page.
+    pages = extract_document(fx.build_docx(), "docx")
+    single = ParseService().chunk_document(fx.page_infos(pages[:1]))[0]
+    assert single.page_start == single.page_end == 1
+    assert fx.citation_like(single)["context_text"].startswith("[page 1] ")
 
 
 def test_main_writes_every_fixture(tmp_path):

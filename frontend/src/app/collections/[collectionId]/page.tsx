@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -25,26 +25,34 @@ import { useLocale } from '../../../i18n';
 import { useUserPlanProfile } from '../../../lib/useUserPlanProfile';
 import { errorCopy, type ErrorCopy } from '../../../lib/errorCopy';
 import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../../lib/billing';
-import type { Citation, CollectionDetail, SessionItem } from '../../../types';
+import type { Citation, CollectionDetail } from '../../../types';
 import { LoadingScreen } from '../../../components/ui/LoadingScreen';
 import { trackEvent } from '../../../lib/analytics';
+import { createCollectionSessions } from '../../../lib/collectionSessions';
 
 export default function CollectionDetailPage() {
   const params = useParams<{ collectionId: string }>();
   const collectionId = params?.collectionId as string;
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: authSession } = useSession();
   const { t, tOr } = useLocale();
   const { profile, userPlan } = useUserPlanProfile();
-  const {
-    sessionId,
-    setSessionId,
-    setMessages,
-    sessions,
-    setSessions,
-    addSession,
-  } = useDocTalkStore();
+  const { sessionId, sessions, isStreaming } = useDocTalkStore();
+  const [sessionError, setSessionError] = useState(false);
+  const scope = `${collectionId}:${status}:${authSession?.user?.id || ''}`;
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
+  const sessionController = useMemo(() => createCollectionSessions(collectionId, {
+    getState: useDocTalkStore.getState,
+    publish: useDocTalkStore.setState,
+    list: listCollectionSessions,
+    messages: getMessages,
+    create: createCollectionSession,
+    isCurrent: () => scopeRef.current === scope,
+    onError: setSessionError,
+  }), [collectionId, scope]);
 
+  const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const [collection, setCollection] = useState<CollectionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddDocs, setShowAddDocs] = useState(false);
@@ -84,98 +92,56 @@ export default function CollectionDetailPage() {
     }
   };
 
-  // Load collection detail
+  useEffect(() => {
+    if (status !== 'unauthenticated') return;
+    const target = typeof window !== 'undefined'
+      ? window.location.pathname + window.location.search + window.location.hash
+      : `/collections/${collectionId}`;
+    router.push(`/auth?callbackUrl=${encodeURIComponent(target)}`);
+  }, [status, collectionId, router]);
+
+  // Detail and sessions belong to the same route/account generation. Updating
+  // collection metadata (for example after adding a document) does not reload chat.
   useEffect(() => {
     if (!collectionId || status !== 'authenticated') return;
     let cancelled = false;
-
+    sessionController.activate();
+    setLoading(true);
+    setCollection(null);
+    setSessionError(false);
+    const previous = useDocTalkStore.getState();
+    previous.flushPendingText();
+    useDocTalkStore.setState({
+      documentId: null, sessionId: null, messages: [], sessions: [], isStreaming: false,
+      domainMode: null, domainModeEpoch: previous.domainModeEpoch + 1,
+      demoAccountingEpoch: previous.demoAccountingEpoch + 1,
+    });
     (async () => {
       try {
         const coll = await getCollection(collectionId);
-        if (!cancelled) setCollection(coll);
+        if (cancelled || scopeRef.current !== scope) return;
+        setCollection(coll);
+        setLoadedScope(scope);
+        setLoading(false);
+        await sessionController.initialize();
       } catch {
-        if (!cancelled) router.push('/collections');
+        if (!cancelled && scopeRef.current === scope) router.push('/collections');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && scopeRef.current === scope) setLoading(false);
       }
     })();
-
-    return () => { cancelled = true; };
-  }, [collectionId, status, router]);
-
-  // Setup session for collection
-  useEffect(() => {
-    if (!collectionId || !collection) return;
-    let cancelled = false;
-
-    (async () => {
-      let sessionReady = false;
-      try {
-        const sessionsData = await listCollectionSessions(collectionId);
-        if (cancelled) return;
-        setSessions(sessionsData.sessions);
-        if (sessionsData.sessions.length > 0) {
-          const latest = sessionsData.sessions[0];
-          setSessionId(latest.session_id);
-          const msgsData = await getMessages(latest.session_id);
-          if (!cancelled) setMessages(msgsData.messages);
-          sessionReady = true;
-        }
-      } catch (e) {
-        console.error('Failed to load collection sessions:', e);
-      }
-      if (!sessionReady && !cancelled) {
-        try {
-          const s = await createCollectionSession(collectionId);
-          if (cancelled) return;
-          setSessionId(s.session_id);
-          const now = s.created_at || new Date().toISOString();
-          addSession({
-            session_id: s.session_id,
-            title: null,
-            message_count: 0,
-            created_at: now,
-            last_activity_at: now,
-          });
-          setMessages([]);
-        } catch (e) {
-          console.error('Failed to create collection session:', e);
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [collectionId, collection, setSessions, setSessionId, setMessages, addSession]);
+    return () => { cancelled = true; sessionController.dispose(); };
+  }, [collectionId, status, scope, router, sessionController]);
 
   const handleSelectSession = useCallback(async (sid: string) => {
-    setSessionId(sid);
     setShowMobileSidebar(null);
-    try {
-      const msgsData = await getMessages(sid);
-      setMessages(msgsData.messages);
-    } catch (e) {
-      console.error('Failed to load session messages:', e);
-    }
-  }, [setSessionId, setMessages]);
+    await sessionController.open(sid);
+  }, [sessionController]);
 
   const handleNewSession = useCallback(async () => {
-    try {
-      const s = await createCollectionSession(collectionId);
-      setSessionId(s.session_id);
-      const now = s.created_at || new Date().toISOString();
-      addSession({
-        session_id: s.session_id,
-        title: null,
-        message_count: 0,
-        created_at: now,
-        last_activity_at: now,
-      });
-      setMessages([]);
-      setShowMobileSidebar(null);
-    } catch (e) {
-      console.error('Failed to create new session:', e);
-    }
-  }, [collectionId, setSessionId, addSession, setMessages]);
+    setShowMobileSidebar(null);
+    await sessionController.newSession();
+  }, [sessionController]);
 
   const handleAddDocs = useCallback(async () => {
     // Open the modal first so the user gets immediate feedback (loading or
@@ -205,6 +171,7 @@ export default function CollectionDetailPage() {
     try {
       await addDocumentsToCollection(collectionId, [docId]);
       const coll = await getCollection(collectionId);
+      if (scopeRef.current !== scope) return;
       setCollection(coll);
       setShowAddDocs(false);
     } catch (e) {
@@ -256,13 +223,10 @@ export default function CollectionDetailPage() {
     [collection?.documents]
   );
 
-  if (status === 'loading' || loading) {
-    return <LoadingScreen label={t('common.loading')} />;
-  }
+  if (status === 'unauthenticated') return null;
 
-  if (status !== 'authenticated') {
-    router.push('/auth?callbackUrl=/collections');
-    return null;
+  if (status === 'loading' || loading || collection?.id !== collectionId || loadedScope !== scope) {
+    return <LoadingScreen label={t('common.loading')} />;
   }
 
   return (
@@ -330,6 +294,15 @@ export default function CollectionDetailPage() {
         </div>
       </div>
 
+      {sessionError && (
+        <div role="alert" className="flex items-center gap-3 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950 dark:border-red-900 dark:bg-red-950 dark:text-red-100">
+          <span>{tOr('collections.sessionLoadError', 'Could not load this conversation. Check your connection and try again.')}</span>
+          <button type="button" onClick={() => sessionController.retry()} className="underline">
+            {tOr('common.retry', 'Retry')}
+          </button>
+        </div>
+      )}
+
       {/* Mobile toggle bar */}
       <div className="flex border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 md:hidden">
         <button
@@ -396,6 +369,7 @@ export default function CollectionDetailPage() {
               activeSessionId={sessionId}
               onSelectSession={handleSelectSession}
               onNewSession={handleNewSession}
+              disabled={isStreaming}
             />
           )}
         </div>
@@ -430,6 +404,7 @@ export default function CollectionDetailPage() {
                 activeSessionId={sessionId}
                 onSelectSession={handleSelectSession}
                 onNewSession={handleNewSession}
+                disabled={isStreaming}
               />
             </div>
           </div>

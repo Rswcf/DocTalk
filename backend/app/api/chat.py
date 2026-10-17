@@ -51,6 +51,7 @@ from app.services.chat_response_versions import (
     stream_with_operation,
 )
 from app.services.chat_service import chat_service
+from app.services.citation_display import display_citations
 from app.services.doc_service import can_access_document
 from app.services.domain_mode_access import enforce_domain_mode_access
 from app.services.share_anchor_service import message_share_anchor
@@ -356,7 +357,7 @@ async def get_session_messages(
                 share_anchor=message_share_anchor(m.id),
                 role=m.role,
                 content=m.content,
-                citations=m.citations,
+                citations=display_citations(m.citations),
                 metadata_json=getattr(m, "metadata_json", {}) or {},
                 created_at=m.created_at,
                 response_version=getattr(m, "response_version", None),

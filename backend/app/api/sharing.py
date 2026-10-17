@@ -27,6 +27,7 @@ from app.models.tables import (
     SharedSession,
     User,
 )
+from app.services.citation_display import citation_display
 from app.services.export_service import _prepare_export
 from app.services.share_anchor_service import message_share_anchor
 
@@ -452,10 +453,12 @@ async def view_shared(
             for c in msg.citations:
                 if not isinstance(c, dict):
                     continue
+                c = citation_display(c)
                 safe_citations.append(
                     {
                         "text_snippet": c.get("text_snippet", ""),
                         "page": c.get("page"),
+                        "page_end": c.get("page_end"),
                         "document_filename": c.get("document_filename", ""),
                     }
                 )

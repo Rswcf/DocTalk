@@ -476,6 +476,7 @@
   "doc.page": "页",
   "doc.slide": "幻灯片",
   "doc.sheet": "工作表",
+  "collections.sessionLoadError": "无法加载此对话。请检查网络连接后重试。",
   "collections.title": "文档集合",
   "collections.create": "创建集合",
   "collections.name": "名称",

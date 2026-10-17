@@ -184,6 +184,7 @@ function createChatHookHarness({ chatStream, initialMessages, maxUserMessages, g
     state.isStreaming = value;
   };
   state.updateSessionActivity = () => {};
+  state.updateSessionDomainMode = () => {};
   state.flushPendingText = () => {};
   state.markLastMessageTruncated = (value) => {
     const last = state.messages[state.messages.length - 1];

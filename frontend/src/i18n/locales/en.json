@@ -476,6 +476,7 @@
   "doc.page": "Page",
   "doc.slide": "Slide",
   "doc.sheet": "Sheet",
+  "collections.sessionLoadError": "Could not load this conversation. Check your connection and try again.",
   "collections.title": "Collections",
   "collections.create": "Create Collection",
   "collections.name": "Name",

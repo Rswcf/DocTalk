@@ -174,6 +174,7 @@ export interface SearchResponse {
 }
 
 export interface SessionItem {
+  domain_mode?: string | null;
   session_id: string;
   title: string | null;
   message_count: number;

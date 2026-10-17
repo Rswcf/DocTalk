@@ -461,6 +461,7 @@
   "doc.page": "Pagina",
   "doc.slide": "Diapositiva",
   "doc.sheet": "Foglio",
+  "collections.sessionLoadError": "Impossibile caricare questa conversazione. Controlla la connessione e riprova.",
   "collections.title": "Collezioni",
   "collections.create": "Crea collezione",
   "collections.name": "Nome",

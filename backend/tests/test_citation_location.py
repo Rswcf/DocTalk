@@ -70,6 +70,7 @@ def test_chat_lexical_focus_and_conservative_fallback():
     source = chunk()
     exact = _citation_payload(1, source, 12, FIRST)
     assert exact["focus_snippet"] == FIRST
+    assert exact["text_snippet"] == FIRST
     assert (exact["page"], exact["page_end"]) == (1, 1)
     broad = _citation_payload(1, source, 12)
     assert (broad["page"], broad["page_end"]) == (1, 2)
@@ -89,6 +90,7 @@ async def test_focus_refinement_also_updates_page_and_boxes():
     assert changed and (pt, ct) == (8, 3)
     assert (citations[0]["page"], citations[0]["page_end"]) == (2, 2)
     assert all(bb["page"] == 2 for bb in citations[0]["bboxes"])
+    assert citations[0]["text_snippet"] == SECOND
 
 
 @pytest.mark.asyncio

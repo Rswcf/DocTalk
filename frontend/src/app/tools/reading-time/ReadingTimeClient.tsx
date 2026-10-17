@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLocale } from '../../../i18n';
+import { getWords } from '../../../lib/textMetrics';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
 import EdSection from '../../../components/marketing/EdSection';
@@ -33,10 +34,6 @@ const monoBtnBase: React.CSSProperties = {
 };
 
 /* ---------- helpers ---------- */
-
-function getWordCount(text: string): number {
-  return (text.match(/[\p{L}\p{N}]+(?:[-']\p{L}+)*/gu) ?? []).length;
-}
 
 function formatDuration(minutes: number, t: TFn): string {
   if (minutes === 0) return t('toolReadingTime.durZeroMin');
@@ -111,7 +108,7 @@ export default function ReadingTimeClient() {
     [t],
   );
 
-  const wordCount = useMemo(() => getWordCount(text), [text]);
+  const wordCount = useMemo(() => getWords(text).length, [text]);
 
   const readingSpeeds: SpeedRow[] = useMemo(
     () => [

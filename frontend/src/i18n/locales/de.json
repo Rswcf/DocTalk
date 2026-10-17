@@ -471,6 +471,7 @@
   "doc.page": "Seite",
   "doc.slide": "Folie",
   "doc.sheet": "Blatt",
+  "collections.sessionLoadError": "Diese Unterhaltung konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
   "collections.title": "Sammlungen",
   "collections.create": "Sammlung erstellen",
   "collections.name": "Name",

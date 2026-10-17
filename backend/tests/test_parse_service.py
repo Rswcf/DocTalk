@@ -10,7 +10,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.services.parse_service import BlockInfo, PageInfo, ParseService  # noqa: E402
+from app.services.parse_service import (  # noqa: E402
+    BlockInfo,
+    CleanBlock,
+    PageInfo,
+    ParseService,
+)
 
 
 class TestDetectScanned:
@@ -221,7 +226,7 @@ class TestChunkDocumentIntegrity:
 
         chunks = self.svc.chunk_document([page])
 
-        assert chunks[0].text == "Alpha ends here. Beta starts here."
+        assert chunks[0].text == "Executive Summary Alpha ends here. Beta starts here."
         assert chunks[0].section_title == "Executive Summary"
 
     def test_title_case_body_line_is_not_dropped_as_heading(self):
@@ -290,7 +295,7 @@ class TestChunkDocumentIntegrity:
 
         chunks = self.svc.chunk_document([page])
 
-        assert chunks[0].text == "这是第一句，继续说明。"
+        assert chunks[0].text == "摘要这是第一句，继续说明。"
 
 
 ATTENTION_SEED_PDF = BACKEND_DIR / "seed_data" / "attention-paper.pdf"
@@ -696,8 +701,8 @@ class TestHeadingDetection:
         assert model.bbox["x"] == 108 / 612
         assert round(model.bbox["w"] * 612) == 118
         assert any(c.section_title == "3 Model Architecture" and c.page_start == 3 for c in chunks)
-        # Neither half of a heading is left behind as chunk text.
-        assert not any("Model Architecture Most competitive" in c.text for c in chunks)
+        # The joined heading remains searchable alongside its source passage.
+        assert any("3 Model Architecture Most competitive" in c.text for c in chunks)
         assert not any(" 3 Most competitive" in c.text for c in chunks)
 
     def test_alphabet_seed_keeps_statement_titles_and_drops_table_headers(self):
@@ -794,8 +799,8 @@ class TestHeadingDetection:
         assert heading[0].bbox["x"] == 108 / 612
         assert round(heading[0].bbox["w"] * 612) == 118
         assert chunks[0].section_title is None
-        assert chunks[-1].section_title == "3 Model Architecture"
-        assert " 3 " not in " ".join(c.text for c in chunks)
+        assert len(chunks) == 1  # one short source window, no overlapping suffix chunks
+        assert "3 Model Architecture" in " ".join(c.text for c in chunks)
 
     def test_numbered_heading_on_one_line(self):
         page = self._page(
@@ -1026,3 +1031,140 @@ class TestHeadingDetection:
         headings = [e.text for e in self.svc.extract_elements([page]) if e.element_type == "heading"]
 
         assert headings == ["2 Background"]
+
+
+class TestSearchableHeadings:
+    def test_mixed_font_pdf_keeps_every_fact_and_body_classification(self):
+        import fitz
+
+        facts = ["Revenue increased to 127 million euros.",
+                 "Debt decreased to 43 million euros.",
+                 "Headcount reached 892 employees.",
+                 "The acquisition closed on 12 May 2026."]
+        for table_size in (8, 12):
+            doc = fitz.open()
+            page = doc.new_page(width=612, height=792)
+            for i, fact in enumerate(facts):
+                page.insert_text((60, 120 + i * 24), fact, fontsize=12)
+            for i in range(24):
+                page.insert_text((60, 300 + i * 14), f"Item {i + 1:02d} value {100 + i}",
+                                 fontsize=table_size)
+            svc = ParseService()
+            pages = svc.extract_pages(doc.tobytes())
+            doc.close()
+            chunks = svc.chunk_document(pages)
+            elements = svc.extract_elements(pages)
+            assert all(any(fact in c.text for c in chunks) for fact in facts)
+            assert not any(e.element_type == "heading" and e.text in facts for e in elements)
+            assert all(c.page_start == c.page_end == 1 for c in chunks)
+            assert all(bb["page"] == 1 for c in chunks for bb in c.bboxes)
+            assert all(c.section_title is None for c in chunks)
+            from app.services.quote_verification_service import verify_quote
+            for fact in facts:
+                chunk = next(c for c in chunks if fact in c.text)
+                verified = verify_quote(fact, chunk.text)
+                assert verified.status == "exact"
+                assert chunk.text[verified.raw_start:verified.raw_end] == fact
+
+    def test_heading_only_document_preserves_complete_text_and_geometry(self):
+        title = "IMPORTANT RESULTS " + "A" * 190  # metadata is capped at 200 chars
+        block = BlockInfo(page=3, text=title.strip(), bbox=(50, 100, 550, 124), font_size=24)
+        page = PageInfo(page_number=3, width_pt=600, height_pt=800, rotation=0, blocks=[block,
+            BlockInfo(page=3, text="APPENDIX", bbox=(50, 150, 150, 160), font_size=8),
+            BlockInfo(page=3, text="CONTENTS", bbox=(50, 180, 150, 190), font_size=8)])
+        svc = ParseService()
+        chunks = svc.chunk_document([page])
+        assert chunks and chunks[0].text.startswith(title.strip())
+        assert chunks[0].section_title == title.strip()[:200]
+        assert chunks[0].page_start == chunks[0].page_end == 3
+        assert chunks[0].bboxes[0] == svc._normalize_bbox(3, block.bbox, 600, 800)
+        assert chunks[0].token_count > 0
+
+    def test_short_complete_sentences_are_not_titles_even_with_large_font(self):
+        svc = ParseService()
+        for text in ("Debt is 43m.", "负债为43百万。", "Headcount is 892!"):
+            block = CleanBlock(page=1, text=text, bbox=(50, 100, 550, 124), font_size=24)
+            assert not svc._is_heading_block(block, 8)
+
+
+class TestChunkWindowCoverage:
+    @staticmethod
+    def page(lines):
+        return PageInfo(page_number=1, width_pt=612, height_pt=792, rotation=0,
+                        blocks=[BlockInfo(page=1, text=text, bbox=(60, 80 + i * 20, 550, 95 + i * 20),
+                                          font_size=11) for i, text in enumerate(lines)])
+
+    def test_short_pdf_fixture_has_one_complete_window(self):
+        import fitz
+        lines = [f"Record {i:02d} confirms that the approved budget for branch {i} is {100+i} euros."
+                 for i in range(1, 7)]
+        doc = fitz.open()
+        page = doc.new_page()
+        for i, line in enumerate(lines):
+            page.insert_text((50, 150 + i * 25), line, fontsize=11)
+        svc = ParseService()
+        chunks = svc.chunk_document(svc.extract_pages(doc.tobytes()))
+        doc.close()
+        assert len(chunks) == 1
+        assert chunks[0].text == " ".join(lines)
+        assert chunks[0].token_count == svc._estimate_tokens(chunks[0].text)
+
+    def test_exact_boundary_and_long_tail_each_window_adds_new_content(self):
+        svc = ParseService()
+        lines = [f"Record {i:02d} confirms the budget allocation for this branch."
+                 for i in range(12)]
+        cost = svc._estimate_tokens(lines[0])
+        svc.TARGET_MIN_TOKENS = svc.TARGET_MAX_TOKENS = cost * 3
+        svc.OVERLAP_TOKENS = cost
+        assert len(svc.chunk_document([self.page(lines[:3])])) == 1
+        chunks = svc.chunk_document([self.page(lines)])
+        seen = set()
+        for chunk in chunks:
+            present = {line for line in lines if line in chunk.text}
+            assert present - seen  # no duplicate-only suffix or intermediate window
+            if seen:
+                assert present & seen  # normal overlap survives
+            seen |= present
+        assert seen == set(lines)
+        assert sum(lines[-1] in c.text for c in chunks) == 1
+
+    def test_overlapping_microchunks_merge_by_source_position_not_wording(self):
+        svc = ParseService()
+        svc.TARGET_MIN_TOKENS = svc.TARGET_MAX_TOKENS = 6
+        svc.OVERLAP_TOKENS = 2
+        lines = ["Short one.", "Short two.", "Short one.", "Short end."]
+        chunks = svc.chunk_document([self.page(lines)])
+        assert len(chunks) == 1
+        assert chunks[0].text == " ".join(lines)
+        assert chunks[0].text.count("Short one.") == 2  # real repetition is retained
+        assert len(chunks[0].bboxes) == len(lines)
+        assert chunks[0].token_count == svc._estimate_tokens(chunks[0].text)
+
+    def test_micro_tail_merged_into_long_window_does_not_repeat_overlap(self):
+        svc = ParseService()
+        long_line = "The complete original source sentence describes the approved budget."
+        lines = [long_line, "Short two.", "Short end."]
+        budget = svc._estimate_tokens(long_line) + svc._estimate_tokens(lines[1])
+        svc.TARGET_MIN_TOKENS = svc.TARGET_MAX_TOKENS = budget
+        svc.OVERLAP_TOKENS = svc._estimate_tokens(lines[1])
+        chunks = svc.chunk_document([self.page(lines)])
+        assert len(chunks) == 1
+        assert chunks[0].text == " ".join(lines)
+        assert len(chunks[0].bboxes) == len(lines)
+        assert chunks[0].token_count == svc._estimate_tokens(chunks[0].text)
+
+
+    def test_large_overlap_sentence_does_not_make_duplicate_intermediate_window(self):
+        svc = ParseService()
+        lines = [f"Record {i:02d} confirms the approved budget for the branch." for i in range(4)]
+        cost = svc._estimate_tokens(lines[0])
+        svc.TARGET_MIN_TOKENS = cost
+        svc.TARGET_MAX_TOKENS = cost * 3 - 1
+        svc.OVERLAP_TOKENS = cost * 2
+        chunks = svc.chunk_document([self.page(lines)])
+        seen = set()
+        for chunk in chunks:
+            present = {line for line in lines if line in chunk.text}
+            assert present - seen
+            seen |= present
+        assert seen == set(lines)

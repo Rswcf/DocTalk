@@ -209,6 +209,7 @@ def page_infos(extracted: list) -> list:
 
 def citation_like(chunk) -> dict[str, Any]:
     """The citation fields the reader receives for ``chunk``."""
+    from app.services.citation_display import citation_display
     from app.services.citation_focus_service import _split_sentences, focus_sentence
     from app.services.citation_location import citation_location
 
@@ -225,6 +226,7 @@ def citation_like(chunk) -> dict[str, Any]:
     }
     if focus:
         payload["focus_snippet"] = focus
+    payload = citation_display(payload, source_text=text)
     location = citation_location(
         chunk.page_start, chunk.page_end, chunk.bboxes, source_text=text, focus=focus or ""
     )

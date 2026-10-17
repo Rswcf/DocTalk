@@ -461,6 +461,7 @@
   "doc.page": "صفحة",
   "doc.slide": "شريحة",
   "doc.sheet": "ورقة",
+  "collections.sessionLoadError": "تعذّر تحميل هذه المحادثة. تحقّق من اتصالك وحاول مرة أخرى.",
   "collections.title": "المجموعات",
   "collections.create": "إنشاء مجموعة",
   "collections.name": "الاسم",

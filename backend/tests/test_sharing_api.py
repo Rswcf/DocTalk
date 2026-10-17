@@ -109,6 +109,7 @@ async def test_shared_view_returns_safe_message_anchor_without_private_citation_
     assert citation == {
         "text_snippet": "Payment is due within sixty days.",
         "page": 4,
+        "page_end": None,
         "document_filename": "contract.pdf",
     }
     assert "bboxes" not in response.text

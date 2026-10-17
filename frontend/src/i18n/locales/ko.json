@@ -461,6 +461,7 @@
   "doc.page": "페이지",
   "doc.slide": "슬라이드",
   "doc.sheet": "시트",
+  "collections.sessionLoadError": "이 대화를 불러올 수 없습니다. 연결을 확인하고 다시 시도하세요.",
   "collections.title": "컬렉션",
   "collections.create": "컬렉션 만들기",
   "collections.name": "이름",

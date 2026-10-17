@@ -44,6 +44,7 @@ from app.services.chat_response_versions import (
     replacement_delivered,
 )
 from app.services.chat_tool_executor import ChatArtifact, chat_tool_executor
+from app.services.citation_display import citation_display
 from app.services.citation_focus_service import current_claim, focus_sentence
 from app.services.citation_location import citation_location
 from app.services.citation_quote_service import apply_focus_quotes, extract_focus_quotes
@@ -1089,6 +1090,10 @@ class _ChunkInfo:
 
 
 def _locate_citation(citation: dict, chunk: _ChunkInfo) -> None:
+    display = citation_display(citation, source_text=chunk.text or "")
+    if "focus_snippet" not in display:
+        citation.pop("focus_snippet", None)
+    citation.update(display)
     citation.update(citation_location(
         chunk.page_start, chunk.page_end,
         [] if chunk.retrieval_modality == "summary" else chunk.bboxes,

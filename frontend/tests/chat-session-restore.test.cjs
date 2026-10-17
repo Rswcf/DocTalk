@@ -723,3 +723,54 @@ test('a menu action that resolves after a document switch leaves the next docume
     assert.ok(h.isOpen(), `${name}: the first document's action closed the menu on the second`);
   }
 });
+
+// Domain mode belongs to the restored conversation. User input while its
+// network request is pending wins, including clicking Default (null).
+test('single-document startup restores Legal, Academic, and explicit Default', async () => {
+  for (const mode of ['legal', 'academic', null]) {
+    const store = createStore(); store.getState().setDomainMode('academic');
+    runUseChatSession(store, {
+      listSessions: async () => ({ sessions: [{ ...row('restored', 2), domain_mode: mode }] }),
+      getMessages: async () => ({ messages: earlier }),
+    });
+    await settle();
+    assert.equal(store.getState().domainMode, mode);
+    assert.equal(store.getState().sessionId, 'restored');
+  }
+});
+test('startup transcript response preserves a newer mode choice and explicit Default', async () => {
+  for (const choice of ['academic', null]) {
+    const store = createStore(), pending = deferred();
+    runUseChatSession(store, {
+      listSessions: async () => ({ sessions: [{ ...row('restored', 2), domain_mode: 'legal' }] }),
+      getMessages: () => pending.promise,
+    });
+    await settle(); store.getState().setDomainMode(choice);
+    pending.resolve({ messages: earlier }); await settle();
+    assert.equal(store.getState().domainMode, choice);
+  }
+});
+test('dropdown restores mode per conversation and respects a choice during pending Open', async () => {
+  for (const choice of [undefined, 'academic', null]) {
+    const pending = deferred();
+    const h = dropdownHarness({ getMessages: () => pending.promise });
+    h.store.getState().setSessions([{ ...row('current'), domain_mode: 'academic' }, { ...row('older'), domain_mode: 'legal' }]);
+    h.store.getState().setDomainMode('academic');
+    const opening = h.switchTo('older');
+    if (choice !== undefined) h.store.getState().setDomainMode(choice);
+    pending.resolve({ messages: olderTranscript }); await opening;
+    assert.equal(h.store.getState().domainMode, choice === undefined ? 'legal' : choice);
+  }
+});
+test('new single-document conversation defaults mode and preserves newer pending choice', async () => {
+  for (const choice of [undefined, 'legal', null]) {
+    const pending = deferred();
+    const h = dropdownHarness({ createSession: () => pending.promise });
+    h.store.getState().setDomainMode('academic');
+    const creating = h.click('session.newChat');
+    if (choice !== undefined) h.store.getState().setDomainMode(choice);
+    pending.resolve({ session_id: 'fresh', created_at: 'now' }); await creating;
+    assert.equal(h.store.getState().domainMode, choice === undefined ? null : choice);
+    assert.equal(h.store.getState().sessions[0].domain_mode, null);
+  }
+});

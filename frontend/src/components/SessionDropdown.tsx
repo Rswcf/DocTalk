@@ -24,7 +24,7 @@ export default function SessionDropdown() {
   const sessions = useDocTalkStore((s) => s.sessions);
   const isStreaming = useDocTalkStore((s) => s.isStreaming);
 
-  const { addSession, setSessionId, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, setStreaming, flushPendingText } = useDocTalkStore();
+  const { addSession, setSessionId, restoreSession, setMessages, removeSession, reset, setDemoMessagesUsed, setDemoRestoredUserMsgCount, bumpDemoAccountingEpoch, setStreaming, flushPendingText } = useDocTalkStore();
   const { t, tOr } = useLocale();
   const router = useRouter();
   const { status } = useSession();
@@ -105,12 +105,14 @@ export default function SessionDropdown() {
     const live = useDocTalkStore.getState();
     if (!documentId || live.documentId !== documentId || live.documentStatus !== 'ready' || live.isStreaming) return;
     setSessionErrorCopy(null);
+    const selectionEpoch = live.domainModeEpoch;
     try {
       const s = await createSession(documentId);
       if (useDocTalkStore.getState().documentId !== documentId) return;
       addSession({
         session_id: s.session_id,
         title: null,
+        domain_mode: null,
         message_count: 0,
         created_at: s.created_at,
         last_activity_at: s.created_at,
@@ -120,7 +122,7 @@ export default function SessionDropdown() {
       // The new conversation exists on the server (and counts toward the
       // session cap), so it stays listed, but it is not opened.
       if (useDocTalkStore.getState().isStreaming) return;
-      setSessionId(s.session_id);
+      restoreSession(s.session_id, [], null, selectionEpoch);
       if (s.demo_messages_used != null) {
         // Fresh session, empty transcript — same contract as useChatSession's
         // createSession path: baseline 0, every message sent from here counts.
@@ -159,6 +161,7 @@ export default function SessionDropdown() {
 
   const openSession = async (id: string) => {
     setSessionErrorCopy(null);
+    const selectionEpoch = useDocTalkStore.getState().domainModeEpoch;
     // Fetch the transcript BEFORE publishing the new session id, and publish
     // both in one synchronous run (same rule as useChatSession). ChatPanel
     // reads "session id set, empty transcript" as a fresh session, so a demo
@@ -175,8 +178,7 @@ export default function SessionDropdown() {
     // it: its writes stop at the session-id check and nothing clears
     // isStreaming.
     if (live.documentId !== documentId || live.isStreaming) return;
-    setSessionId(id);
-    setMessages(msgs.messages);
+    restoreSession(id, msgs.messages, live.sessions.find(row => row.session_id === id)?.domain_mode, selectionEpoch);
     // Same restore contract as useChatSession's reuse branch: switching to a
     // session with a real transcript must reset the baseline to what THIS
     // transcript carries, or the demo counter stays misaligned against the

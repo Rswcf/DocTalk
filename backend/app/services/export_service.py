@@ -8,6 +8,8 @@ from typing import Any, List
 
 from markupsafe import escape as html_escape
 
+from app.services.citation_display import citation_display
+
 _MAX_MESSAGES = 500
 
 # Codepoints forbidden by XML 1.0 Char production (https://www.w3.org/TR/xml/#charsets):
@@ -83,7 +85,7 @@ def _prepare_export(messages: List[Any], *, markdown: bool = False) -> tuple[lis
             prepared.append((msg.role, text))
             continue
         citations = [
-            c
+            citation_display(c)
             for c in raw
             if isinstance(c, dict)
             and isinstance(c.get("ref_index"), int)
