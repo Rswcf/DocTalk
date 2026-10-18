@@ -38,6 +38,7 @@ from app.schemas.admin import (
     AdminUserActivityResponse,
 )
 from app.services.backup_status_service import get_postgres_backup_status
+from app.services.refund_ops_service import get_refund_operations_status
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -1993,6 +1994,18 @@ async def admin_billing_health(
         "has_mode_mismatch": has_mode_mismatch,
         "prices": price_statuses,
     }
+
+
+@router.get("/refund-operations")
+async def admin_refund_operations(
+    response: Response,
+    limit: int = Query(50, ge=1, le=100),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Read-only exception queue. No refund, cancellation or repair actions."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return await get_refund_operations_status(db, limit=limit)
 
 
 @router.get("/ops-health")

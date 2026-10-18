@@ -8,6 +8,16 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.36.5] - 2026-10-18
+
+### Added
+- Prospective, explicitly confirmed refunds for unused first monthly payments within 14 days, capped at US$25 and once per 365 days. Execution defaults off. Controlled live rollout requires an attested Stripe account, matching durable operation identity and an explicit user allowlist; prior purchases are not enrolled retrospectively.
+- Read-only administrator refund exception queue, bounded operational CLI and aggregate exception monitoring. Additive migrations preserve financial audit and bind future operations to their provider environment.
+
+### Fixed
+- Cash recovery preserves a single refund and credit adjustment across retries, delayed settlement and post-success failure. Disabling new refunds still permits reconciliation of previously submitted cash in the original account.
+- Document access and upload-slot checks remain serialized with account changes; refundable allowance stays reserved while processing. Checkout completion analytics deduplicate repeated delivery.
+
 ## [0.36.4] - 2026-10-18
 
 ### Fixed

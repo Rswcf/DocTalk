@@ -337,6 +337,17 @@ async def create_layout_translation(
                 },
             )
 
+    # Preserve document-before-user lock order: a zero-credit paid/OCR job is
+    # still usage and must not race an approved cash refund.
+    await db.scalar(select(Document).where(Document.id == doc.id).with_for_update(of=Document))
+    from app.services.refund_service import lock_user
+    locked_user = await lock_user(db, user.id)
+    if locked_user.refund_reserved_credits or locked_user.refund_delete_requested_at:
+        raise HTTPException(409, "Refund or account deletion is processing")
+    if (locked_user.plan or "free").lower() != plan:
+        raise HTTPException(409, "Plan changed; refresh before translating")
+    locked_user.credit_debit_version += 1
+
     engine = str(getattr(config_status, "engine", "retainpdf") or "retainpdf")
     provider = str(getattr(config_status, "ocr_provider", engine) or engine)
     job = DocumentJob(

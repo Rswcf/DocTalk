@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import tables as tables_api
 from app.core import deps as deps_module
+from app.models.tables import Document, User
 
 api_app = FastAPI()
 api_app.include_router(tables_api.router)
@@ -30,7 +31,8 @@ class _Result:
 
 
 def _make_user(*, plan: str = "free") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), plan=plan, email="user@example.com")
+    return SimpleNamespace(id=uuid.uuid4(), plan=plan, email="user@example.com",
+                           refund_reserved_credits=0, refund_delete_requested_at=None, credit_debit_version=0)
 
 
 def _make_doc(user: SimpleNamespace, *, status: str = "ready") -> SimpleNamespace:
@@ -63,6 +65,22 @@ def _assign_document_job_defaults(added: list[object]) -> None:
 
 
 def _override_dependencies(db: object, user: object) -> None:
+    # Route-level fakes preserve parent/user lock queries while job lookups
+    # continue using each test's original scalar result. Real lock contention
+    # and reservation rejection are verified by independent PostgreSQL tests.
+    original_scalar = db.scalar
+
+    async def scalar(statement, *args, **kwargs):
+        entity = statement.column_descriptions[0].get("entity")
+        if entity is User:
+            return user
+        if entity is Document:
+            document_id = next(iter(statement.compile().params.values()))
+            return await db.get(Document, document_id)
+        return await original_scalar(statement, *args, **kwargs)
+
+    db.scalar = scalar
+
     async def _get_db():
         yield db
 

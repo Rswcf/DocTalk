@@ -11,6 +11,15 @@ from app.api import users as users_api
 from app.services.doc_service import can_access_document
 
 
+@pytest.fixture(autouse=True)
+def isolate_refund_deletion_fence(monkeypatch):
+    # These legacy fake-DB tests exercise document/Stripe failure branches.
+    # Real PostgreSQL refund tests cover the newly added deletion mutex.
+    from app.services import refund_service
+
+    monkeypatch.setattr(refund_service, "begin_user_deletion", AsyncMock())
+
+
 def test_can_access_document_denies_ownerless_non_demo() -> None:
     doc = SimpleNamespace(demo_slug=None, user_id=None)
 
@@ -33,7 +42,9 @@ def test_can_access_document_requires_matching_owner() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_me_aborts_when_any_document_delete_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_delete_me_aborts_when_any_document_delete_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     user = SimpleNamespace(
         id=uuid.uuid4(),
         email="user@example.com",

@@ -1265,8 +1265,8 @@ to a follow-up PR to keep this scope tight.
 
 `refund_requested` is only an internal review signal. The cancel endpoint does
 not call Stripe Refunds or automatically decide eligibility; refunds are
-handled by a separate manual/business process until an explicit refund
-workflow is implemented.
+handled by a separate manual/business process in production. The separate
+Sandbox-only automatic refund candidate below does not change that policy.
 
 **`billing_state` projection**: `GET /api/users/profile` now returns a
 `billing_state` object (`managed_by`, `can_cancel`, `interval`, `period_end`,
@@ -1286,6 +1286,13 @@ not blocked on any of those fields. Admin-managed users see "Return to Free
 plan" instead of "Manage billing in Stripe". Pricing and Billing surfaces show
 the 7-day fair-use refund review copy to reduce purchase anxiety without
 promising automatic refunds.
+
+**Checkout analytics replay identity**: subscription Checkout completion events use
+`stripe_checkout_completed:<session.id>` as a nullable unique `ProductEvent`
+business key. Apply migration `20261018_0047` before deploying this code.
+PostgreSQL `ON CONFLICT DO NOTHING` prevents duplicate completion analytics
+on concurrent delivery or replay. Historical NULL-key events remain unchanged;
+existing duplicate history is not backfilled. Analytics remains best effort.
 
 **Analytics**: cancel intent emits `subscription_cancel_requested`; checking
 the refund-review option also emits `refund_requested`. The admin funnel
@@ -1739,3 +1746,58 @@ us-west2 with the installed glossary/footnote contract verified. Vercel producti
 backend checks. The final release report records real-PDF production acceptance,
 the resolved volume-ownership migration, laboratory performance, and the browser
 organization-policy restriction on saving downloads.
+
+### Sandbox-only automatic refund candidate (default off)
+
+Migration `20261018_0048` adds future Checkout policy enrollment, a monotonic
+user usage epoch, reserved credits and durable `refund_operations`. It leaves
+historical purchases unenrolled. Apply the migration before this code. The
+upgrade is add-only; downgrade refuses to remove existing refund audit rows.
+
+`AUTO_REFUND_ENABLED` and `AUTO_REFUND_PROVIDER_CREATES_ENABLED` default false.
+An explicit timezone-aware `AUTO_REFUND_POLICY_START_AT` and policy version
+`monthly-zero-use-v1` enroll only new monthly attempts. Every provider path
+requires `sk_test_`; there is no live override. The cash cap is at most USD 25.
+Eligibility is limited to initial monthly invoices requested within 14 days,
+zero usage since the invoice grant's captured epoch, unambiguous credits and
+at most one commercial automatic refund per rolling 365 days. Free usage
+settled before purchase does not disqualify the user. Other requests enter
+manual review. This candidate does not replace statutory rights or modify
+existing purchases' contract terms.
+
+`/api/billing/refund-options` returns disabled without calling Stripe when off.
+Owner-only request/read/list APIs are separate from the existing cancellation
+review checkbox. Confirmation requires three explicit booleans for full cash
+refund, immediate cancellation and credit revocation. Confirmation only persists
+an operation and reservation; Celery task `recover_refund_operations` runs every
+60 seconds and recovers broker loss. New credit debits and cost-bearing actions
+are blocked while credits are reserved. The usage epoch and non-credit paid-use
+hooks survive later job/document deletion. Account deletion records a user fence
+before taking document locks; active refund operations block deletion.
+
+Each operation has a unique invoice identity, stable Stripe idempotency key and
+leased worker ownership. No provider request holds a database row lock. Provider
+requests use a bounded client and bounded pagination. Unknown cash results are
+queried before retry; after 24 hours an unknown outcome requires manual review.
+Pending/failed refunds do not cancel subscriptions or revoke credits. A successful
+refund cancels only its original subscription and appends one unique negative
+credit adjustment, preserving unrelated/free credits and original grant history.
+Completed refunds are read back periodically for 30 days and on refund callbacks.
+A provider-confirmed failure after success becomes `cash_reversed`, with no blind
+second refund or automatic rights restoration. Old Checkout/plan/invoice events
+cannot revive an already refunded subscription. Successful cash with incomplete
+rights updates remains repairable; turning off new provider creates does not
+abandon already successful operations.
+
+The Stripe Refund object does not define `livemode`. Refund identity is verified
+through the pinned test client, exact operation metadata and the freshly retrieved
+invoice/subscription/PaymentIntent/Charge chain, whose modes and customer IDs must
+match. An explicit conflicting mode or payment identity is rejected. Refund webhooks
+validate mode on the signed top-level Event; the callback is only a durable wake-up
+hint. Worker provider readback remains authoritative, including after out-of-order
+updates. See the [Stripe Refund schema](https://docs.stripe.com/api/refunds/object).
+
+
+### Read-only refund operations CLI
+
+`backend/scripts/refund_ops.py` is restricted to an existing secure administrator environment. It requires an explicit test/live mode and exact Stripe account, performs Account GET identity attestation, then reads a bounded refund queue in a database read-only transaction. It has no refund, cancellation or repair command and does not load dotenv. Queue rules are shared with server ops health; operational response and production release gates are described in [OPS_AUTO_REFUNDS.md](OPS_AUTO_REFUNDS.md). Account attestation and queue health do not prove cash receipt.

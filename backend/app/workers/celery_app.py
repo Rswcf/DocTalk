@@ -30,6 +30,7 @@ celery_app = Celery(
         "app.workers.deletion_worker",
         "app.workers.cleanup_tasks",
         "app.workers.annual_credit_worker",
+        "app.workers.refund_worker",
         "app.workers.ops_monitor",
     ],
 )
@@ -52,6 +53,8 @@ celery_app.conf.task_routes = {
 
 # Periodic tasks (requires celery beat scheduler)
 celery_app.conf.beat_schedule = {
+    "check-refund-operations": {"task": "check_refund_operations", "schedule": 300},
+    "recover-refund-operations": {"task": "recover_refund_operations", "schedule": 60},
     "deliver-annual-credits": {
         "task": "deliver_annual_credit_installments",
         "schedule": 300,

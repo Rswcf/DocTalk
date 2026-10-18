@@ -981,14 +981,19 @@ async def reparse_document(
     # 'parsing', BEFORE publishing — the worker reads only this column.
     from sqlalchemy import update as sa_update
 
+    from app.services.refund_service import record_paid_use
+
+    # Existing document lock precedes the user/refund lock. Claim usage in the
+    # same transaction as 'parsing', before any worker can be dispatched.
+    await record_paid_use(db, user.id)
     requested_locale = body.locale if body else None
     claimed = await db.execute(
         sa_update(Document)
         .where(Document.id == doc.id, Document.status.in_(("ready", "error")))
         .values(status="parsing", parse_requested_locale=requested_locale)
     )
-    await db.commit()
     if claimed.rowcount != 1:
+        await db.rollback()
         raise HTTPException(
             status_code=409,
             detail={
@@ -997,6 +1002,7 @@ async def reparse_document(
                 "status": "parsing",
             },
         )
+    await db.commit()
     from app.workers.parse_worker import parse_document
     parse_document.delay(str(doc.id), locale=requested_locale)
     return {"status": "reparsing"}

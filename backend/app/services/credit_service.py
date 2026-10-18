@@ -4,6 +4,7 @@ from typing import Optional
 from uuid import UUID
 
 import sqlalchemy as sa
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -45,7 +46,9 @@ def get_estimated_cost(mode: str) -> int:
     return MODE_ESTIMATED_COST.get(mode, MODE_ESTIMATED_COST["balanced"])
 
 
-def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, mode: str | None = None) -> int:
+def calculate_cost(
+    prompt_tokens: int, completion_tokens: int, model: str, mode: str | None = None
+) -> int:
     """Calculate credit cost for token usage, with optional mode multiplier."""
     input_rate, output_rate = CREDIT_RATES.get(model, DEFAULT_RATE)
     input_cost = round(prompt_tokens * input_rate / 1000)
@@ -82,12 +85,26 @@ async def debit_credits(
         sa.update(User)
         .where(User.id == user_id)
         .where(User.credits_balance >= cost)
-        .values(credits_balance=User.credits_balance - cost)
+        .where(User.refund_reserved_credits == 0)
+        .where(User.refund_delete_requested_at.is_(None))
+        .values(
+            credits_balance=User.credits_balance - cost,
+            credit_debit_version=User.credit_debit_version + 1,
+        )
         .returning(User.credits_balance)
     )
     row = result.fetchone()
 
     if row is None:
+        flags = (
+            await db.execute(
+                sa.select(
+                    User.refund_reserved_credits, User.refund_delete_requested_at
+                ).where(User.id == user_id)
+            )
+        ).first()
+        if flags and (flags[0] or flags[1] is not None):
+            raise HTTPException(409, "Refund or account deletion is processing")
         return None
 
     new_balance = row[0]
@@ -207,9 +224,13 @@ async def reconcile_credits(
     # lock is what a concurrent _refund_predebit blocks on, regardless of
     # which branch below actually runs.
     locked = await db.execute(
-        sa.select(CreditLedger).where(
-            CreditLedger.id == predebit_ledger_id, CreditLedger.user_id == user_id,
-        ).with_for_update().execution_options(populate_existing=True)
+        sa.select(CreditLedger)
+        .where(
+            CreditLedger.id == predebit_ledger_id,
+            CreditLedger.user_id == user_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     ledger_row = locked.scalar_one_or_none()
     if ledger_row is None:
@@ -220,7 +241,9 @@ async def reconcile_credits(
     if ledger_row.reconciled_at is not None:
         # A commit acknowledgement can be lost. Recovery must not apply the
         # same predebit difference again, even with a different token estimate.
-        balance = await db.scalar(sa.select(User.credits_balance).where(User.id == user_id))
+        balance = await db.scalar(
+            sa.select(User.credits_balance).where(User.id == user_id)
+        )
         if balance is None:
             raise RuntimeError(f"User {user_id} not found during credit reconciliation")
         return balance
@@ -232,7 +255,9 @@ async def reconcile_credits(
             .where(CreditLedger.id == predebit_ledger_id)
             .values(reconciled_at=sa.func.now())
         )
-        balance = await db.scalar(sa.select(User.credits_balance).where(User.id == user_id))
+        balance = await db.scalar(
+            sa.select(User.credits_balance).where(User.id == user_id)
+        )
         if balance is None:
             raise RuntimeError(f"User {user_id} not found during credit reconciliation")
         await db.flush()

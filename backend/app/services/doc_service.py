@@ -21,6 +21,7 @@ from app.services.document_limits import (
 from app.services.predebited_job_service import (
     settle_active_predebited_jobs_before_parent_delete,
 )
+from app.services.refund_service import record_paid_use
 from app.services.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,17 @@ class DocService:
                         storage_key,
                     )
                 raise HTTPException(status_code=403, detail=limit_detail)
+            try:
+                # The usage epoch survives later document deletion. Keep the
+                # authoritative claim in this same insert/parse transaction.
+                await record_paid_use(db, user_id)
+            except HTTPException:
+                await db.rollback()
+                try:
+                    await asyncio.to_thread(storage_service.delete_file, storage_key)
+                except Exception:
+                    logger.exception("Failed to clean up refund-blocked upload object %s", storage_key)
+                raise
 
         # Create document row (status=parsing)
         doc = Document(

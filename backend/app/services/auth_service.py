@@ -103,6 +103,8 @@ async def update_user(db: AsyncSession, user: User, **kwargs) -> User:
 
 
 async def delete_user(db: AsyncSession, user: User) -> None:
+    from app.services.refund_service import begin_user_deletion
+    await begin_user_deletion(db, user.id)
     await db.delete(user)
     await db.commit()
 

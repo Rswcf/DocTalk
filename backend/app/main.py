@@ -28,6 +28,7 @@ from .api.feedback import router as feedback_router
 from .api.layout_translations import router as layout_translations_router
 from .api.question_templates import router as question_templates_router
 from .api.quotes import router as quotes_router
+from .api.refunds import router as refunds_router
 from .api.search import search_router
 from .api.sharing import router as sharing_router
 from .api.tables import router as tables_router
@@ -187,6 +188,7 @@ app.include_router(auth.router)
 app.include_router(credits_router)
 app.include_router(users_router)
 app.include_router(billing_router)
+app.include_router(refunds_router)
 app.include_router(collections_router)
 app.include_router(admin_router)
 app.include_router(events_router)

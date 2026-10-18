@@ -1043,9 +1043,14 @@ Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；�
 
 每次成功取消都会写入 `plan_transitions`，`source='self_serve_cancel'`。metadata 包含 `sub_id`、`status_at_cancel`、分支原因码（如 `admin_promoted_revert`、`branch_c_auto_heal`、`stripe_already_canceled_sync`），以及用户提供的取消上下文：`cancel_reason`、`cancel_feedback`、`refund_requested`。
 
-`refund_requested` 只是内部审核信号。取消端点不会调用 Stripe Refunds，也不会自动判定退款资格；在独立退款工作流实现前，退款仍由人工/业务流程处理。
+`refund_requested` 只是内部审核信号。取消端点不会调用 Stripe Refunds，也不会自动判定退款资格；生产退款仍由人工/业务流程处理。下述独立 Sandbox 自动退款候选不改变生产政策。
 
 前端 `/billing` 的取消入口保持自助可达，确认弹窗可收集可选取消原因、可选反馈和退款审核勾选，但取消动作不依赖这些字段。Pricing 和 Billing 页面展示 7-day fair-use refund review 文案，用于降低付费焦虑但不承诺自动退款。
+
+订阅 Checkout 完成分析事件使用 `stripe_checkout_completed:<session.id>` 作为
+`ProductEvent` 可空唯一业务键。部署代码前须应用迁移 `20261018_0047`。
+PostgreSQL `ON CONFLICT DO NOTHING` 防止并发投递或重放产生重复完成事件。
+历史 NULL 键事件保持不变，已有重复历史不回填。分析记录仍为 best effort。
 
 取消意图会记录 `subscription_cancel_requested` 事件；勾选退款审核会额外记录 `refund_requested`。Admin funnel 已纳入这两个事件，便于跟踪付费后取消和退款压力。
 
@@ -1091,3 +1096,35 @@ RPO 为 24 小时;恢复约需 30–45 分钟(下载、owner 解密、`pg_restor
 ### 集成测试隔离(2026-08)
 
 `backend/tests/conftest.py` 在任何 app 模块导入前强制所有集成测试使用临时库 `doctalk_test`(自动建库+迁移,仅限回环地址),同时拦截 shell 导出的 `DATABASE_URL` 与 pydantic-settings 静默读取的 `.env`。除非显式设置 `DOCTALK_TEST_DATABASE_URL`,非回环主机一律硬拒——导出生产 URL 必须快速失败,绝不远程建库。此规则源于同日两次共享开发库数据丢失事故(`alembic downgrade base` 往返与集成夹具)。永远不要对 `doctalk` 运行破坏性迁移测试。
+
+### Sandbox 自动退款候选（默认关闭）
+
+迁移 `20261018_0048` 只新增未来Checkout政策标记、用户使用计数、额度预约及
+`refund_operations`，旧订单不补资格。部署代码前须迁移；存在退款审计时禁止降级删除。
+`AUTO_REFUND_ENABLED` 与 `AUTO_REFUND_PROVIDER_CREATES_ENABLED` 默认false，
+须设置带时区的 `AUTO_REFUND_POLICY_START_AT` 才对新月付attempt记录版本
+`monthly-zero-use-v1`。所有provider路径硬性要求sk_test，无live override。
+
+首版仅评估付款后14天申请、首次月付、付款后零使用、资金清楚、最多25美元且
+滚动365天最多一次的商业自动退款。付款前已结算免费使用不误拒。其它进入人工，
+不取代法定权利、不追溯收紧旧购买。原取消弹窗的退款勾选仍仅记录审核意图。
+新确认接口须明确全额退款、立即取消、撤销对应额度三项影响；它只持久化操作与预约。
+Celery `recover_refund_operations` 每60秒恢复待处理任务，provider调用不持数据库行锁。
+预约期间阻止新扣分与成本动作；文档锁先于用户锁，删除意图先持久化再删文档。
+
+未知现金结果先查provider，超过24小时不盲重建；pending/failed不取消、不撤额度。
+现金成功后只取消原订阅，追加唯一负向账本，保留免费及其他额度和原始发放历史。
+已完成退款在30天内定期复核并接受退款回调唤醒；provider确认成功后失败则进入
+`cash_reversed`人工修复，不二次退款、不自动恢复权益。旧Checkout/发票/计划事件
+不得恢复已退款订阅。关闭新现金创建开关不会遗弃现金已成功后的权益修复。
+
+Stripe Refund 对象没有 `livemode` 字段。退款身份须通过固定测试客户端、操作 metadata
+以及实时读取的 invoice/subscription/PaymentIntent/Charge 关联链核验；关联对象的环境与
+客户身份必须一致。显式环境或付款身份冲突仍拒绝。退款回调在已签名的顶层 Event 校验环境，
+只写持久唤醒提示；Worker 始终回读 provider 事实，包括收到乱序事件之后。参见
+[Stripe Refund schema](https://docs.stripe.com/api/refunds/object)。
+
+
+### 只读退款运营CLI
+
+`backend/scripts/refund_ops.py`仅供既有安全管理员环境使用。它要求显式test/live模式与精确Stripe账户，通过Account GET核对身份后，在数据库只读事务中读取有界退款队列。脚本不加载dotenv，没有退款、取消或修复命令。队列规则与服务端运营健康检查共享。处理边界及生产发布门禁见[OPS_AUTO_REFUNDS.md](OPS_AUTO_REFUNDS.md)。账户匹配和队列健康不证明客户资金到账。

@@ -367,6 +367,9 @@ class User(Base):
     credits_balance: Mapped[int] = mapped_column(
         sa.Integer, nullable=False, server_default=sa.text("0")
     )
+    refund_delete_requested_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    credit_debit_version: Mapped[int] = mapped_column(sa.BigInteger, nullable=False, server_default=sa.text("0"))
+    refund_reserved_credits: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
     signup_bonus_granted_at: Mapped[Optional[datetime]] = mapped_column(
         sa.DateTime(timezone=True)
     )
@@ -432,6 +435,15 @@ class CheckoutAttempt(Base):
         onupdate=sa.func.now(),
     )
 
+    refund_provider_mode: Mapped[Optional[str]] = mapped_column(sa.String(16))
+    refund_provider_account_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    refund_policy_version: Mapped[Optional[str]] = mapped_column(sa.String(64))
+    refund_policy_enrolled_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    refund_debit_baseline: Mapped[Optional[int]] = mapped_column(sa.BigInteger)
+    refund_invoice_id: Mapped[Optional[str]] = mapped_column(sa.String(255), unique=True)
+    refund_subscription_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    refund_price_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    refund_grant_credits: Mapped[Optional[int]] = mapped_column(sa.Integer)
     user: Mapped[User] = relationship("User")
 
     __table_args__ = (
@@ -590,6 +602,8 @@ class CreditLedger(Base):
     )
 
     __table_args__ = (
+        sa.Index("uq_credit_ledger_cash_refund", "user_id", "ref_type", "ref_id", unique=True,
+                 postgresql_where=sa.text("ref_type = 'cash_refund' AND ref_id IS NOT NULL")),
         sa.Index("idx_credit_ledger_user_created", "user_id", "created_at"),
         sa.Index("idx_credit_ledger_ref", "ref_type", "ref_id"),
         sa.Index(
@@ -855,6 +869,7 @@ class ProductEvent(Base):
         nullable=True,
         index=True,
     )
+    deduplication_key: Mapped[Optional[str]] = mapped_column(sa.String(320), nullable=True)
     event_name: Mapped[str] = mapped_column(sa.String(64), nullable=False, index=True)
     source: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
     reason: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
@@ -870,6 +885,7 @@ class ProductEvent(Base):
     user: Mapped[Optional["User"]] = relationship("User")
 
     __table_args__ = (
+        sa.UniqueConstraint("deduplication_key", name="uq_product_event_deduplication_key"),
         sa.Index("idx_product_events_created", sa.text("created_at DESC")),
         sa.Index(
             "idx_product_events_name_created", "event_name", sa.text("created_at DESC")
@@ -1432,3 +1448,41 @@ class MessageRevision(Base):
     message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("messages.id", ondelete="CASCADE"), nullable=False, index=True)
     snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[sa.DateTime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("now()"))
+
+
+class RefundOperation(Base):
+    """Durable mode/account-bound cash refund saga; never cascades away financial facts."""
+    __tablename__ = "refund_operations"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()"))
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    invoice_id: Mapped[str] = mapped_column(sa.String(255), unique=True, nullable=False)
+    provider_mode: Mapped[Optional[str]] = mapped_column(sa.String(16))
+    provider_account_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    policy_version: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    request_kind: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    status: Mapped[str] = mapped_column(sa.String(32), nullable=False, index=True)
+    review_reason: Mapped[Optional[str]] = mapped_column(sa.String(128))
+    subscription_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    customer_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    payment_intent_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    charge_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    price_id: Mapped[Optional[str]] = mapped_column(sa.String(255))
+    plan: Mapped[Optional[str]] = mapped_column(sa.String(16))
+    amount_minor: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    currency: Mapped[str] = mapped_column(sa.String(8), nullable=False, server_default=sa.text("'usd'"))
+    credits_to_revoke: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default=sa.text("0"))
+    paid_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    requested_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"))
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    first_submitted_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    provider_refund_id: Mapped[Optional[str]] = mapped_column(sa.String(255), unique=True)
+    idempotency_key: Mapped[str] = mapped_column(sa.String(255), nullable=False, unique=True)
+    cash_status: Mapped[Optional[str]] = mapped_column(sa.String(32))
+    subscription_canceled_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    adjustment_ledger_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
+    evidence_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa.text("'{}'::jsonb"))
+    lease_token: Mapped[Optional[str]] = mapped_column(sa.String(64))
+    lease_until: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    next_retry_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True))
+    last_error: Mapped[Optional[str]] = mapped_column(sa.String(128))
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"), onupdate=sa.func.now())

@@ -144,6 +144,15 @@ class Settings(BaseSettings):
     SENTRY_TRACES_SAMPLE_RATE: float = Field(default=0.1)
 
     # Stripe
+    # Explicit mode and exact account are required independently of both kill switches.
+    AUTO_REFUND_MODE: str = "sandbox"
+    AUTO_REFUND_LIVE_USER_IDS: list[str] = Field(default_factory=list)
+    AUTO_REFUND_EXPECTED_ACCOUNT_ID: Optional[str] = None
+    AUTO_REFUND_ENABLED: bool = False
+    AUTO_REFUND_PROVIDER_CREATES_ENABLED: bool = False
+    AUTO_REFUND_POLICY_VERSION: str = "monthly-zero-use-v1"
+    AUTO_REFUND_POLICY_START_AT: Optional[str] = None
+    AUTO_REFUND_MAX_AMOUNT_MINOR: int = 2500
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
     STRIPE_PRICE_BOOST: str = "price_boost"

@@ -91,6 +91,9 @@ def _make_user(*, plan: str = "free", **overrides: object) -> SimpleNamespace:
         "email": "user@example.com",
         "stripe_subscription_id": None,
         "stripe_customer_id": None,
+        "refund_reserved_credits": 0,
+        "refund_delete_requested_at": None,
+        "credit_debit_version": 0,
     }
     payload.update(overrides)
     return SimpleNamespace(**payload)
@@ -123,6 +126,22 @@ def _override_dependencies(
     api_app.dependency_overrides[deps_module.get_db_session] = _get_db
 
     if auth_user is not _UNSET:
+        # Full-row refund locking is distinct from the existing plan/count
+        # scalar fakes; retain those original return values and assertions.
+        from app.models.tables import RefundOperation, User
+
+        original_scalar = db.scalar
+
+        async def scalar(statement, *args, **kwargs):
+            description = statement.column_descriptions[0]
+            if description.get("entity") is User and description.get("name") == "User":
+                return auth_user
+            if description.get("entity") is RefundOperation:
+                return None
+            return await original_scalar(statement, *args, **kwargs)
+
+        db.scalar = AsyncMock(side_effect=scalar)
+
         async def _require_auth():
             return auth_user
 
@@ -1326,6 +1345,8 @@ async def test_collection_doc_limit_reached(client: AsyncClient) -> None:
         return None
 
     db = _make_db(
+        scalar=AsyncMock(return_value=settings.FREE_MAX_DOCS_PER_COLLECTION),
+        scalars=AsyncMock(return_value=SimpleNamespace(all=lambda: [document_id])),
         get=AsyncMock(side_effect=_fake_get),
         execute=AsyncMock(
             side_effect=[
@@ -1419,7 +1440,7 @@ async def test_share_limit_reached(client: AsyncClient, monkeypatch: pytest.Monk
     user = _make_user(plan="free")
     db = _make_db(
         execute=AsyncMock(return_value=_Result(scalar_one_or_none=None)),
-        scalar=AsyncMock(side_effect=[user, 2, 1]),
+        scalar=AsyncMock(side_effect=[2, 1]),
     )
     _override_dependencies(db, auth_user=user)
     monkeypatch.setattr(

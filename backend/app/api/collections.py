@@ -22,6 +22,7 @@ from app.models.tables import (
 from app.services.predebited_job_service import (
     settle_active_predebited_jobs_before_parent_delete,
 )
+from app.services.refund_service import lock_user, record_paid_use
 
 collections_router = APIRouter(prefix="/api/collections", tags=["collections"])
 
@@ -170,6 +171,26 @@ async def create_collection(
             ).all()
         )
 
+    # Parent locks above precede the user serialization lock. Recount after
+    # acquiring it: two writes below the Free cap must not hide paid capacity.
+    locked_user = await lock_user(db, user.id)
+    plan = (locked_user.plan or "free").lower()
+    max_collections = {"free": settings.FREE_MAX_COLLECTIONS,
+                       "plus": settings.PLUS_MAX_COLLECTIONS,
+                       "pro": settings.PRO_MAX_COLLECTIONS}.get(plan, settings.FREE_MAX_COLLECTIONS)
+    current_count = await db.scalar(select(func.count()).select_from(Collection)
+                                    .where(Collection.user_id == user.id)) or 0
+    if current_count >= max_collections:
+        raise HTTPException(status_code=403, detail="Collection limit reached")
+    max_docs = {"free": settings.FREE_MAX_DOCS_PER_COLLECTION,
+                "plus": settings.PLUS_MAX_DOCS_PER_COLLECTION,
+                "pro": settings.PRO_MAX_DOCS_PER_COLLECTION}.get(plan, settings.FREE_MAX_DOCS_PER_COLLECTION)
+    if len(locked_document_ids) > max_docs:
+        raise HTTPException(status_code=403, detail="Collection document limit reached")
+    if (current_count >= settings.FREE_MAX_COLLECTIONS
+            or len(locked_document_ids) > settings.FREE_MAX_DOCS_PER_COLLECTION):
+        await record_paid_use(db, user.id)
+
     coll = Collection(
         name=body.name,
         description=body.description,
@@ -304,6 +325,19 @@ async def add_documents_to_collection(
             continue
         valid_doc_ids.append(did)
 
+    # Existing parents precede the user lock. Serialize the authoritative
+    # capacity decision with refunds and other adds for this user.
+    if valid_doc_ids:
+        valid_doc_ids = list((await db.scalars(select(Document.id).where(
+            Document.id.in_(valid_doc_ids), Document.user_id == user.id,
+        ).order_by(Document.id).with_for_update(read=True, key_share=True))).all())
+    locked_user = await lock_user(db, user.id)
+    plan = (locked_user.plan or "free").lower()
+    max_docs = {"free": settings.FREE_MAX_DOCS_PER_COLLECTION,
+                "plus": settings.PLUS_MAX_DOCS_PER_COLLECTION,
+                "pro": settings.PRO_MAX_DOCS_PER_COLLECTION}.get(plan, settings.FREE_MAX_DOCS_PER_COLLECTION)
+    current_docs = await db.scalar(select(func.count()).select_from(collection_documents)
+                                   .where(collection_documents.c.collection_id == collection_id)) or 0
     # Check limit against actual addable count
     if current_docs + len(valid_doc_ids) > max_docs:
         raise HTTPException(
@@ -315,6 +349,9 @@ async def add_documents_to_collection(
                 "plan": plan,
             },
         )
+
+    if valid_doc_ids and current_docs + len(valid_doc_ids) > settings.FREE_MAX_DOCS_PER_COLLECTION:
+        await record_paid_use(db, user.id)
 
     added = 0
     for did in valid_doc_ids:

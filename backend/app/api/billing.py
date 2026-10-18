@@ -12,6 +12,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_delete, cache_get, cache_set
@@ -36,6 +37,7 @@ from app.schemas.billing import (
     PortalUrlResponse,
 )
 from app.schemas.common import ReceivedResponse
+from app.services import refund_service
 from app.services.annual_credit_service import (
     grant_installment,
     month_anniversary,
@@ -93,19 +95,26 @@ async def _record_product_event(
     billing: str | None = None,
     reason: str | None = None,
     metadata: dict | None = None,
+    deduplication_key: str | None = None,
 ) -> None:
     try:
-        db.add(
-            ProductEvent(
-                user_id=user_id,
-                event_name=event_name,
-                source=source,
-                reason=reason,
-                plan=plan,
-                billing=billing,
-                metadata_json=metadata or {},
-            )
+        values = dict(
+            user_id=user_id,
+            event_name=event_name,
+            source=source,
+            reason=reason,
+            plan=plan,
+            billing=billing,
+            metadata_json=metadata or {},
         )
+        if deduplication_key is None:
+            db.add(ProductEvent(**values))
+        else:
+            await db.execute(
+                insert(ProductEvent).values(
+                    **values, deduplication_key=deduplication_key
+                ).on_conflict_do_nothing(constraint="uq_product_event_deduplication_key")
+            )
         await db.commit()
     except Exception as e:
         await db.rollback()
@@ -691,6 +700,7 @@ async def _create_or_recover_checkout_session(
         },
         subscription_data={
             "metadata": {
+                **({"refund_policy_version": attempt.refund_policy_version} if getattr(attempt, "refund_policy_version", None) else {}),
                 "checkout_attempt_id": str(attempt.id),
                 "plan": attempt.plan,
                 "billing": attempt.billing_period,
@@ -920,6 +930,8 @@ async def subscribe(
     # normal double-clicks/two-tab requests. The attempt is committed before
     # Stripe is called so every retry reuses one durable idempotency key.
     locked_user = await _lock_user(db, user.id)
+    if getattr(locked_user, "refund_reserved_credits", 0):
+        raise HTTPException(409, "Refund processing")
     if (
         locked_user.stripe_subscription_id
         and locked_user.stripe_subscription_id != _PENDING_SENTINEL
@@ -985,6 +997,7 @@ async def subscribe(
         reason=(body.reason or "")[:64] or None,
         started_at=datetime.now(timezone.utc),
         status="creating",
+        **(refund_service.enrollment(user_id=user.id) if body.billing == "monthly" else {}),
     )
     db.add(attempt)
     locked_user.stripe_subscription_id = _PENDING_SENTINEL
@@ -1065,6 +1078,12 @@ async def change_plan(
         # The checkout sentinel is not a Stripe Subscription ID. Only the
         # serialized subscribe flow can safely resume or replace that checkout.
         raise HTTPException(409, "Subscription checkout requires recovery. Use /subscribe instead.")
+    locked_refund_user = await refund_service.lock_user(db, user.id)
+    if getattr(locked_refund_user, "refund_reserved_credits", 0):
+        raise HTTPException(409, "Refund processing")
+    if hasattr(locked_refund_user, "credit_debit_version"):
+        locked_refund_user.credit_debit_version += 1  # Invalidate refund baseline before remote plan mutation.
+    await db.commit()
     if not user.stripe_subscription_id:
         if user.stripe_customer_id:
             try:
@@ -1668,6 +1687,9 @@ async def _handle_checkout_session_subscription_completed(
         logger.warning("Subscription completed for non-existent user %s", user_id)
         return {"received": True}
 
+    if await refund_service.refunded_subscription(db, user.id, session.get("subscription")):
+        await db.commit()
+        return {"received": True}
     attempt = await _checkout_attempt_for_session(session, db, for_update=True)
     if attempt:
         if session.get("id"):
@@ -1710,6 +1732,9 @@ async def _handle_checkout_session_subscription_completed(
             sub = await asyncio.to_thread(
                 stripe.Subscription.retrieve, subscription_id
             )
+            if sub.get("status") in {"canceled", "incomplete_expired"}:
+                await db.commit()
+                return {"received": True}
             if sub.get("items") and sub["items"].get("data"):
                 sub_price_id = sub["items"]["data"][0].get("price", {}).get("id", "")
                 detected = _plan_from_price_id(sub_price_id)
@@ -1743,15 +1768,22 @@ async def _handle_checkout_session_subscription_completed(
         subscription_id=subscription_id,
         customer_id=customer_id,
     )
+    # Provider session identity survives distinct webhook IDs and concurrent retries.
+    session_id = session.get("id")
+    if not session_id:
+        logger.warning("Subscription checkout missing session ID; analytics skipped")
+        return {"received": True}
     session_metadata = session.get("metadata", {}) or {}
     await _record_product_event(
         db,
         user_id=user.id,
         event_name="checkout_completed",
+        deduplication_key=f"stripe_checkout_completed:{session_id}",
         source=(session_metadata.get("source") or "stripe_webhook")[:64],
         plan=plan,
         reason=session_metadata.get("reason", "")[:64] or None,
         metadata={
+            "checkout_session_id": session_id,
             "subscription_id": subscription_id,
             "customer_id": customer_id,
             "source": session_metadata.get("source"),
@@ -2029,6 +2061,9 @@ async def _handle_invoice_payment_succeeded(
         if not locked_user:
             await db.rollback()
             return {"received": True}
+        if await refund_service.refunded_subscription(db, locked_user.id, contract.subscription_id):
+            await db.commit()
+            return {"received": True}
         if not await db.scalar(reference):
             # Checkout/subscription events own current entitlements. An old paid
             # invoice must not revert the current plan or revive a cancelled one.
@@ -2057,6 +2092,7 @@ async def _handle_invoice_payment_succeeded(
                     db, user_id=locked_user.id, amount=allowance,
                     reason="monthly_allowance", ref_type="stripe_invoice", ref_id=invoice_id,
                 )
+                await refund_service.capture_baseline(db, locked_user, invoice, contract, allowance)
         await db.commit()
     except Exception as e:
         await db.rollback()
@@ -2201,6 +2237,9 @@ async def _handle_subscription_updated(
     user = await db.scalar(select(User).where(User.stripe_customer_id == customer_id))
     if not user:
         return {"received": True}
+    if await refund_service.refunded_subscription(db, user.id, subscription.get("id")):
+        await db.commit()
+        return {"received": True}
     status = subscription.get("status", "")
     if status not in ("active", "trialing"):
         return {"received": True}
@@ -2267,11 +2306,16 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         expected_livemode = False
     else:
         raise HTTPException(503, "Stripe environment not configured")
-    if type(event.get("livemode")) is not bool:
+    if event.get("livemode") is not True and event.get("livemode") is not False:
         raise HTTPException(400, "Invalid event livemode")
     if event["livemode"] is not expected_livemode:
         raise HTTPException(400, "Stripe environment mismatch")
 
+    if event["type"] in {"refund.created", "refund.updated", "refund.failed"}:
+        obj = event.get("data", {}).get("object")
+        if isinstance(obj, dict):
+            await refund_service.wake_refund(db, obj)
+        return {"received": True}
     handlers = {
         "checkout.session.completed": _handle_checkout_session_completed,
         "checkout.session.async_payment_succeeded": _handle_checkout_session_async_payment_succeeded,

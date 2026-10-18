@@ -20,6 +20,7 @@ import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
 import { needsCheckoutRecovery } from "../../lib/billingRecovery";
 import { formatStripePlanPrice } from "../../lib/planPricing";
 import CheckoutStatusNotice from "../../components/CheckoutStatusNotice";
+import RefundPanel from "../../components/RefundPanel";
 import { authHrefFor, type BillingPeriodIntent, type BillingPlanIntent } from "../../lib/billingLinks";
 import { getBillingErrorMessage as billingErrorMessage, startCheckout } from "../../lib/billing";
 import { trackEvent } from "../../lib/analytics";
@@ -113,6 +114,7 @@ function BillingContent() {
   const [cancelReason, setCancelReason] = useState<CancelSubscriptionReason | null>(null);
   const [cancelFeedback, setCancelFeedback] = useState("");
   const [refundRequested, setRefundRequested] = useState(false);
+  const [refundPolicyEnabled, setRefundPolicyEnabled] = useState(false);
 
   // I13 focus-trap refs for the three confirm dialogs. The hook captures the previously
   // focused element on open and restores it on close.
@@ -604,6 +606,8 @@ function BillingContent() {
 
         {/* Current Plan panel — BGB §312k-compliant cancel button.
             Shown only for paid users (free plan has nothing to manage). */}
+        {profile ? <RefundPanel key={profile.id} onAvailabilityChange={setRefundPolicyEnabled} onCompleted={() => { triggerCreditsRefresh(); void refetchProfile(); }} /> : null}
+
         {profile && profile.plan !== 'free' && profile.billing_state && (
           <section
             className="mb-8 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6"
@@ -913,10 +917,10 @@ function BillingContent() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-semibold">
-                      {tOr('billing.refundPolicy.title', '7-day fair-use refund')}
+                      {refundPolicyEnabled ? tOr('billing.refund.title', 'Refund requests') : tOr('billing.refundPolicy.title', '7-day fair-use refund')}
                     </p>
                     <p className="mt-1 leading-6 text-emerald-800 dark:text-emerald-200">
-                      {tOr(
+                      {refundPolicyEnabled ? tOr('billing.refund.policy', 'Automatic refunds are limited to an unused first monthly payment within 14 days, up to US$25, once per 365 days. Other requests receive manual review.') : tOr(
                         'billing.refundPolicy.body',
                         'If DocTalk is not a fit and usage is low, cancel within 7 days and request a refund review from the cancel flow.'
                       )}
@@ -1234,7 +1238,7 @@ function BillingContent() {
                       {tOr('billing.cancel.refundCheckbox', 'Request a refund review')}
                     </span>
                     <span className="mt-0.5 block leading-5 text-emerald-800 dark:text-emerald-200">
-                      {tOr('billing.cancel.refundHint', 'Best for recent purchases with low usage. Cancellation is not blocked by this choice.')}
+                      {refundPolicyEnabled ? tOr('billing.refund.reviewOnly', 'The refund checkbox in the cancellation form only records a request for review. It does not issue a cash refund.') : tOr('billing.cancel.refundHint', 'Best for recent purchases with low usage. Cancellation is not blocked by this choice.')}
                     </span>
                   </span>
                 </label>

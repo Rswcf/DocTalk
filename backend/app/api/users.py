@@ -383,6 +383,9 @@ async def delete_me(
     user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db_session),
 ):
+    from app.services.refund_service import begin_user_deletion
+    await begin_user_deletion(db, user.id)
+
     # 1) Find all user documents
     doc_rows = await db.execute(select(Document.id).where(Document.user_id == user.id))
     doc_ids = [row.id for row in doc_rows.all()]

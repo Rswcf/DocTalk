@@ -11,6 +11,13 @@ from app.api import billing
 
 
 @pytest.fixture(autouse=True)
+def no_refunded_subscription(monkeypatch):
+    monkeypatch.setattr(
+        billing.refund_service, "refunded_subscription", AsyncMock(return_value=False)
+    )
+
+
+@pytest.fixture(autouse=True)
 def prices(monkeypatch):
     for name, value in {
         "STRIPE_PRICE_PLUS_MONTHLY": "price_plus",
@@ -86,9 +93,7 @@ def database(plan="free", subscription="pending"):
     "price,amount",
     [
         ("price_plus", 3000),
-
         ("price_pro", 9000),
-
     ],
 )
 async def test_paid_invoice_before_checkout_including_zero_cash(

@@ -13,12 +13,33 @@ from httpx import ASGITransport, AsyncClient
 from app.api import layout_translations as layout_api
 from app.core import deps as deps_module
 
+
+@pytest.fixture(autouse=True)
+def isolate_refund_user_lock(monkeypatch):
+    from app.services import refund_service
+
+    async def lock(db, user_id):
+        # Preserve the real authenticated fixture plan; only lock SQL is fake.
+        user = _REFUND_USERS[user_id]
+        return user
+
+    monkeypatch.setattr(refund_service, "lock_user", lock)
+
+
+_REFUND_USERS = {}
+
+
 api_app = FastAPI()
 api_app.include_router(layout_api.router)
 
 
 class _Result:
-    def __init__(self, *, scalar_one_or_none: object = None, scalars_all: list[object] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        scalar_one_or_none: object = None,
+        scalars_all: list[object] | None = None,
+    ) -> None:
         self._scalar_one_or_none = scalar_one_or_none
         self._scalars_all = scalars_all or []
 
@@ -30,10 +51,21 @@ class _Result:
 
 
 def _make_user(plan: str = "free") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid.uuid4(), plan=plan, email="user@example.com")
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        plan=plan,
+        email="user@example.com",
+        refund_reserved_credits=0,
+        refund_delete_requested_at=None,
+        credit_debit_version=0,
+    )
+    _REFUND_USERS[user.id] = user
+    return user
 
 
-def _make_doc(user_id: uuid.UUID, *, page_count: int = 10, file_size: int = 1024) -> SimpleNamespace:
+def _make_doc(
+    user_id: uuid.UUID, *, page_count: int = 10, file_size: int = 1024
+) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         user_id=user_id,
@@ -61,7 +93,9 @@ def _override_dependencies(db: object, user: object) -> None:
 @pytest.fixture(autouse=True)
 def _clear_dependency_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     api_app.dependency_overrides.clear()
-    monkeypatch.setattr(layout_api, "_enqueue_layout_translation_job", lambda job_id: None)
+    monkeypatch.setattr(
+        layout_api, "_enqueue_layout_translation_job", lambda job_id: None
+    )
     monkeypatch.setattr(
         layout_api,
         "layout_translation_config_status",
@@ -76,7 +110,9 @@ def _clear_dependency_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest_asyncio.fixture
 async def client():
-    async with AsyncClient(transport=ASGITransport(app=api_app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=api_app), base_url="http://test"
+    ) as ac:
         yield ac
 
 
@@ -111,13 +147,17 @@ async def test_document_capacity_precheck_uses_fresh_plan_after_upgrade() -> Non
 
 
 @pytest.mark.asyncio
-async def test_free_user_can_start_two_trial_layout_translations(client: AsyncClient) -> None:
+async def test_free_user_can_start_two_trial_layout_translations(
+    client: AsyncClient,
+) -> None:
     user = _make_user("free")
     doc = _make_doc(user.id)
     db = _fake_db(doc, used=1)
     _override_dependencies(db, user)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 202
     payload = response.json()
@@ -134,7 +174,9 @@ async def test_free_user_hits_layout_translation_limit(client: AsyncClient) -> N
     db = _fake_db(doc, used=2)
     _override_dependencies(db, user)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 403
     detail = response.json()["detail"]
@@ -145,13 +187,17 @@ async def test_free_user_hits_layout_translation_limit(client: AsyncClient) -> N
 
 
 @pytest.mark.asyncio
-async def test_free_user_hits_layout_translation_page_limit_before_trial_is_consumed(client: AsyncClient) -> None:
+async def test_free_user_hits_layout_translation_page_limit_before_trial_is_consumed(
+    client: AsyncClient,
+) -> None:
     user = _make_user("free")
     doc = _make_doc(user.id, page_count=26)
     db = _fake_db(doc, used=0)
     _override_dependencies(db, user)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 413
     detail = response.json()["detail"]
@@ -164,28 +210,41 @@ async def test_free_user_hits_layout_translation_page_limit_before_trial_is_cons
 
 
 @pytest.mark.asyncio
-async def test_plus_user_can_start_layout_translation_for_mid_sized_pdf(client: AsyncClient) -> None:
+async def test_plus_user_can_start_layout_translation_for_mid_sized_pdf(
+    client: AsyncClient,
+) -> None:
     user = _make_user("plus")
     doc = _make_doc(user.id, page_count=53)
     db = _fake_db(doc, used=0)
     _override_dependencies(db, user)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 202
     payload = response.json()
     assert payload["metadata_json"]["max_pages"] == 150
-    db.scalar.assert_not_called()
+    # Paid plans skip the Free trial count, but still lock the document
+    # before the refund/user mutex for this new paid/OCR action.
+    db.scalar.assert_awaited_once()
+    sql = str(db.scalar.await_args.args[0])
+    assert "documents" in sql and "FOR UPDATE" in sql
+    assert "count(" not in sql
 
 
 @pytest.mark.asyncio
-async def test_layout_translation_accepts_non_chinese_target_language(client: AsyncClient) -> None:
+async def test_layout_translation_accepts_non_chinese_target_language(
+    client: AsyncClient,
+) -> None:
     user = _make_user("plus")
     doc = _make_doc(user.id, page_count=12)
     db = _fake_db(doc, used=0)
     _override_dependencies(db, user)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "en"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "en"}
+    )
 
     assert response.status_code == 202
     payload = response.json()
@@ -194,7 +253,9 @@ async def test_layout_translation_accepts_non_chinese_target_language(client: As
 
 
 @pytest.mark.asyncio
-async def test_import_requested_layout_translation_respects_document_limit(client: AsyncClient) -> None:
+async def test_import_requested_layout_translation_respects_document_limit(
+    client: AsyncClient,
+) -> None:
     user = _make_user("plus")
     doc = _make_doc(user.id, page_count=12)
     db = _fake_db(doc, used=20)
@@ -214,7 +275,9 @@ async def test_import_requested_layout_translation_respects_document_limit(clien
 
 
 @pytest.mark.asyncio
-async def test_import_request_on_existing_layout_translation_respects_document_limit(client: AsyncClient) -> None:
+async def test_import_request_on_existing_layout_translation_respects_document_limit(
+    client: AsyncClient,
+) -> None:
     user = _make_user("plus")
     doc = _make_doc(user.id, page_count=12)
     existing = SimpleNamespace(
@@ -249,13 +312,17 @@ async def test_import_request_on_existing_layout_translation_respects_document_l
 
 
 @pytest.mark.asyncio
-async def test_layout_translation_rejects_large_files_before_trial_is_consumed(client: AsyncClient) -> None:
+async def test_layout_translation_rejects_large_files_before_trial_is_consumed(
+    client: AsyncClient,
+) -> None:
     user = _make_user("free")
     doc = _make_doc(user.id, file_size=51 * 1024 * 1024)
     db = _fake_db(doc, used=0)
     _override_dependencies(db, user)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 413
     detail = response.json()["detail"]
@@ -280,7 +347,9 @@ async def test_layout_translation_does_not_consume_trial_when_sidecar_not_config
         lambda: SimpleNamespace(ready=False, missing=("RETAINPDF_API_BASE_URL",)),
     )
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 503
     detail = response.json()["detail"]
@@ -305,7 +374,9 @@ async def test_layout_translation_refuses_missing_file_before_trial_is_consumed(
 
     monkeypatch.setattr(layout_api.storage_service, "object_exists", _missing)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 410
     assert response.json()["detail"] == {
@@ -335,7 +406,9 @@ async def test_layout_translation_storage_outage_is_not_reported_as_missing(
 
     monkeypatch.setattr(layout_api.storage_service, "object_exists", _down)
 
-    response = await client.post(f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"})
+    response = await client.post(
+        f"/api/documents/{doc.id}/layout-translation", json={"target_language": "zh-CN"}
+    )
 
     assert response.status_code == 503
     assert response.json()["detail"]["error"] == "STORAGE_UNAVAILABLE"

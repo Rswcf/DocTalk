@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db_session, require_auth
 from app.models.tables import Document, DocumentJob, DocumentTable, ProductEvent, User
 from app.services.doc_service import can_access_document
+from app.services.refund_service import record_paid_use
 from app.services.table_service import (
     TABLE_JOB_TYPES,
     TABLE_RECONSTRUCT_JOB_TYPE,
@@ -108,8 +109,12 @@ def _table_response(table: DocumentTable) -> DocumentTableResponse:
     )
 
 
-async def _verify_document(document_id: uuid.UUID, user: User, db: AsyncSession) -> Document:
-    doc = await db.get(Document, document_id)
+async def _verify_document(document_id: uuid.UUID, user: User, db: AsyncSession, *, lock_parent: bool = False) -> Document:
+    if lock_parent:
+        doc = await db.scalar(select(Document).where(Document.id == document_id)
+                              .with_for_update(read=True, key_share=True))
+    else:
+        doc = await db.get(Document, document_id)
     if not doc or not can_access_document(doc, user):
         raise HTTPException(
             status_code=404,
@@ -209,7 +214,7 @@ async def reconstruct_document_table(
             status_code=404,
             detail={"error": "TABLE_NOT_FOUND", "message": "Table not found"},
         )
-    doc = await _verify_document(table.document_id, user, db)
+    doc = await _verify_document(table.document_id, user, db, lock_parent=True)
     if doc.status != "ready":
         raise HTTPException(
             status_code=409,
@@ -225,6 +230,11 @@ async def reconstruct_document_table(
     )
     if existing:
         return _job_response(existing)
+
+    locked_user = await record_paid_use(db, user.id)
+    if (locked_user.plan or "free").lower() not in {"plus", "pro"}:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail="AI table reconstruction requires Plus")
 
     job = DocumentJob(
         user_id=user.id,
@@ -294,7 +304,7 @@ async def export_document_tables(
             status_code=403,
             detail={"error": "PLAN_REQUIRED", "message": "CSV export requires Plus", "required_plan": "plus"},
         )
-    doc = await _verify_document(document_id, user, db)
+    doc = await _verify_document(document_id, user, db, lock_parent=True)
     rows = await db.execute(
         select(DocumentTable)
         .where(DocumentTable.document_id == doc.id)
@@ -311,6 +321,11 @@ async def export_document_tables(
         csv_parts.append("\n")
     content = "".join(csv_parts)
     stem = f"{doc.filename.rsplit('.', 1)[0]}-tables.csv"
+    locked_user = await record_paid_use(db, user.id)
+    if (locked_user.plan or "free").lower() not in {"plus", "pro"}:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail="CSV export requires Plus")
+    await db.commit()
     return StreamingResponse(
         iter([content.encode("utf-8-sig")]),
         media_type="text/csv; charset=utf-8",
@@ -355,10 +370,15 @@ async def export_document_table(
             status_code=404,
             detail={"error": "TABLE_NOT_FOUND", "message": "Table not found"},
         )
-    doc = await _verify_document(table.document_id, user, db)
+    doc = await _verify_document(table.document_id, user, db, lock_parent=True)
     rows = (table.cells or {}).get("rows")
     content = render_table_csv(rows if isinstance(rows, list) else [])
     stem = f"{doc.filename.rsplit('.', 1)[0]}-p{table.page}-table{table.table_index + 1}.csv"
+    locked_user = await record_paid_use(db, user.id)
+    if (locked_user.plan or "free").lower() not in {"plus", "pro"}:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail="CSV export requires Plus")
+    await db.commit()
     return StreamingResponse(
         iter([content.encode("utf-8-sig")]),
         media_type="text/csv; charset=utf-8",

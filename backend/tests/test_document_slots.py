@@ -102,13 +102,13 @@ async def test_reparse_winner_keeps_conditional_claim_and_dispatch_order(
     monkeypatch: pytest.MonkeyPatch,
     stored_file_present: list[str],
 ) -> None:
-    user = SimpleNamespace(id=uuid.uuid4(), plan="free")
+    user = SimpleNamespace(id=uuid.uuid4(), plan="free", refund_reserved_credits=0, refund_delete_requested_at=None, credit_debit_version=0)
     doc = SimpleNamespace(
         id=uuid.uuid4(), user_id=user.id, status="error", storage_key="documents/a.pdf"
     )
     db = SimpleNamespace(
         scalar=AsyncMock(
-            side_effect=[doc, "free", settings.FREE_MAX_DOCUMENTS - 1, 1]
+            side_effect=[doc, "free", settings.FREE_MAX_DOCUMENTS - 1, 1, user]
         ),
         rollback=AsyncMock(),
         execute=AsyncMock(return_value=SimpleNamespace(rowcount=1)),
@@ -135,16 +135,16 @@ async def test_reparse_winner_keeps_conditional_claim_and_dispatch_order(
 
 
 @pytest.mark.asyncio
-async def test_ready_reparse_skips_user_lock(
+async def test_ready_reparse_skips_capacity_count_but_records_usage(
     monkeypatch: pytest.MonkeyPatch,
     stored_file_present: list[str],
 ) -> None:
-    user = SimpleNamespace(id=uuid.uuid4(), plan="free")
+    user = SimpleNamespace(id=uuid.uuid4(), plan="free", refund_reserved_credits=0, refund_delete_requested_at=None, credit_debit_version=0)
     doc = SimpleNamespace(
         id=uuid.uuid4(), user_id=user.id, status="ready", storage_key="documents/a.pdf"
     )
     db = SimpleNamespace(
-        scalar=AsyncMock(return_value=doc),
+        scalar=AsyncMock(side_effect=[doc, user]),
         rollback=AsyncMock(),
         execute=AsyncMock(return_value=SimpleNamespace(rowcount=1)),
         commit=AsyncMock(),
@@ -158,9 +158,10 @@ async def test_ready_reparse_skips_user_lock(
 
     assert result == {"status": "reparsing"}
     assert stored_file_present == ["documents/a.pdf"]
-    assert db.scalar.await_count == 1
+    assert db.scalar.await_count == 2
+    assert user.credit_debit_version == 1
     lock_sql = str(
-        db.scalar.await_args.args[0].compile(
+        db.scalar.await_args_list[0].args[0].compile(
             dialect=postgresql.dialect(),
             compile_kwargs={"literal_binds": True},
         )

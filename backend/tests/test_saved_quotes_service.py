@@ -114,9 +114,11 @@ class TestSaveQuoteIdempotency:
         user = SimpleNamespace(id=uuid.uuid4(), plan="free")
         document = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
+            scalar=AsyncMock(return_value=user),  # Explicit user serialization lock.
             execute=AsyncMock(side_effect=[
                 _ScalarResult(None),  # pg_advisory_xact_lock
                 _ScalarResult(None),  # get_existing_saved_quote -> no idempotent hit
+                _ScalarResult(document.id),  # document parent key-share lock
                 _ScalarResult(5),     # count_active_saved_quotes -> well under FREE limit
             ]),
             add=lambda _obj: None,
@@ -155,6 +157,7 @@ class TestSaveQuoteIdempotency:
         document = SimpleNamespace(id=uuid.uuid4())
         existing_row = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
+            scalar=AsyncMock(return_value=user),  # Explicit user serialization lock.
             execute=AsyncMock(side_effect=[
                 _ScalarResult(None),           # pg_advisory_xact_lock
                 _ScalarResult(existing_row),   # get_existing_saved_quote -> idempotent hit
@@ -181,9 +184,11 @@ class TestSaveQuoteIdempotency:
         user = SimpleNamespace(id=uuid.uuid4(), plan="free")
         document = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
+            scalar=AsyncMock(return_value=user),  # Explicit user serialization lock.
             execute=AsyncMock(side_effect=[
                 _ScalarResult(None),                          # pg_advisory_xact_lock
                 _ScalarResult(None),                           # no idempotent hit
+                _ScalarResult(document.id),  # document parent key-share lock
                 _ScalarResult(settings.FREE_SAVED_QUOTES_LIMIT),  # already AT the cap
             ]),
             add=AsyncMock(side_effect=AssertionError("must not insert when the cap is reached")),
@@ -205,12 +210,14 @@ class TestSaveQuoteIdempotency:
         """Was test_create_pro_plan_unaffected_by_free_limit at the API
         layer before FIX-1 moved the cap decision into save_quote() itself
         — the real behavior belongs here now."""
-        user = SimpleNamespace(id=uuid.uuid4(), plan="pro")
+        user = SimpleNamespace(id=uuid.uuid4(), plan="pro", refund_reserved_credits=0, refund_delete_requested_at=None, credit_debit_version=0)
         document = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
+            scalar=AsyncMock(return_value=user),  # Explicit user serialization lock.
             execute=AsyncMock(side_effect=[
                 _ScalarResult(None),  # pg_advisory_xact_lock
                 _ScalarResult(None),  # no idempotent hit
+                _ScalarResult(document.id),  # document parent key-share lock
                 # Well past the FREE limit — this user is pro.
                 _ScalarResult(settings.FREE_SAVED_QUOTES_LIMIT + 500),
             ]),
@@ -249,9 +256,11 @@ class TestSaveQuoteIdempotency:
         document = SimpleNamespace(id=uuid.uuid4())
         winner_row = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
+            scalar=AsyncMock(return_value=user),  # Explicit user serialization lock.
             execute=AsyncMock(side_effect=[
                 _ScalarResult(None),  # pg_advisory_xact_lock
                 _ScalarResult(None),  # no idempotent hit (this caller lost the race)
+                _ScalarResult(document.id),  # document parent key-share lock
                 _ScalarResult(5),     # well under the cap
             ]),
             add=lambda _obj: None,
@@ -284,9 +293,11 @@ class TestSaveQuoteIdempotency:
         user = SimpleNamespace(id=uuid.uuid4(), plan="free")
         document = SimpleNamespace(id=uuid.uuid4())
         db = SimpleNamespace(
+            scalar=AsyncMock(return_value=user),  # Explicit user serialization lock.
             execute=AsyncMock(side_effect=[
                 _ScalarResult(None),  # pg_advisory_xact_lock
                 _ScalarResult(None),  # no idempotent hit
+                _ScalarResult(document.id),  # document parent key-share lock
                 _ScalarResult(5),     # well under the cap
             ]),
             add=lambda _obj: None,
@@ -305,6 +316,7 @@ class TestSaveQuoteIdempotency:
 
         with pytest.raises(IntegrityError):
             await sqs.save_quote(db, user=user, document=document, card=_card())
+
 
 
 class TestCountActiveSavedQuotes:

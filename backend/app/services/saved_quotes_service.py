@@ -26,6 +26,7 @@ from app.models.database import AsyncSessionLocal
 from app.models.tables import Document, SavedQuote, User
 from app.services.quote_search_service import QuoteCard
 from app.services.quote_verification_service import QUOTE_VERIFIER_VERSION
+from app.services.refund_service import lock_user, record_paid_use
 from app.services.text_normalizer import normalize
 
 _LIMIT_BY_PLAN = {
@@ -121,7 +122,10 @@ async def save_quote(
     concurrent work touching the same row (credit-balance debits from
     chat/quote-search billing), coupling this feature's cap enforcement to
     billing latency for no reason. The advisory lock only ever contends
-    with other save_quote() calls for the same user.
+    with other save_quote() calls for the same user. Refund enrollment now
+    additionally requires a short user lock for NEW saves after the parent
+    lock, so a paid-capacity insert cannot race a refund reservation. An
+    idempotent existing-save read does not record new paid use.
 
     CRITICAL: every return path below explicitly commits (the lock is
     released when ITS transaction ends, so leaving one open would hold the
@@ -155,11 +159,19 @@ async def save_quote(
         await db.commit()  # release the lock; nothing written, see docstring
         return SaveQuoteOutcome(row=existing, created=False, limit_reached=False, active_count=0)
 
+    # Parent-before-user order also serializes quote insertion against document
+    # deletion. The user lock makes paid-capacity use atomic with refund claim.
+    await db.execute(sa.select(Document.id).where(Document.id == document.id)
+                     .with_for_update(read=True, key_share=True))
+    locked_user = await lock_user(db, user.id)
     active_count = await count_active_saved_quotes(db, user.id)
-    limit = saved_quotes_limit_for_plan(user.plan)
+    limit = saved_quotes_limit_for_plan(locked_user.plan)
     if active_count >= limit:
         await db.commit()  # release the lock; nothing written, see docstring
         return SaveQuoteOutcome(row=None, created=False, limit_reached=True, active_count=active_count)
+
+    if active_count >= settings.FREE_SAVED_QUOTES_LIMIT:
+        await record_paid_use(db, user.id)
 
     row = SavedQuote(
         user_id=user.id,
