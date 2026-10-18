@@ -1664,6 +1664,18 @@ are described below; the temporary sales guard alone never stopped external or
 previously opened Stripe sessions.
 
 
+Pending Checkout recovery (0.36.4): paid access and a Stripe subscription are
+separate facts. A non-free plan with `stripe_subscription_id="pending"` must use
+`/subscribe`, including when selecting its current plan. The existing attempt
+recovery serializes retries and reuses an open Session, replaces an expired one,
+or adopts a completion that races expiration. It preserves access and credits.
+`/change-plan` rejects non-`sub_*` markers before retrieving a Subscription.
+Profile GET only reads Sessions then subscriptions. It labels the marker `none`
+only when every Session is expired and every subscription is terminal; ambiguous
+or unavailable state remains `pending`. It never creates/expires Sessions or
+writes plan, credits, or the marker. Both states expose checkout recovery, while
+the subscribe route remains authoritative before any replacement is created.
+
 Billing row-lock reads refresh ORM identity-map state (`populate_existing=True`)
 for the user and owned CheckoutAttempt. Auth may have loaded `pending` before a
 webhook commit; a locking read must observe the subscription ID committed by that

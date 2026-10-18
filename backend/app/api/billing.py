@@ -1061,6 +1061,10 @@ async def change_plan(
     _require_supported_purchase_period(body.billing)
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(503, "Stripe not configured")
+    if user.stripe_subscription_id and not user.stripe_subscription_id.startswith(_STRIPE_SUB_ID_PREFIX):
+        # The checkout sentinel is not a Stripe Subscription ID. Only the
+        # serialized subscribe flow can safely resume or replace that checkout.
+        raise HTTPException(409, "Subscription checkout requires recovery. Use /subscribe instead.")
     if not user.stripe_subscription_id:
         if user.stripe_customer_id:
             try:
@@ -1182,13 +1186,28 @@ async def compute_billing_state(user: User) -> dict:
         }
 
     if sub_id == _PENDING_SENTINEL:
+        # A profile read must never create/expire a Checkout or change access.
+        # Snapshot Sessions before subscriptions, as in legacy recovery, so an
+        # open -> complete race cannot be mistaken for an abandoned checkout.
+        status = "pending"
+        if user.stripe_customer_id and settings.STRIPE_SECRET_KEY:
+            try:
+                sessions = await _list_customer_subscription_checkouts(user.stripe_customer_id)
+                subscriptions = await _list_customer_subscriptions(user.stripe_customer_id)
+                if (
+                    all(_stripe_value(session, "status") == "expired" for session in sessions)
+                    and all(sub.get("status") in {"canceled", "incomplete_expired"} for sub in subscriptions)
+                ):
+                    status = "none"
+            except (stripe.StripeError, HTTPException) as exc:
+                logger.warning("Could not inspect pending Checkout for user %s: %s", user.id, exc)
         return {
             "managed_by": "stripe",
             "can_cancel": False,  # checkout in flight — don't offer cancel
             "interval": None,
             "period_end": None,
             "cancel_at_period_end": False,
-            "status": "pending",
+            "status": status,
         }
 
     if sub_id and not sub_id.startswith(_STRIPE_SUB_ID_PREFIX):

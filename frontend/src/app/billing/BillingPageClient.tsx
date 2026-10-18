@@ -17,6 +17,7 @@ import {
 import { triggerCreditsRefresh } from "../../components/CreditsDisplay";
 import PricingTable from "../../components/PricingTable";
 import { PLAN_HIERARCHY, type PlanType } from "../../lib/models";
+import { needsCheckoutRecovery } from "../../lib/billingRecovery";
 import { formatStripePlanPrice } from "../../lib/planPricing";
 import CheckoutStatusNotice from "../../components/CheckoutStatusNotice";
 import { authHrefFor, type BillingPeriodIntent, type BillingPlanIntent } from "../../lib/billingLinks";
@@ -99,7 +100,8 @@ function BillingContent() {
     error: profileError,
     refetch: refetchProfile,
   } = useUserProfile();
-  const startNewSubscription = profile?.billing_state?.managed_by === 'admin';
+  const recoverCheckout = needsCheckoutRecovery(profile?.billing_state);
+  const startNewSubscription = profile?.billing_state?.managed_by === 'admin' || recoverCheckout;
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(false);
@@ -272,7 +274,7 @@ function BillingContent() {
     if (!profile) return;
     const currentPlan = profile.plan as PlanType;
 
-    if (currentPlan === 'free' || (profile.billing_state?.managed_by === 'admin' && currentPlan !== plan)) {
+    if (currentPlan === 'free' || recoverCheckout || (profile.billing_state?.managed_by === 'admin' && currentPlan !== plan)) {
       await handleSubscribe(plan);
       return;
     }
@@ -481,9 +483,9 @@ function BillingContent() {
     ? offerPlanParam
     : null;
 
-  const offerShowsCreditPacks = offerPlan === 'pro' && profile?.plan === 'pro'
+  const offerShowsCreditPacks = !recoverCheckout && offerPlan === 'pro' && profile?.plan === 'pro'
     && ['credits', 'insufficient_credits'].includes(searchParams.get('reason') || '');
-  const offerIsCurrentPlan = offerPlan === profile?.plan && !offerShowsCreditPacks;
+  const offerIsCurrentPlan = offerPlan === profile?.plan && !offerShowsCreditPacks && !recoverCheckout;
 
   return (
     <div className="dt-stitch-theme min-h-screen">
@@ -648,7 +650,7 @@ function BillingContent() {
                       : t('billing.cancel.button')}
                   </button>
                 )}
-                {profile.billing_state.managed_by === 'stripe' && (
+                {profile.billing_state.managed_by === 'stripe' && !recoverCheckout && (
                   <button
                     type="button"
                     onClick={handleManage}
@@ -788,7 +790,7 @@ function BillingContent() {
                       </li>
                     ))}
                   </ul>
-                  {profile?.plan === 'plus' ? (
+                  {profile?.plan === 'plus' && !recoverCheckout ? (
                     profile?.billing_state?.managed_by === 'stripe' ? (
                       <button
                         onClick={handleManage}
@@ -864,7 +866,7 @@ function BillingContent() {
                       </li>
                     ))}
                   </ul>
-                  {profile?.plan === 'pro' ? (
+                  {profile?.plan === 'pro' && !recoverCheckout ? (
                     profile?.billing_state?.managed_by === 'stripe' ? (
                       <button
                         onClick={handleManage}
@@ -930,6 +932,7 @@ function BillingContent() {
                 onSelectPlan={setSelectedPlan}
                 submitting={submitting}
                 startNewSubscription={startNewSubscription}
+                recoverCheckout={recoverCheckout}
                 purchaseDisabled={!pricesReady || (billingPeriod === 'annual' && !annualEnabled)}
               />
             </section>

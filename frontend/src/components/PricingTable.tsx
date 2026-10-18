@@ -34,6 +34,7 @@ interface PricingTableProps {
   submitting?: string | null;
   purchaseDisabled?: boolean;
   startNewSubscription?: boolean;
+  recoverCheckout?: boolean;
 }
 
 export default function PricingTable({
@@ -44,6 +45,7 @@ export default function PricingTable({
   submitting = null,
   purchaseDisabled = false,
   startNewSubscription = false,
+  recoverCheckout = false,
 }: PricingTableProps) {
   const { t } = useLocale();
 
@@ -67,7 +69,7 @@ export default function PricingTable({
   };
 
   const renderCta = (plan: PlanType) => {
-    if (currentPlan === plan) {
+    if (currentPlan === plan && !recoverCheckout) {
       return (
         <button
           disabled

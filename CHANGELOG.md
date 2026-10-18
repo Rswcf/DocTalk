@@ -8,6 +8,12 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.36.4] - 2026-10-18
+
+### Fixed
+- Paid-access accounts with unfinished subscription checkout can resume or restart checkout from either plan card. Expired checkouts no longer remain labeled as pending. Recovery uses the existing serialized subscription flow and preserves current access and credits.
+- Plan changes reject unfinished checkout markers before calling Stripe's subscription API. Profile reads inspect billing state without creating or expiring checkout sessions.
+
 ## [0.36.3] - 2026-10-17
 
 ### Fixed

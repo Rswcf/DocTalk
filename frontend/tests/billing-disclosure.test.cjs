@@ -10,7 +10,7 @@ function load(file,mocks={}) {
   const original=loaded.require.bind(loaded);
   loaded.require=key=>Object.hasOwn(mocks,key)?mocks[key]:original(key);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{
-    compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022},fileName:filename,
+    compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true},fileName:filename,
   }).outputText,filename);
   return loaded.exports;
 }
@@ -81,4 +81,41 @@ test('checkout API encodes IDs and requests noncached status',async()=>{
     assert.ok(calls[0].url.endsWith('session_id=cs_test%26other%3Dvalue'));
     assert.equal(calls[0].options.cache,'no-store');
   }finally{global.fetch=original;}
+});
+
+test('unfinished checkouts use subscription recovery, active plans retain management',()=>{
+  const {needsCheckoutRecovery}=load('billingRecovery.ts');
+  for(const status of ['pending','none']) assert.equal(needsCheckoutRecovery({managed_by:'stripe',status,can_cancel:false}),true);
+  for(const status of ['active','trialing','past_due','canceled']) assert.equal(needsCheckoutRecovery({managed_by:'stripe',status,can_cancel:false}),false);
+  assert.equal(needsCheckoutRecovery({managed_by:'admin',status:'none',can_cancel:true}),false);
+  assert.equal(needsCheckoutRecovery(undefined),false);
+  const page=fs.readFileSync(path.resolve(__dirname,'../src/app/billing/BillingPageClient.tsx'),'utf8');
+  assert.match(page,/currentPlan === 'free' \|\| recoverCheckout/);
+  assert.match(page,/profile\?\.plan === 'plus' && !recoverCheckout/);
+  assert.match(page,/profile\?\.plan === 'pro' && !recoverCheckout/);
+});
+
+
+test('desktop and mobile current-plan CTAs recover checkout and keep admin current plan disabled',()=>{
+  const Table=load('../components/PricingTable.tsx',{
+    '../i18n':{useLocale:()=>({t:(key,args)=>key==='billing.subscribePlan'?`Subscribe ${args.plan}`:key})},
+    '../lib/models':{PLAN_HIERARCHY:{free:0,plus:1,pro:2}},
+    './spell':{ShimmerBadge:()=>null},
+  }).default;
+  function buttons(node,result=[]) {
+    if(!node||typeof node!=='object')return result;
+    if(Array.isArray(node)){node.forEach(item=>buttons(item,result));return result;}
+    if(node.type==='button')result.push(node);
+    buttons(node.props?.children,result);return result;
+  }
+  for(const plan of ['plus','pro']) {
+    const actions=[];
+    const recovered=buttons(Table({currentPlan:plan,recoverCheckout:true,startNewSubscription:true,onUpgrade:p=>actions.push(p)}));
+    const samePlan=recovered.filter(button=>button.props.children===`Subscribe ${plan==='plus'?'Plus':'Pro'}`);
+    assert.equal(samePlan.length,2,'desktop and mobile each offer recovery');
+    samePlan.forEach(button=>{assert.equal(button.props.disabled,false);button.props.onClick();});
+    assert.deepEqual(actions,[plan,plan]);
+    const admin=buttons(Table({currentPlan:plan,startNewSubscription:true}));
+    assert.equal(admin.filter(button=>button.props.children==='billing.currentPlan'&&button.props.disabled).length,2);
+  }
 });

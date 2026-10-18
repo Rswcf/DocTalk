@@ -250,3 +250,46 @@ async def test_stripe_error_degrades_gracefully(monkeypatch):
     assert state["status"] == "none"
     # can_cancel True based on plan alone — endpoint will fail-closed if clicked.
     assert state["can_cancel"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('sessions,subscriptions,expected', [
+    ([{'status': 'expired'}], [], 'none'),
+    ([{'status': 'open'}], [], 'pending'),
+    ([{'status': 'complete'}], [{'status': 'active', 'id': 'sub_paid'}], 'pending'),
+    ([{'status': 'expired'}], [{'status': 'incomplete', 'id': 'sub_unpaid'}], 'pending'),
+    ([], [], 'none'),
+])
+async def test_pending_profile_inspection_is_read_only(monkeypatch, sessions, subscriptions, expected):
+    user = _user(stripe_subscription_id='pending')
+    monkeypatch.setattr(billing_api.settings, 'STRIPE_SECRET_KEY', 'sk_test_fixture')
+    monkeypatch.setattr(billing_api, '_list_customer_subscription_checkouts', AsyncMock(return_value=sessions))
+    monkeypatch.setattr(billing_api, '_list_customer_subscriptions', AsyncMock(return_value=subscriptions))
+    create = AsyncMock(side_effect=AssertionError('GET must not create checkout'))
+    monkeypatch.setattr(billing_api, '_create_or_recover_checkout_session', create)
+    state = await billing_api.compute_billing_state(user)
+    assert state['status'] == expected
+    assert state['can_cancel'] is False
+    assert user.stripe_subscription_id == 'pending'
+    assert user.plan == 'pro'
+    create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_pending_profile_stripe_failure_retains_recoverable_state(monkeypatch):
+    monkeypatch.setattr(billing_api.settings, 'STRIPE_SECRET_KEY', 'sk_test_fixture')
+    monkeypatch.setattr(billing_api, '_list_customer_subscription_checkouts', AsyncMock(side_effect=billing_api.stripe.APIConnectionError('unavailable')))
+    assert (await billing_api.compute_billing_state(_user(stripe_subscription_id='pending')))['status'] == 'pending'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('subscription_id', ['pending', 'malformed'])
+async def test_change_plan_never_retrieves_checkout_marker(monkeypatch, subscription_id):
+    from fastapi import HTTPException
+    monkeypatch.setattr(billing_api.settings, 'STRIPE_SECRET_KEY', 'sk_test_fixture')
+    retrieve = AsyncMock(side_effect=AssertionError('not a subscription ID'))
+    monkeypatch.setattr(billing_api.stripe.Subscription, 'retrieve', retrieve)
+    with pytest.raises(HTTPException) as exc:
+        await billing_api.change_plan(body=billing_api.SubscribeRequest(plan='plus'), user=_user(stripe_subscription_id=subscription_id), db=SimpleNamespace())
+    assert exc.value.status_code == 409
+    retrieve.assert_not_called()
