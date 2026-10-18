@@ -30,6 +30,7 @@ from app.services.document_diff_service import (
     DOCUMENT_DIFF_PREDEBIT_CREDITS,
     render_document_diff_csv,
 )
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.predebited_job_service import create_predebited_document_job
 from app.services.workflow_costs import job_predebit
 
@@ -260,7 +261,7 @@ async def _create_diff_job(
         result = await db.execute(
             sa.delete(CreditLedger)
             .where(CreditLedger.id == ledger_id)
-            .where(CreditLedger.reconciled_at.is_(None))
+            .where(unresolved_predebit())
             .returning(CreditLedger.id)
         )
         if result.scalar_one_or_none() is None:

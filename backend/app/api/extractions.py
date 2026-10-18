@@ -38,6 +38,7 @@ from app.services.extraction_service import (
     list_templates,
     render_csv,
 )
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.predebited_job_service import create_predebited_document_job
 from app.services.workflow_costs import job_predebit
 
@@ -300,7 +301,7 @@ async def create_extraction(
         result = await db.execute(
             sa.delete(CreditLedger)
             .where(CreditLedger.id == ledger_id)
-            .where(CreditLedger.reconciled_at.is_(None))
+            .where(unresolved_predebit())
             .returning(CreditLedger.id)
         )
         refunded = result.scalar_one_or_none() is not None

@@ -448,10 +448,13 @@ async def eligibility(db, user, facts, requested_at, operation_id=None):
         or grants[0].delta <= 0
     ):
         return "grant_unresolved", None
+    from app.services.legacy_settlement_service import attested_ledger_ids
+
+    legacy_settled = await attested_ledger_ids(db, rows)
     for row in rows:
         if row.delta > 0 and row.id != grants[0].id and row.reason != "signup_bonus":
             return "complex_funding", None
-        if row.delta < 0 and row.reconciled_at is None:
+        if row.delta < 0 and row.reconciled_at is None and row.id not in legacy_settled:
             return "inflight_predebit", None
     if await db.scalar(
         sa.select(Document.id)

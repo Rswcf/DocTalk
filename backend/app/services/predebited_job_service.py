@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import CreditLedger, DocumentJob
 from app.services import credit_service
+from app.services.legacy_settlement_service import unresolved_predebit
 
 # Redis can redeliver an unacknowledged task after 40 minutes. Every
 # predebited job lease must remain exclusive beyond that broker window.
@@ -77,7 +78,7 @@ async def settle_active_predebited_jobs_before_parent_delete(
         sa.select(CreditLedger.id).where(
             CreditLedger.ref_type == "document_job",
             CreditLedger.ref_id == sa.cast(DocumentJob.id, sa.String),
-            CreditLedger.reconciled_at.is_(None),
+            unresolved_predebit(),
         )
     )
     candidate_ids = list(

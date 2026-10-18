@@ -620,6 +620,22 @@ class CreditLedger(Base):
     )
 
 
+class LegacyCreditSettlement(Base):
+    """Separate audit proof; original financial ledger remains byte-for-byte intact."""
+    __tablename__ = "legacy_credit_settlements"
+
+    ledger_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("credit_ledger.id", ondelete="NO ACTION"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    protocol: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    ledger_fingerprint: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    ledger_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    evidence_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    manifest_sha256: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    reviewed_by: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    attested_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()"))
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+
+
 class AnnualCreditInstallment(Base):
     """One durable monthly delivery from a paid annual invoice."""
 

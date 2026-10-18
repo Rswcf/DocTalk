@@ -26,6 +26,7 @@ from app.services.extraction_service import (
     FREE_MONTHLY_EXTRACTION_LIMIT,
     get_template,
 )
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.predebited_job_service import create_predebited_document_job
 from app.services.table_service import TABLE_SCAN_JOB_TYPE
 
@@ -236,7 +237,7 @@ async def _queue_extraction(
         result = await db.execute(
             sa.delete(CreditLedger)
             .where(CreditLedger.id == ledger_id)
-            .where(CreditLedger.reconciled_at.is_(None))
+            .where(unresolved_predebit())
             .returning(CreditLedger.id)
         )
         if result.scalar_one_or_none() is None:

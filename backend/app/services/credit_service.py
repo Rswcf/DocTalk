@@ -238,6 +238,11 @@ async def reconcile_credits(
             f"Predebit ledger {predebit_ledger_id} not found during credit reconciliation"
         )
 
+    from app.models.tables import LegacyCreditSettlement
+
+    if await db.get(LegacyCreditSettlement, predebit_ledger_id) is not None:
+        raise RuntimeError("Historical settled debit cannot be reconciled again")
+
     if ledger_row.reconciled_at is not None:
         # A commit acknowledgement can be lost. Recovery must not apply the
         # same predebit difference again, even with a different token estimate.

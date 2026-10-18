@@ -65,6 +65,7 @@ def test_lock_busy_untokenized_duplicate_is_a_noop(monkeypatch) -> None:
 
 def test_reconcile_sync_equal_cost_still_locks_and_stamps_marker() -> None:
     db = MagicMock()
+    db.get.return_value = None
     db.scalar.return_value = object()
 
     _reconcile_sync(

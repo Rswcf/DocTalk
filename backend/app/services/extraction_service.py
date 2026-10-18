@@ -35,6 +35,7 @@ from app.services.domain_mode_access import (
     release_orphaned_extraction_trial_sync,
 )
 from app.services.embedding_service import embedding_service
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.llm_provider import (
     apply_provider_options as _apply_provider_options,
 )
@@ -603,7 +604,7 @@ def _refund_predebit_sync(
     result = db.execute(
         sa.delete(CreditLedger)
         .where(CreditLedger.id == ledger_id)
-        .where(CreditLedger.reconciled_at.is_(None))
+        .where(unresolved_predebit())
         .returning(CreditLedger.id)
     )
     refunded = result.scalar_one_or_none() is not None
@@ -637,6 +638,11 @@ def _reconcile_sync(
         raise RuntimeError(
             f"Predebit ledger {ledger_id} not found during extraction credit reconciliation"
         )
+
+    from app.models.tables import LegacyCreditSettlement
+
+    if db.get(LegacyCreditSettlement, ledger_id) is not None:
+        raise RuntimeError("Historical settled debit cannot be reconciled again")
 
     diff = pre_debited - actual_cost
     if diff:
@@ -703,7 +709,7 @@ def _settle_extraction_predebit_after_failure_sync(
                 .where(
                     CreditLedger.ref_type == "document_job",
                     CreditLedger.ref_id == job_id_text,
-                    CreditLedger.reconciled_at.is_(None),
+                    unresolved_predebit(),
                     *(
                         (CreditLedger.id == ledger_id,)
                         if ledger_id is not None
@@ -748,7 +754,7 @@ def _settle_extraction_predebit_after_failure_sync(
                         CreditLedger.user_id == resolved_user_id,
                         CreditLedger.ref_type == "document_job",
                         CreditLedger.ref_id == job_id_text,
-                        CreditLedger.reconciled_at.is_(None),
+                        unresolved_predebit(),
                     )
                     .order_by(CreditLedger.created_at.desc())
                     .limit(1)

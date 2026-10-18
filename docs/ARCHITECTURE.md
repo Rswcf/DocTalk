@@ -1264,9 +1264,9 @@ Webhook / change-plan / admin audit writes are intentionally **deferred**
 to a follow-up PR to keep this scope tight.
 
 `refund_requested` is only an internal review signal. The cancel endpoint does
-not call Stripe Refunds or automatically decide eligibility; refunds are
-handled by a separate manual/business process in production. The separate
-Sandbox-only automatic refund candidate below does not change that policy.
+not call Stripe Refunds or automatically decide eligibility. Manual refund review
+remains separate from the account-bound automatic refund flow below; that flow
+has its own enrollment, allowlist and default-off creation gates.
 
 **`billing_state` projection**: `GET /api/users/profile` now returns a
 `billing_state` object (`managed_by`, `can_cancel`, `interval`, `period_end`,
@@ -1747,23 +1747,39 @@ backend checks. The final release report records real-PDF production acceptance,
 the resolved volume-ownership migration, laboratory performance, and the browser
 organization-policy restriction on saving downloads.
 
-### Sandbox-only automatic refund candidate (default off)
+### Account-bound automatic refunds (default off)
 
 Migration `20261018_0048` adds future Checkout policy enrollment, a monotonic
 user usage epoch, reserved credits and durable `refund_operations`. It leaves
 historical purchases unenrolled. Apply the migration before this code. The
 upgrade is add-only; downgrade refuses to remove existing refund audit rows.
+Migration `20261018_0049` adds durable provider mode/account identity. Migration
+`20261019_0050` creates an empty legacy-settlement audit table without backfilling
+ledger rows. Its downgrade drops the table only when empty and rejects any audit
+row, including revoked attestations.
 
 `AUTO_REFUND_ENABLED` and `AUTO_REFUND_PROVIDER_CREATES_ENABLED` default false.
 An explicit timezone-aware `AUTO_REFUND_POLICY_START_AT` and policy version
-`monthly-zero-use-v1` enroll only new monthly attempts. Every provider path
-requires `sk_test_`; there is no live override. The cash cap is at most USD 25.
+`monthly-zero-use-v1` enroll only new monthly attempts. Provider paths require
+explicit `AUTO_REFUND_MODE=sandbox|live`, a matching full `sk_test_`/`sk_live_`
+key and `AUTO_REFUND_EXPECTED_ACCOUNT_ID`, verified by Account GET. Live requests
+also require membership in `AUTO_REFUND_LIVE_USER_IDS` (default empty; only an
+explicit `*` permits all users). Supporting live mode does not enable global
+refunds. The cash cap is at most USD 25.
 Eligibility is limited to initial monthly invoices requested within 14 days,
 zero usage since the invoice grant's captured epoch, unambiguous credits and
 at most one commercial automatic refund per rolling 365 days. Free usage
 settled before purchase does not disqualify the user. Other requests enter
 manual review. This candidate does not replace statutory rights or modify
 existing purchases' contract terms.
+
+The 0.36.6 legacy compatibility path certifies positively proven historical free
+consumption so an old Free user can later make a newly enrolled first purchase.
+It never enrolls an old paid order or invents an invoice/payment-time baseline.
+Original ledger values, balances and settlement timestamps remain unchanged.
+Unknown historical rows and unresolved modern predebits remain blocked. See
+[LEGACY-CREDIT-SETTLEMENT.md](LEGACY-CREDIT-SETTLEMENT.md) for exact proof,
+reviewed manifests, maintenance and audit protection.
 
 `/api/billing/refund-options` returns disabled without calling Stripe when off.
 Owner-only request/read/list APIs are separate from the existing cancellation
@@ -1790,7 +1806,7 @@ rights updates remains repairable; turning off new provider creates does not
 abandon already successful operations.
 
 The Stripe Refund object does not define `livemode`. Refund identity is verified
-through the pinned test client, exact operation metadata and the freshly retrieved
+through the pinned account-bound client, exact operation metadata and the freshly retrieved
 invoice/subscription/PaymentIntent/Charge chain, whose modes and customer IDs must
 match. An explicit conflicting mode or payment identity is rejected. Refund webhooks
 validate mode on the signed top-level Event; the callback is only a durable wake-up

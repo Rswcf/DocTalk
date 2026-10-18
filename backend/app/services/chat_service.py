@@ -55,6 +55,7 @@ from app.services.document_brief_service import (
     document_brief_service,
 )
 from app.services.document_element_service import chunk_to_retrieval_item
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.llm_provider import (
     apply_provider_options as _apply_provider_options,
 )
@@ -795,7 +796,7 @@ async def _refund_predebit(
     result = await db.execute(
         sa.delete(CreditLedger)
         .where(CreditLedger.id == predebit_ledger_id)
-        .where(CreditLedger.reconciled_at.is_(None))
+        .where(unresolved_predebit())
         .returning(CreditLedger.id)
     )
     refunded = result.scalar_one_or_none() is not None

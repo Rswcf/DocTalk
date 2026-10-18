@@ -17,6 +17,7 @@ from app.services.extraction_service import (
     run_extraction_job_sync,
     stage_stale_extraction_recovery_sync,
 )
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.predebited_job_service import RECOVERY_POLICIES
 from app.workers.celery_app import celery_app
 
@@ -29,7 +30,7 @@ def _stale_predebited_job_ids_statement(now: datetime):
         select(CreditLedger.id).where(
             CreditLedger.ref_type == "document_job",
             CreditLedger.ref_id == sa.cast(DocumentJob.id, sa.String),
-            CreditLedger.reconciled_at.is_(None),
+            unresolved_predebit(),
         )
     )
     expired_or_missing_lease = sa.or_(
@@ -65,7 +66,7 @@ def _orphaned_predebit_ledger_ids_statement():
         select(CreditLedger.id)
         .where(
             CreditLedger.ref_type == "document_job",
-            CreditLedger.reconciled_at.is_(None),
+            unresolved_predebit(),
             ~live_job,
         )
         .order_by(CreditLedger.created_at, CreditLedger.id)
@@ -78,7 +79,7 @@ def _terminal_undelivered_predebit_job_ids_statement():
         select(CreditLedger.id).where(
             CreditLedger.ref_type == "document_job",
             CreditLedger.ref_id == sa.cast(DocumentJob.id, sa.String),
-            CreditLedger.reconciled_at.is_(None),
+            unresolved_predebit(),
         )
     )
     no_result = ~sa.exists(

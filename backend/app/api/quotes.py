@@ -31,6 +31,7 @@ from app.services import (
     saved_quotes_service,
 )
 from app.services.doc_service import can_access_document
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.workflow_costs import QUOTE_SEARCH_PREDEBIT_CREDITS
 
 logger = logging.getLogger(__name__)
@@ -114,7 +115,7 @@ async def _refund_predebit(db: AsyncSession, user_id: uuid.UUID, pre_debited: in
     result = await db.execute(
         sa.delete(CreditLedger)
         .where(CreditLedger.id == ledger_id)
-        .where(CreditLedger.reconciled_at.is_(None))
+        .where(unresolved_predebit())
         .returning(CreditLedger.id)
     )
     refunded = result.scalar_one_or_none() is not None

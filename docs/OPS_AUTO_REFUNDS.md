@@ -37,4 +37,44 @@ Authenticated administrators can use `GET /api/admin/refund-operations?limit=50`
 
 `recover_refund_operations` runs every **60 seconds** to reconcile accepted operations. The separate `check_refund_operations` monitor runs every **300 seconds** and reports aggregate diagnostics through existing logs/Sentry. The monitor does not refund, cancel, repair or send customer messages. A healthy monitor does not prove the recovery worker executed or cash arrived. Approve the internal alert recipients and response ownership before enablement.
 
-Production release must include the durable environment/account identity migration (0049 after 0048), once its final revision name and tests are confirmed. Refuse to reconcile an operation under a different provider mode/account. The full migration chain, backup and compatible rollback review must include this migration.
+Production release follows `20261018_0048` (future enrollment and refund audit),
+`20261018_0049` (durable provider identity), then `20261019_0050` (empty legacy
+settlement audit table). No migration backfills an old purchase or ledger marker.
+0050 can downgrade only while its table is empty; any audit row prevents removal.
+Include the full chain in fresh-backup, migration and compatible-rollback gates.
+Refuse to reconcile an operation under a different provider mode/account.
+
+## Legacy maintenance and staged enablement
+
+[LEGACY-CREDIT-SETTLEMENT.md](LEGACY-CREDIT-SETTLEMENT.md) defines the exact historical
+writer proofs. This path supports an old Free user's future newly enrolled first
+purchase. It does not refund old paid purchases or create missing invoice/baseline
+facts. The original enrollment policy and start time keep their meaning.
+
+The legacy CLI report is a database READ ONLY transaction for explicitly supplied
+user/ledger IDs. Its reviewed-manifest apply is a separate database write, not a
+read-only audit. It appends attestations without changing ledger values, balances
+or settlement timestamps. Apply revalidates fresh facts and requires
+`DOCTALK_LEGACY_SETTLEMENT_ADMIN=1`; database permissions remain the write boundary.
+Keep both refund flags false, drain old workers, review the exact manifest outside
+the repository, apply once, and compare original financial fields before rollout.
+Do not apply a manifest merely to force a user into automatic eligibility.
+
+Deploy the backend first with flags off and an empty live list. Verify actual code,
+schema, provider identity, region and recovery/monitor execution before releasing
+the frontend. Start with explicit UUIDs in `AUTO_REFUND_LIVE_USER_IDS` within one
+verified live account; never use `*` for the observation stage.
+`AUTO_REFUND_ENABLED=true` allows future enrollment, eligibility and request
+creation. With `AUTO_REFUND_PROVIDER_CREATES_ENABLED=false`, confirmation and new
+provider cash creation remain blocked. Request creation still writes an operation;
+use the separate read-only report for a no-write observation.
+
+An old Free user who has not made a new enrolled payment has zero eligible invoices.
+This is expected and proves neither failure nor live legacy-path refund success.
+Expand the explicit cohort only after independent review, regression and runtime
+checks pass with no unresolved identity, cash or reservation anomalies. Inform the
+user before any new real charge/refund; do not repeat the completed canary or create
+orders to manufacture coverage. Open provider creates only for the intended cohort
+with response ownership and approved financial scope. During an incident disable
+both flags and clear the list, redeploy and verify the effective runtime, while
+preserving provider identity and accepted-operation reconciliation.

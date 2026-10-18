@@ -1043,7 +1043,7 @@ Table-aware retrieval 会使用这些 canonical table 位置做覆盖选择；�
 
 每次成功取消都会写入 `plan_transitions`，`source='self_serve_cancel'`。metadata 包含 `sub_id`、`status_at_cancel`、分支原因码（如 `admin_promoted_revert`、`branch_c_auto_heal`、`stripe_already_canceled_sync`），以及用户提供的取消上下文：`cancel_reason`、`cancel_feedback`、`refund_requested`。
 
-`refund_requested` 只是内部审核信号。取消端点不会调用 Stripe Refunds，也不会自动判定退款资格；生产退款仍由人工/业务流程处理。下述独立 Sandbox 自动退款候选不改变生产政策。
+`refund_requested` 只是内部审核信号。取消端点不会调用 Stripe Refunds，也不会自动判定退款资格。人工退款审核与下述账户绑定自动退款流程分开；自动流程须独立满足enrollment、名单及默认关闭的现金创建门槛。
 
 前端 `/billing` 的取消入口保持自助可达，确认弹窗可收集可选取消原因、可选反馈和退款审核勾选，但取消动作不依赖这些字段。Pricing 和 Billing 页面展示 7-day fair-use refund review 文案，用于降低付费焦虑但不承诺自动退款。
 
@@ -1097,17 +1097,29 @@ RPO 为 24 小时;恢复约需 30–45 分钟(下载、owner 解密、`pg_restor
 
 `backend/tests/conftest.py` 在任何 app 模块导入前强制所有集成测试使用临时库 `doctalk_test`(自动建库+迁移,仅限回环地址),同时拦截 shell 导出的 `DATABASE_URL` 与 pydantic-settings 静默读取的 `.env`。除非显式设置 `DOCTALK_TEST_DATABASE_URL`,非回环主机一律硬拒——导出生产 URL 必须快速失败,绝不远程建库。此规则源于同日两次共享开发库数据丢失事故(`alembic downgrade base` 往返与集成夹具)。永远不要对 `doctalk` 运行破坏性迁移测试。
 
-### Sandbox 自动退款候选（默认关闭）
+### 绑定账户的自动退款（默认关闭）
 
 迁移 `20261018_0048` 只新增未来Checkout政策标记、用户使用计数、额度预约及
 `refund_operations`，旧订单不补资格。部署代码前须迁移；存在退款审计时禁止降级删除。
 `AUTO_REFUND_ENABLED` 与 `AUTO_REFUND_PROVIDER_CREATES_ENABLED` 默认false，
 须设置带时区的 `AUTO_REFUND_POLICY_START_AT` 才对新月付attempt记录版本
-`monthly-zero-use-v1`。所有provider路径硬性要求sk_test，无live override。
+`monthly-zero-use-v1`。迁移 `20261018_0049` 持久记录provider环境及账户。
+迁移 `20261019_0050` 只新增空的历史结算审计表，不回填账本；仅空表允许降级删除，
+存在任何审计行（包括已撤销证明）时拒绝降级。
+
+provider路径须显式设置 `AUTO_REFUND_MODE=sandbox|live`、匹配环境的完整
+`sk_test_`/`sk_live_`密钥及 `AUTO_REFUND_EXPECTED_ACCOUNT_ID`，并通过Account GET核对。
+live申请还须命中 `AUTO_REFUND_LIVE_USER_IDS`，默认名单为空；仅显式 `*` 允许全量。
+支持live不表示已全量开放。
 
 首版仅评估付款后14天申请、首次月付、付款后零使用、资金清楚、最多25美元且
 滚动365天最多一次的商业自动退款。付款前已结算免费使用不误拒。其它进入人工，
-不取代法定权利、不追溯收紧旧购买。原取消弹窗的退款勾选仍仅记录审核意图。
+不取代法定权利、不追溯收紧旧购买。
+0.36.6仅为有正向证据的历史免费消费添加独立结算证明，让老Free用户未来新购首月
+仍可按原enrollment政策申请退款；不追溯旧付费订单，不补造invoice或付款时baseline。
+原账本、余额及结算时间保持不变；无法证明的历史行与现代未结算预扣仍拒绝。
+证明、manifest审核、维护及审计保护见[LEGACY-CREDIT-SETTLEMENT.md](LEGACY-CREDIT-SETTLEMENT.md)。
+原取消弹窗的退款勾选仍仅记录审核意图。
 新确认接口须明确全额退款、立即取消、撤销对应额度三项影响；它只持久化操作与预约。
 Celery `recover_refund_operations` 每60秒恢复待处理任务，provider调用不持数据库行锁。
 预约期间阻止新扣分与成本动作；文档锁先于用户锁，删除意图先持久化再删文档。
@@ -1118,7 +1130,7 @@ Celery `recover_refund_operations` 每60秒恢复待处理任务，provider调�
 `cash_reversed`人工修复，不二次退款、不自动恢复权益。旧Checkout/发票/计划事件
 不得恢复已退款订阅。关闭新现金创建开关不会遗弃现金已成功后的权益修复。
 
-Stripe Refund 对象没有 `livemode` 字段。退款身份须通过固定测试客户端、操作 metadata
+Stripe Refund 对象没有 `livemode` 字段。退款身份须通过固定的账户绑定客户端、操作 metadata
 以及实时读取的 invoice/subscription/PaymentIntent/Charge 关联链核验；关联对象的环境与
 客户身份必须一致。显式环境或付款身份冲突仍拒绝。退款回调在已签名的顶层 Event 校验环境，
 只写持久唤醒提示；Worker 始终回读 provider 事实，包括收到乱序事件之后。参见

@@ -8,6 +8,12 @@ releases use `0.minor.patch` semantics such as `0.2.0` and `0.2.1`.
 
 ## [Unreleased]
 
+## [0.36.6] - 2026-10-19
+
+### Fixed
+- Historical free-use debits from an audited legacy writer can be certified against exact ledger snapshots without changing balances or settlement timestamps. Unknown and current predebits still require settlement before automatic refunds.
+- Certified historical debits cannot be refunded or reconciled again by cancellation and recovery paths. Existing prospective purchase enrollment and refund limits remain unchanged.
+
 ## [0.36.5] - 2026-10-18
 
 ### Added

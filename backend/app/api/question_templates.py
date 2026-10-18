@@ -27,6 +27,7 @@ from app.models.tables import (
 )
 from app.services import credit_service
 from app.services.doc_service import can_access_document
+from app.services.legacy_settlement_service import unresolved_predebit
 from app.services.predebited_job_service import create_predebited_document_job
 from app.services.question_template_service import (
     BATCH_TEMPLATE_JOB_TYPE,
@@ -346,7 +347,7 @@ async def _create_run(
         result = await db.execute(
             sa.delete(CreditLedger)
             .where(CreditLedger.id == ledger_id)
-            .where(CreditLedger.reconciled_at.is_(None))
+            .where(unresolved_predebit())
             .returning(CreditLedger.id)
         )
         if result.scalar_one_or_none() is None:

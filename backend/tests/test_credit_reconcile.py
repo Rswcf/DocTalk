@@ -26,6 +26,7 @@ def _locked_ledger_row():
 @pytest.mark.asyncio
 async def test_reconcile_updates_balance_and_ledger_for_undercharge() -> None:
     db = SimpleNamespace(
+        get=AsyncMock(return_value=None),
         execute=AsyncMock(
             side_effect=[
                 _locked_ledger_row(),  # FIX3-A(b): SELECT ... FOR UPDATE locks the ledger row first
@@ -69,7 +70,7 @@ async def test_reconcile_locks_the_ledger_row_before_any_update() -> None:
             return _ScalarResult(85)
         return _ScalarResult(None)
 
-    db = SimpleNamespace(execute=AsyncMock(side_effect=execute), flush=AsyncMock())
+    db = SimpleNamespace(execute=AsyncMock(side_effect=execute), flush=AsyncMock(), get=AsyncMock(return_value=None))
 
     await reconcile_credits(
         db=db,
@@ -95,6 +96,7 @@ async def test_reconcile_noop_still_locks_and_stamps_reconciled_at() -> None:
     user_id = uuid.uuid4()
     fake_user = SimpleNamespace(id=user_id, credits_balance=470)
     db = SimpleNamespace(
+        get=AsyncMock(return_value=None),
         scalar=AsyncMock(return_value=fake_user.credits_balance),
         execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
         flush=AsyncMock(),
@@ -116,6 +118,7 @@ async def test_reconcile_noop_still_locks_and_stamps_reconciled_at() -> None:
 @pytest.mark.asyncio
 async def test_reconcile_noop_raises_when_user_missing() -> None:
     db = SimpleNamespace(
+        get=AsyncMock(return_value=None),
         scalar=AsyncMock(return_value=None),
         execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
         flush=AsyncMock(),
@@ -138,6 +141,7 @@ async def test_reconcile_raises_when_ledger_row_missing_at_lock_time() -> None:
     (the later UPDATE statements no longer carry their own separate
     existence check, since the lock already proved the row exists)."""
     db = SimpleNamespace(
+        get=AsyncMock(return_value=None),
         execute=AsyncMock(side_effect=[_ScalarResult(None)]),
         flush=AsyncMock(),
     )
@@ -157,6 +161,7 @@ async def test_reconcile_raises_when_ledger_row_missing_at_lock_time() -> None:
 @pytest.mark.asyncio
 async def test_reconcile_raises_when_balance_update_misses_user() -> None:
     db = SimpleNamespace(
+        get=AsyncMock(return_value=None),
         execute=AsyncMock(side_effect=[_locked_ledger_row(), _ScalarResult(None)]),
         flush=AsyncMock(),
     )
