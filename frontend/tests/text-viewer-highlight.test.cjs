@@ -70,9 +70,10 @@ test('a converted-PDF candidate is kept only when unique in the whole document a
   assert.equal(uniqueInPageRange(index, 1, 3, '   '), false);
 });
 
-test('the converted viewer filters its text candidates; the native PDF viewer passes them through', () => {
+test('the converted viewer filters its text candidates; the native PDF viewer suppresses exact matches for broad ranges', () => {
   const viewer = stripComments(read('components/PdfViewer/PdfViewer.tsx'));
-  assert.match(viewer, /if \(!syntheticBoxes\) return \{ highlightSnippet: snippetProp, highlightFocus: focusProp \};/);
+  assert.ok(viewer.includes("if (citation && (citation.pageEnd ?? citation.page) > citation.page)"));
+  assert.ok(viewer.includes("return { highlightSnippet: null, highlightFocus: null }"));
   assert.match(viewer, /uniqueInPageRange\(convertedIndex, citation\.page, citation\.pageEnd \|\| citation\.page, text\)/);
   // The guard lives outside every effect body: the per-page props read the filtered names.
   assert.match(viewer, /\? highlightSnippet : null\}/);

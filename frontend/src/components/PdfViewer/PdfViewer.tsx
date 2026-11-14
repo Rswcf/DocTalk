@@ -133,7 +133,12 @@ export default function PdfViewer({ pdfUrl, currentPage, highlights: boxHighligh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syntheticBoxes, validPdfUrl, textCacheVersion]);
   const { highlightSnippet, highlightFocus } = useMemo(() => {
-    if (!syntheticBoxes) return { highlightSnippet: snippetProp, highlightFocus: focusProp };
+    if (!syntheticBoxes) {
+      if (citation && (citation.pageEnd ?? citation.page) > citation.page) {
+        return { highlightSnippet: null, highlightFocus: null };
+      }
+      return { highlightSnippet: snippetProp, highlightFocus: focusProp };
+    }
     const keep = (text?: string | null) => (convertedIndex && citation
       && uniqueInPageRange(convertedIndex, citation.page, citation.pageEnd || citation.page, text) ? text : null);
     return { highlightSnippet: keep(snippetProp), highlightFocus: keep(focusProp) };

@@ -107,7 +107,7 @@ def _prepare_export(messages: List[Any], *, markdown: bool = False) -> tuple[lis
             key = tuple(str(c.get(field) or "") for field in (
                 "ref_index", "document_id", "document_filename", "chunk_id",
                 "page", "page_end",
-            )) + ("" if text_hit else str(c.get("text_snippet") or ""),)
+            )) + (str(c.get("focus_snippet" if text_hit else "text_snippet") or ""),)
             if key not in source_ids:
                 source_ids[key] = len(references) + 1
                 references.append({**c, "ref_index": source_ids[key]})

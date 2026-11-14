@@ -1,6 +1,7 @@
 "use client";
 
-import { citationPageRange } from '../../lib/citationText';
+import { useLocale } from '../../i18n';
+import { citationPreview, citationPageRange } from '../../lib/citationText';
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import type { Citation } from '../../types';
@@ -17,9 +18,10 @@ function confidenceColor(score: number): string {
 
 export default function CollectionCitationCard({ citation }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const shouldHighlight = citation.retrievalModality !== 'summary' && Boolean(citation.bboxes?.length);
+  const excerpt = citationPreview(citation);
+  const { t } = useLocale();
   const originalHref = citation.documentId
-    ? `/d/${citation.documentId}?page=${citation.page}${shouldHighlight ? `&highlight=${citation.chunkId}` : ''}`
+    ? `/d/${citation.documentId}?page=${citation.page}`
     : '';
 
   return (
@@ -45,9 +47,9 @@ export default function CollectionCitationCard({ citation }: Props) {
             </span>
             <span className="text-zinc-500">p. {citationPageRange(citation)}</span>
           </div>
-          {citation.contextText && (
+          {excerpt && (
             <p className="text-zinc-600 dark:text-zinc-400 mt-1 line-clamp-4">
-              &ldquo;{citation.contextText}&rdquo;
+              &ldquo;{excerpt}&rdquo;
             </p>
           )}
           {citation.documentId && (
@@ -57,7 +59,7 @@ export default function CollectionCitationCard({ citation }: Props) {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 mt-2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
             >
-              <ExternalLink size={10} /> View in original
+              <ExternalLink size={10} /> {t('citation.jumpTo', { page: citation.page })}
             </a>
           )}
         </div>

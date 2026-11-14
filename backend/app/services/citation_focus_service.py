@@ -18,6 +18,10 @@ from typing import List, Optional
 
 _LATIN_WORD_RE = re.compile(r"[a-z]{2,}|\d+")  # content words (≥2 letters) or numbers
 _NUMERIC_RE = re.compile(r"\d+")
+# Treat structured identifiers as indivisible. A shared digit or a partial
+# model number does not identify the same reading, part or instrument.
+_CODE_RE = re.compile(r"(?<![\w-])(?=[A-Za-z0-9-]*[0-9])(?=[A-Za-z0-9-]*[A-Za-z])[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+(?![\w-])")
+_NEGATION_RE = re.compile(r"\b(?:no|not|never|without|rejected|failed)\b", re.I)
 _CJK_RE = re.compile(r"[一-鿿]")
 # ASCII .?! is a boundary only before whitespace/EOS (mirrors parse_service);
 # CJK 。！？； always end a sentence (no inter-sentence spaces in CJK).
@@ -89,6 +93,7 @@ def focus_sentence(
     claim_text: str,
     *,
     page_texts: dict[int, str] | None = None,
+    page_headings: dict[int, str] | None = None,
     min_overlap: int = 2,
     max_sentence_ratio: float = 0.7,
     dominance: float = 1.5,
@@ -113,11 +118,35 @@ def focus_sentence(
     if page_texts:
         best = _without_previous_folio(best, page_texts)
         best_overlap = len(claim_feats & _features(best))
+    for page, heading in (page_headings or {}).items():
+        if not heading or not best.startswith(heading + " "):
+            continue
+        raw = (page_texts or {}).get(page, "")
+        # The title must be the very occurrence attached to this passage,
+        # not another line elsewhere on the same page with the same wording.
+        lines = [" ".join(line.split()) for line in raw.splitlines()]
+        if (" ".join(raw.split()).count(best) == 1
+                and lines.count(heading) == 1
+                and " ".join(" ".join(lines[lines.index(heading):]).split()).startswith(best)
+                and not _NEGATION_RE.search(heading) and not _numeric_tokens(heading)):
+            best = best[len(heading) + 1:]
+            best_overlap = len(claim_feats & _features(best))
+            break
+    codes = set(_CODE_RE.findall(claim_text))
+    if codes and (not codes.issubset(_CODE_RE.findall(best)) or
+                  set(_NEGATION_RE.findall(claim_text.lower())) != set(_NEGATION_RE.findall(best.lower()))):
+        return None
     runner = scored[1][0] if len(scored) > 1 else 0
     if best_overlap < min_overlap:
         return None
     if runner > 0 and best_overlap < runner * dominance:
-        return None  # ambiguous — don't guess
+        # Break a lexical near-tie only for an independently corroborated,
+        # unique full identifier in the already leading sentence.
+        source_terms = _features(_CODE_RE.sub("", best))
+        if not (codes and best_overlap > runner
+                and sum(codes.issubset(_CODE_RE.findall(s)) for s in sentences) == 1
+                and source_terms and source_terms <= _features(_CODE_RE.sub("", claim_text))):
+            return None
     # Numeric/date consistency: if the claim names numbers (years, percents,
     # currency, page-like), the focused sentence MUST contain all of them —
     # else a sentence sharing only predicate words could be highlighted while

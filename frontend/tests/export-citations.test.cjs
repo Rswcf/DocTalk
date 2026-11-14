@@ -112,3 +112,15 @@ test('reader bottom cards and inline sources keep distinct locations with stable
   assert.deepEqual(display.map(c=>c.refIndex), [1,2]);
   assert.deepEqual(citationText.uniqueCitationIndexes(display), display);
 });
+
+test('same-page ref reuse has independent targets and previews, including JSON replay', () => {
+  const base = {ref_index:1, chunk_id:'one', page:3, page_end:3, context_text:'[page 1–3] Receiving inspection'};
+  const raw = [{...base, offset:7, focus_snippet:'The reading was 73.42 decibels.'},
+               {...base, offset:14, focus_snippet:'Its verification seal was LUMEN-D1BBCD.'}];
+  for (const data of [raw, JSON.parse(JSON.stringify(raw))]) {
+    const cites = citationText.uniqueCitationIndexes(renumberCitations(data.map(mapCitationPayload)));
+    assert.equal(citationText.insertCitationMarkers('Reading + seal', cites), 'Reading[1] + seal[2]');
+    assert.deepEqual(cites.map(citationText.citationPreview), raw.map(c => c.focus_snippet));
+    assert.equal(citationText.citationPreview({...cites[1], page:1}), '');
+  }
+});

@@ -94,7 +94,7 @@ export function citationSourceKey(citation: Citation): string {
   const textHit = Boolean(citation.chunkId) && !citation.tableId && (citation.retrievalModality ?? 'text') === 'text';
   return JSON.stringify([
     citation.refIndex, citation.documentId, citation.documentFilename, citation.chunkId,
-    citation.page, citation.pageEnd, textHit ? null : citation.textSnippet,
+    citation.page, citation.pageEnd, textHit ? citation.focusSnippet || null : citation.textSnippet,
   ]);
 }
 
@@ -179,4 +179,11 @@ export function citationPageRange(citation: Pick<Citation, 'page' | 'pageEnd'>):
   const start = Number.isInteger(citation.page) && citation.page > 0 ? citation.page : 1;
   const end = citation.pageEnd;
   return end != null && Number.isInteger(end) && end > start ? `${start}–${end}` : String(start);
+}
+
+// A multi-page location cannot identify one exact line in the native PDF.
+// Keep the page range visible without quoting an unrelated chunk prefix.
+export function citationPreview(c: Pick<Citation, 'focusSnippet' | 'page' | 'pageEnd' | 'textSnippet'>): string {
+  if ((c.pageEnd ?? c.page) > c.page) return '';
+  return c.focusSnippet || c.textSnippet || '';
 }

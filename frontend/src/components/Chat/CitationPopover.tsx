@@ -1,6 +1,7 @@
 "use client";
 
-import { citationPageRange } from '../../lib/citationText';
+import { useLocale } from '../../i18n';
+import { citationPreview, citationPageRange } from '../../lib/citationText';
 import React from 'react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { ExternalLink } from 'lucide-react';
@@ -19,9 +20,10 @@ function confidenceColor(score: number): string {
 
 export default function CitationPopover({ citation, children }: CitationPopoverProps) {
   const hasExtra = citation.confidenceScore != null || citation.contextText || citation.documentId;
-  const shouldHighlight = citation.retrievalModality !== 'summary' && Boolean(citation.bboxes?.length);
+  const excerpt = citationPreview(citation);
+  const { t } = useLocale();
   const originalHref = citation.documentId
-    ? `/d/${citation.documentId}?page=${citation.page}${shouldHighlight ? `&highlight=${citation.chunkId}` : ''}`
+    ? `/d/${citation.documentId}?page=${citation.page}`
     : '';
   if (!hasExtra) return <>{children}</>;
 
@@ -57,7 +59,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
             )}
             {citation.page && <span> &mdash; p. {citationPageRange(citation)}</span>}
           </div>
-          {citation.contextText && (
+          {excerpt && (
             <p
               className="text-zinc-600 dark:text-zinc-400 line-clamp-4 mt-1"
               style={{
@@ -67,7 +69,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
                 lineHeight: 1.55,
               }}
             >
-              &ldquo;{citation.contextText}&rdquo;
+              &ldquo;{excerpt}&rdquo;
             </p>
           )}
           {citation.documentId && (
@@ -77,7 +79,7 @@ export default function CitationPopover({ citation, children }: CitationPopoverP
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 mt-2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
             >
-              <ExternalLink size={10} /> View in original
+              <ExternalLink size={10} /> {t('citation.jumpTo', { page: citation.page })}
             </a>
           )}
           <HoverCard.Arrow className="fill-white dark:fill-zinc-800" />

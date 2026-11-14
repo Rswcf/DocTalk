@@ -8,7 +8,7 @@ import type { ChatArtifact, Citation, DocumentHierarchicalBrief, Message } from 
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
-import { uniqueCitationIndexes } from '../../lib/citationText';
+import { citationPreview, uniqueCitationIndexes } from '../../lib/citationText';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
 import PlusMenu from './PlusMenu';
@@ -118,7 +118,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
               <CitationCard
                 key={`${message.id}-${citation.refIndex}`}
                 refIndex={citation.refIndex}
-                textSnippet={citation.textSnippet}
+                textSnippet={citationPreview(citation)}
                 page={citation.page}
                 pageEnd={citation.pageEnd}
                 active={activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex}

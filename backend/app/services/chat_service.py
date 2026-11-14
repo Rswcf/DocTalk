@@ -5,6 +5,7 @@ import logging
 import re
 import time
 import uuid
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -22,6 +23,7 @@ from app.models.tables import (
     Chunk,
     CreditLedger,
     Document,
+    DocumentElement,
     DocumentTable,
     Message,
     Page,
@@ -289,8 +291,8 @@ def _citation_payload(
     # Sentence-level focus: when the answer claim near this citation clearly maps
     # to one sentence of the chunk, attach it (verbatim) so the UI can highlight
     # just that sentence instead of the whole chunk. None → keep whole-chunk.
-    if not is_summary and claim_text and chunk.text:
-        focus = focus_sentence(chunk.text, claim_text, page_texts=chunk.page_texts)
+    if not is_summary and not chunk.table_id and claim_text and chunk.text:
+        focus = focus_sentence(chunk.text, claim_text, page_texts=chunk.page_texts, page_headings=chunk.page_headings)
         if focus:
             citation_data["focus_snippet"] = focus
     _locate_citation(citation_data, chunk)
@@ -571,7 +573,7 @@ def _citation_contract() -> str:
         "\n\n## Citation Contract\n"
         "- Every answer based on document sources MUST include clickable bracket citations like [1].\n"
         "- Put a citation at the end of every factual paragraph or bullet that uses document content.\n"
-        "- Prefer short factual bullets over dense paragraphs; one bullet should contain one main claim and its citation.\n"
+        "- For multipart questions give each requested fact its own short sentence and [n], even when reusing the same source number.\n"
         "- Use only the source numbers listed above. If no source supports a claim, do not make that claim.\n"
         "- A response with no [n] citations is invalid unless there are no relevant sources.\n"
     )
@@ -1088,6 +1090,7 @@ class _ChunkInfo:
     summary_fallback_sections: tuple[str, ...] = ()
     summary_missing_sections: tuple[str, ...] = ()
     page_texts: dict[int, str] | None = None
+    page_headings: dict[int, str] | None = None
 
 
 def _locate_citation(citation: dict, chunk: _ChunkInfo) -> None:
@@ -1122,15 +1125,26 @@ async def _hydrate_citation_pages(db: AsyncSession, chunk_map: dict[int, _ChunkI
         selected.append(chunk)
     if not keys:
         return
-    rows = await db.execute(select(Page.document_id, Page.page_number, Page.content).where(
+    # A verified heading boundary can separate a title glued to a sentence by
+    # an existing index. One bounded query, no reparsing or extra round trip.
+    heading = select(DocumentElement.text).where(
+        DocumentElement.document_id == Page.document_id,
+        DocumentElement.page_start == Page.page_number,
+        DocumentElement.page_end == Page.page_number,
+        DocumentElement.element_type == "heading",
+    ).order_by(DocumentElement.reading_order).limit(1).scalar_subquery()
+    rows = await db.execute(select(Page.document_id, Page.page_number, Page.content, heading).where(
         sa.tuple_(Page.document_id, Page.page_number).in_(keys)
     ))
-    texts = {(doc_id, page): content or "" for doc_id, page, content in rows.all()}
+    pages = {(doc_id, page): (content or "", title or "") for doc_id, page, content, title in rows.all()}
     for chunk in selected:
         chunk.page_texts = {
-            page: texts.get((chunk.document_id, page), "")
+            page: pages.get((chunk.document_id, page), ("", ""))[0]
             for page in range(chunk.page_start, chunk.page_end + 1)
         }
+        chunk.page_headings = {p: pages[(chunk.document_id, p)][1] for p in chunk.page_texts
+                               if (chunk.document_id, p) in pages}
+
 
 
 @dataclass
@@ -1250,14 +1264,8 @@ async def _refine_citation_focus(
     """
     # Legacy continuation records may already carry the same ref-level focus
     # on unrelated occurrences. Do not promote those to precise page claims.
-    ambiguous_focus = {
-        (c.get("ref_index"), c.get("focus_snippet")) for c in citations
-        if c.get("focus_snippet") and sum(
-            other.get("ref_index") == c.get("ref_index")
-            and other.get("focus_snippet") == c.get("focus_snippet")
-            for other in citations
-        ) > 1
-    }
+    focus_counts = Counter((c.get("ref_index"), c["focus_snippet"]) for c in citations if c.get("focus_snippet"))
+    ambiguous_focus = {key for key, count in focus_counts.items() if count > 1}
     cleaned = False
     for citation in citations:
         if (citation.get("ref_index"), citation.get("focus_snippet")) in ambiguous_focus:
@@ -1280,10 +1288,12 @@ async def _refine_citation_focus(
         # thinking-disabled) so this stays the intended cheap, fast call.
         _opts: dict[str, Any] = {}
         _apply_provider_options(_opts, focus_model, user_id=user.id)
+        counts = Counter(c.get("ref_index") for c in citations)
+        single_use = {ref for ref, count in counts.items() if count == 1}
         focus_map, (focus_pt, focus_ct) = await asyncio.wait_for(
             extract_focus_quotes(
                 answer=answer,
-                citations=citations,
+                citations=[c for c in citations if c.get("ref_index") in single_use],
                 chunk_texts={ref: (c.text or "") for ref, c in chunk_map.items()},
                 client=_get_llm_client(focus_model),
                 model=focus_model,
@@ -1293,10 +1303,8 @@ async def _refine_citation_focus(
         )
         # The fallback model returns one quote per ref, not per occurrence.
         # Repeated refs may support different assertions/pages in one answer.
-        repeated_refs = {ref for ref in focus_map
-                         if sum(c.get("ref_index") == ref for c in citations) > 1}
         changed = apply_focus_quotes(
-            citations, {ref: quote for ref, quote in focus_map.items() if ref not in repeated_refs}
+            citations, {ref: quote for ref, quote in focus_map.items() if ref in single_use}
         ) or cleaned
         for citation in citations:
             chunk = chunk_map.get(citation.get("ref_index"))
@@ -1331,6 +1339,7 @@ class RefParserFSM:
         self.char_offset: int = 0
         self.state: str = "TEXT"  # TEXT | MAYBE_REF
         self.recent_claim: str = ""
+        self.last_cited_claim: str = ""
 
     def feed(self, token: str) -> List[Dict[str, Any]]:
         events: List[Dict[str, Any]] = []
@@ -1351,7 +1360,12 @@ class RefParserFSM:
                     if inner.isdigit() and (int(inner) in self.chunk_map):
                         ref_num = int(inner)
                         chunk = self.chunk_map[ref_num]
-                        events.append(sse("citation", _citation_payload(ref_num, chunk, self.char_offset, current_claim(self.recent_claim))))
+                        claim = current_claim(self.recent_claim)
+                        if not any(ch.isalnum() for ch in claim):
+                            claim = self.last_cited_claim  # adjacent [1][2]
+                        events.append(sse("citation", _citation_payload(ref_num, chunk, self.char_offset, claim)))
+                        self.last_cited_claim = claim
+                        self.recent_claim = ""
                     else:
                         # 非有效引用，回退为普通文本
                         events.append(sse("token", {"text": self.buffer}))

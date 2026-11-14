@@ -114,8 +114,8 @@ async def test_page_hydration_batches_and_keeps_collection_documents_separate():
     a, b = chunk(), chunk()
     summary = chunk(retrieval_modality="summary")
     db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(all=lambda: [
-        (a.document_id, 1, FIRST), (a.document_id, 2, SECOND),
-        (b.document_id, 1, SECOND), (b.document_id, 2, FIRST),
+        (a.document_id, 1, FIRST, None), (a.document_id, 2, SECOND, None),
+        (b.document_id, 1, SECOND, None), (b.document_id, 2, FIRST, None),
     ])))
     await _hydrate_citation_pages(db, {1: a, 2: b, 3: summary})
     db.execute.assert_awaited_once()
@@ -151,7 +151,7 @@ async def test_sparse_and_many_document_hydration_is_bounded():
     db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(all=lambda: [])))
     await _hydrate_citation_pages(db, dict(enumerate([sparse, *sources])))
     query = db.execute.call_args.args[0]
-    pairs = next(iter(query.compile().params.values()))
+    pairs = next(v for v in query.compile().params.values() if isinstance(v, list))
     assert len(pairs) == 512
     assert all(doc_id != sparse.document_id for doc_id, _ in pairs)
     assert sparse.page_texts == {} and sources[-1].page_texts == {}
