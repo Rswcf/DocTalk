@@ -76,6 +76,22 @@ def test_chat_lexical_focus_and_conservative_fallback():
     assert (broad["page"], broad["page_end"]) == (1, 2)
 
 
+@pytest.mark.parametrize("footer,on_same_page,expected", [
+    ("1 / 2", False, (2, 2)),  # a verified footer joined to the next page
+    ("", False, (1, 2)),  # a fraction alone is not evidence of a footer
+    ("1 / 2", True, (2, 2)),  # a real fraction on the cited page survives
+])
+def test_focus_at_physical_page_boundary(footer, on_same_page, expected):
+    source = chunk()
+    passage = "Calibration result The approved acoustic reading was 73.42 decibels."
+    joined = "1 / 2 " + passage
+    source.text = FIRST + " " + joined + " " + SECOND
+    source.page_texts = {1: FIRST + "\n" + footer, 2: joined if on_same_page else passage}
+    citation = _citation_payload(1, source, 0, "The approved acoustic reading was 73.42 decibels.")
+    assert (citation["page"], citation["page_end"]) == expected
+    assert citation["focus_snippet"] == (passage if footer and not on_same_page else joined)
+
+
 @pytest.mark.asyncio
 async def test_focus_refinement_also_updates_page_and_boxes():
     source = chunk()

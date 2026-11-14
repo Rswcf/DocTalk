@@ -66,10 +66,29 @@ def current_claim(buffer: str) -> str:
     return segs[-1] if segs else ""
 
 
+def _without_previous_folio(sentence: str, page_texts: dict[int, str]) -> str:
+    """Drop a joined page counter only when both physical pages confirm it."""
+    match = re.match(r"^(\d+\s*/\s*\d+)\s+(.+)$", sentence, re.DOTALL)
+    if not match:
+        return sentence
+    marker, passage = match.groups()
+    pages = {page: " ".join(text.split()) for page, text in page_texts.items()}
+    full = " ".join(sentence.split())
+    if any(full in text for text in pages.values()):
+        return sentence  # A fraction that belongs to a physical source passage.
+    for page, text in page_texts.items():
+        lines = text.rstrip().splitlines()
+        if (lines and " ".join(lines[-1].split()) == " ".join(marker.split())
+                and " ".join(passage.split()) in pages.get(page + 1, "")):
+            return passage
+    return sentence
+
+
 def focus_sentence(
     chunk_text: str,
     claim_text: str,
     *,
+    page_texts: dict[int, str] | None = None,
     min_overlap: int = 2,
     max_sentence_ratio: float = 0.7,
     dominance: float = 1.5,
@@ -91,6 +110,9 @@ def focus_sentence(
         reverse=True,
     )
     best_overlap, best = scored[0]
+    if page_texts:
+        best = _without_previous_folio(best, page_texts)
+        best_overlap = len(claim_feats & _features(best))
     runner = scored[1][0] if len(scored) > 1 else 0
     if best_overlap < min_overlap:
         return None

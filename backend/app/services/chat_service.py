@@ -290,7 +290,7 @@ def _citation_payload(
     # to one sentence of the chunk, attach it (verbatim) so the UI can highlight
     # just that sentence instead of the whole chunk. None → keep whole-chunk.
     if not is_summary and claim_text and chunk.text:
-        focus = focus_sentence(chunk.text, claim_text)
+        focus = focus_sentence(chunk.text, claim_text, page_texts=chunk.page_texts)
         if focus:
             citation_data["focus_snippet"] = focus
     _locate_citation(citation_data, chunk)
