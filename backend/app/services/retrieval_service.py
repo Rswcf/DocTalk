@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 import uuid
 from typing import Iterable, List
 
 import sqlalchemy as sa
+from openai import AuthenticationError
 from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,8 @@ from app.core.config import settings
 from app.models.tables import Chunk, DocumentTable
 from app.services.embedding_service import embedding_service
 from app.services.rag_evaluator_service import extract_query_terms
+
+logger = logging.getLogger(__name__)
 
 # Minimum text length for a chunk to be useful in retrieval.
 # Shorter chunks are typically form fields, metadata footers, or page numbers
@@ -235,7 +239,11 @@ class RetrievalService:
 
     async def search(self, query: str, document_id: uuid.UUID, top_k: int, db: AsyncSession):
         # 1) Embed query — run sync call off the event loop
-        qvec = (await asyncio.to_thread(embedding_service.embed_texts, [query]))[0]
+        try:
+            qvec = (await asyncio.to_thread(embedding_service.embed_texts, [query]))[0]
+        except AuthenticationError:
+            logger.warning("Embedding provider rejected authentication; using document lexical search")
+            return await self.lexical_search(query, document_id, top_k, db)
 
         # 2) Qdrant search — over-fetch to compensate for micro-chunk filtering
         client = embedding_service.get_qdrant_client()

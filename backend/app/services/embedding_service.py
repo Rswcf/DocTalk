@@ -6,7 +6,7 @@ import time
 from functools import lru_cache
 from typing import List, Optional
 
-from openai import OpenAI
+from openai import AuthenticationError, OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 
@@ -59,6 +59,9 @@ class EmbeddingService:
                 if not vectors:
                     raise ValueError("Empty embedding response")
                 return vectors
+            except AuthenticationError:
+                # Retrying an unchanged credential cannot resolve a provider 401.
+                raise
             except Exception as exc:
                 last_exc = exc
                 wait = 2 ** attempt  # 1s, 2s, 4s

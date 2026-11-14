@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
+import httpx
 import pytest
+from openai import AuthenticationError
 
+from app.services.embedding_service import embedding_service
 from app.services.rag_evaluator_service import extract_query_terms
 from app.services.retrieval_service import (
     _lexical_score,
@@ -301,3 +304,21 @@ def test_table_payloads_do_not_return_all_tables_when_specific_term_is_missing()
     payloads = _table_payloads_from_tables("Show tables about MetaX", [table], [chunk], top_k=4)
 
     assert payloads == []
+
+@pytest.mark.asyncio
+async def test_provider_401_uses_same_document_citation_without_retry(monkeypatch):
+    document_id = uuid.uuid4()
+    chunk = SimpleNamespace(id=uuid.uuid4(), text="Quarterly revenue increased. " * 12,
+                            page_start=3, page_end=3, bboxes=[{"page": 3}], section_title=None)
+    response = httpx.Response(401, request=httpx.Request("POST", "https://example.test/embeddings"))
+    create = Mock(side_effect=AuthenticationError("Invalid credential", response=response, body=None))
+    client = SimpleNamespace(embeddings=SimpleNamespace(create=create))
+    monkeypatch.setattr(embedding_service, "_get_client", lambda: client)
+    db = SimpleNamespace(execute=AsyncMock(return_value=_Rows([chunk])))
+
+    hits = await retrieval_service.search("quarterly revenue", document_id, 5, db)
+
+    create.assert_called_once()
+    statement = db.execute.await_args.args[0]
+    assert document_id in statement.compile().params.values()
+    assert [(hit["chunk_id"], hit["page"], hit["bboxes"]) for hit in hits] == [(chunk.id, 3, chunk.bboxes)]
