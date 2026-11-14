@@ -40,7 +40,9 @@ RUN apt-get update \
 
 # Install Python dependencies
 COPY backend/requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt greenlet psycopg[binary] && rm /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt greenlet psycopg[binary] \
+    && python -c "import kombu.transport.redis" \
+    && rm /tmp/requirements.txt
 
 # Create non-root user with writable home (required by LibreOffice for user profile)
 RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 --ingroup app --home /home/app app \
