@@ -217,6 +217,7 @@
   "privacy.section2.item1": "DocTalk non addestra modelli con i tuoi dati",
   "privacy.section2.item2": "I documenti vengono elaborati per fornire le funzioni documentali che richiedi.",
   "privacy.section2.item3": "A seconda della funzione e della configurazione, i contenuti e le domande pertinenti possono essere elaborati direttamente da DeepSeek, tramite OpenRouter e i suoi fornitori, oppure da fornitori di OCR e traduzione. DocTalk non vende i tuoi dati né li usa per addestrare modelli. I termini di conservazione e addestramento variano in base al servizio e alla configurazione; non viene offerta una garanzia universale di conservazione zero.",
+  "privacy.demoTrial": "Per la demo pubblica registriamo la pagina di ingresso, la categoria di provenienza e i passaggi fino alla visualizzazione del brano citato. Identificativi casuali raggruppano i passaggi di una visita. Queste misurazioni escludono il testo delle domande e il contenuto dei documenti e vengono eliminate durante la pulizia giornaliera dopo 90 giorni.",
   "privacy.section3.title": "Conservazione dei dati",
   "privacy.section3.content": "I documenti sono crittografati a riposo con AES-256. Puoi eliminare i tuoi dati in qualsiasi momento dalle impostazioni del tuo account.",
   "privacy.section4.title": "I tuoi diritti",

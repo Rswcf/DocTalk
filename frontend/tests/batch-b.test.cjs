@@ -229,6 +229,7 @@ function createChatHookHarness({ chatStream, initialMessages, maxUserMessages, g
       '../store': { useDocTalkStore },
       '../components/CreditsDisplay': { triggerCreditsRefresh: () => {} },
       './errorCopy': { errorCopy: () => ({ body: 'Retryable network error' }) },
+      './demoTrial': { demoQuestion() {}, demoStep() {}, linkDemoAnswer() {} },
       './analytics': { trackEvent: (name) => metrics.events.push(name) },
       './shareAnchors': { messageShareAnchorFromId: (id) => id },
       './billingLinks': { deriveUpgradePlan: () => 'plus' },

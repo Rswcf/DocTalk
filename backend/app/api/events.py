@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+import re
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import UUID4, BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user_optional, get_db_session
@@ -13,6 +15,7 @@ from app.models.tables import ProductEvent, User
 router = APIRouter(prefix="/api/events", tags=["events"])
 
 ALLOWED_EVENTS = {
+    "demo_trial",
     "billing_view",
     "upgrade_click",
     "checkout_created",
@@ -58,6 +61,7 @@ ALLOWED_EVENTS = {
 }
 
 PUBLIC_EVENTS = {
+    "demo_trial",
     "landing_cta_clicked",
     "auth_modal_opened",
     "auth_provider_clicked",
@@ -70,6 +74,26 @@ PUBLIC_EVENTS = {
     "paywall_opened",
     "limit_hit",
 }
+
+
+class DemoTrialStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    step: Literal["entry", "question", "answer", "citation", "source"]
+    source: Literal["google", "bing", "other_search", "ai", "paid", "campaign", "referral", "direct_unknown"]
+    visit: UUID4
+    attempt: UUID4 | None = None
+    landing_path: str = Field(max_length=180, pattern=r"^/(?:[a-z0-9-]+/){0,3}(?:[a-z0-9-]+|\*)?$")
+    qa: bool = False
+
+    def public_landing(self) -> str:
+        path = self.landing_path
+        if re.fullmatch(
+            r"/(?:(?:zh|ja|es|ko|de|fr|pt|it|ar|hi)(?:/|$))?"
+            r"(?:(?:use-cases|compare|alternatives|features|tools|demo)(?:/[a-z0-9-]{1,80})?"
+            r"|blog(?:/category)?(?:/[a-z0-9-]{1,80})?|pricing|trust|about|contact|imprint|privacy|terms)?", path
+        ):
+            return path
+        return "/d/*" if path.startswith("/d/") else "/*"
 
 
 class ProductEventRequest(BaseModel):
@@ -114,6 +138,24 @@ async def record_product_event(
         client_ip = get_client_ip(request)
         if not await public_event_limiter.is_allowed(client_ip):
             raise HTTPException(status_code=429, detail="Too many events")
+
+    if body.event_name == "demo_trial":
+        try:
+            step = DemoTrialStep.model_validate(body.properties)
+        except ValidationError:
+            raise HTTPException(status_code=422, detail="Invalid demo trial fields") from None
+        if (step.step == "entry") != (step.attempt is None):
+            raise HTTPException(status_code=422, detail="Invalid demo trial attempt")
+        # No user, chat session, message identifier, PDF text, or question is stored.
+        # A network retry and a repeated UI callback represent the same milestone.
+        statement = insert(ProductEvent).values(
+            event_name="demo_trial", source=step.source, reason=step.step,
+            deduplication_key=f"trial:{step.visit}:{step.attempt}:{step.step}",
+            metadata_json={**step.model_dump(mode="json", exclude_none=True), "landing_path": step.public_landing()},
+        ).on_conflict_do_nothing(index_elements=["deduplication_key"])
+        await db.execute(statement)
+        await db.commit()
+        return Response(status_code=204)
 
     properties = _safe_properties(body.properties)
     event = ProductEvent(

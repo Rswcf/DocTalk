@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { enterDemo } from '../../lib/demoTrial';
 import Link from 'next/link';
 import { ArrowRight, BookOpen, FileCheck2, FileSignature, FileText, Loader2, Quote } from 'lucide-react';
 import { useLocale } from '../../i18n';
@@ -63,6 +64,7 @@ export default function DemoPageClient() {
   };
 
   useEffect(() => {
+    enterDemo();
     fetchDocs();
   }, []);
 

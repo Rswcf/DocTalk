@@ -222,6 +222,7 @@
   "privacy.section2.item1": "DocTalk does not train models on your data",
   "privacy.section2.item2": "Documents are processed to provide the document features you request.",
   "privacy.section2.item3": "Depending on the feature and configuration, relevant document content and questions may be processed by DeepSeek directly, through OpenRouter and its upstream providers, or by OCR and translation providers. DocTalk does not sell your data or use it to train models. Provider retention and training terms vary by service and configuration; no universal zero-retention guarantee is made.",
+  "privacy.demoTrial": "For the public demo, we record the entry page, source category and steps through to viewing a cited passage. Random IDs group steps within a visit. These measurements omit question text and document contents and are removed by a daily cleanup after 90 days.",
   "privacy.section3.title": "Data Storage",
   "privacy.section3.content": "Documents are encrypted at rest using AES-256. You can delete your data anytime from your account settings.",
   "privacy.section4.title": "Your Rights",

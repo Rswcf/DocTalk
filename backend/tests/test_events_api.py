@@ -300,3 +300,18 @@ async def test_quote_finder_events_reject_anonymous_user(monkeypatch, event_name
 
     assert response.status_code == 401
     assert fake_db.added == []
+
+
+def test_demo_trial_excludes_private_fields_and_collapses_app_urls():
+    from pydantic import ValidationError
+
+    from app.api.events import DemoTrialStep
+
+    fields = {"visit": uuid.uuid4(), "source": "google", "step": "entry"}
+    for url, normalized in [
+        ("/d/private-document-id", "/d/*"), ("/shared/private-token", "/*"),
+        ("/blog/ai-due-diligence-guide", "/blog/ai-due-diligence-guide"),
+    ]:
+        assert DemoTrialStep(**fields, landing_path=url).public_landing() == normalized
+    with pytest.raises(ValidationError):
+        DemoTrialStep(**fields, landing_path="/demo", question="private text")

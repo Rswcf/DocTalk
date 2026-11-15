@@ -222,6 +222,7 @@
   "privacy.section2.item1": "DocTalk 不使用您的数据训练模型",
   "privacy.section2.item2": "文档用于提供您请求的文档功能。",
   "privacy.section2.item3": "根据所用功能和配置，相关文档内容与问题可能由 DeepSeek 直接处理，或通过 OpenRouter 及其上游提供商处理，也可能由 OCR 和翻译提供商处理。DocTalk 不出售您的数据，也不将其用于训练模型。提供商的数据保留和训练条款因服务与配置而异；我们不作适用于所有服务的零保留保证。",
+  "privacy.demoTrial": "对于公开 Demo，我们记录落地页、来源类别以及从进入到查看引用原文的步骤。随机标识仅用于关联一次访问中的步骤。这些统计不含问题文本或文档内容，并在满 90 天后由每日清理任务删除。",
   "privacy.section3.title": "数据存储",
   "privacy.section3.content": "文档使用 AES-256 加密存储。你可以随时在账户设置中删除你的数据。",
   "privacy.section4.title": "你的权利",

@@ -95,3 +95,14 @@ def refresh_stale_demo_parses_task() -> int:
     from app.services.demo_seed import refresh_stale_demo_parses
 
     return refresh_stale_demo_parses()
+
+@celery_app.task(name="cleanup_demo_trial_events")
+def cleanup_demo_trial_events() -> int:
+    from app.models.sync_database import sync_engine
+
+    with sync_engine.begin() as conn:
+        result = conn.execute(sa.text("""
+            DELETE FROM product_events
+            WHERE event_name = 'demo_trial' AND created_at < now() - interval '90 days'
+        """))
+        return result.rowcount

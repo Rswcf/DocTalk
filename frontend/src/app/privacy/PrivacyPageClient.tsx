@@ -24,7 +24,7 @@ export default function PrivacyPageClient() {
         lede={tOr('privacy.controller.intro', 'The controller responsible for the processing of personal data on this website is:')}
         meta={
           <p className="ed-caption">
-            {t('privacy.lastUpdated')}: 2026-09-30
+            {t('privacy.lastUpdated')}: 2026-11-15
           </p>
         }
       />
@@ -69,6 +69,7 @@ export default function PrivacyPageClient() {
       <EdSection num="03" title={t('privacy.section3.title')}>
         <EdProse>
           <p>{t('privacy.section3.content')}</p>
+          <p>{t('privacy.demoTrial')}</p>
         </EdProse>
       </EdSection>
 

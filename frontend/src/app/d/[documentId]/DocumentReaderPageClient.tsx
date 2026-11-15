@@ -27,6 +27,7 @@ import type { ChatArtifact, Citation } from '../../../types';
 import { trackEvent } from '../../../lib/analytics';
 import { layoutTranslationTargetLabel, proxiedArtifactUrl } from '../../../lib/layoutTranslation';
 import { useDocumentBrief } from '../../../lib/useDocumentBrief';
+import { enterDemo, demoStep } from '../../../lib/demoTrial';
 import { citationPassage } from '../../../lib/citationText';
 import { readerView, type ReaderView, type ReaderViewChoice } from '../../../lib/readerView';
 
@@ -122,6 +123,10 @@ export default function DocumentReaderPageClient() {
   );
   const { sessionError } = useChatSession(documentId);
   const { isLoggedIn, userPlan, canUseCustomInstructions } = useUserPlanProfile();
+  useEffect(() => {
+    if (isDemo && documentStatus === 'ready' && useDocTalkStore.getState().documentId === documentId) enterDemo();
+  }, [isDemo, documentStatus, documentId]);
+
   const sessionErrorCopy = sessionError ? errorCopy(sessionError, t, tOr, { isDemo }) : null;
   const error = loaderError;
   const documentErrorCopy = loaderErrorCode
@@ -461,6 +466,7 @@ export default function DocumentReaderPageClient() {
         : t('status.processing');
 
   const handleCitationClick = useCallback((citation: Citation, messageId?: string) => {
+    if (isDemo) demoStep(useDocTalkStore.getState().sessionId, messageId, 'citation');
     trackEvent('citation_clicked', {
       source: isDemo ? 'demo_reader' : 'document_reader',
       page: citation.page,

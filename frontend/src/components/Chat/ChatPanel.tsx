@@ -226,7 +226,16 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
 
   useEffect(() => {
     const hasConversationMessages = messages.some((message) => message.id !== 'summary_synthetic');
-    if (!initialQuestion || hasConversationMessages || isStreaming) return;
+    if (!initialQuestion || isStreaming) return;
+    if (hasConversationMessages) {
+      // A return visit can restore an old thread. Offer the linked question
+      // for manual submission without spending another demo message on reload.
+      if (autoSubmitInitialQuestion && !input && initialQuestionSubmittedRef.current !== initialQuestion) {
+        initialQuestionSubmittedRef.current = initialQuestion;
+        setInput(initialQuestion);
+      }
+      return;
+    }
 
     if (autoSubmitInitialQuestion) {
       const autoSubmitKey = `${sessionId}:${initialQuestion}`;

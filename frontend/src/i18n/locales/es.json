@@ -276,6 +276,7 @@
   "privacy.section2.item3": "Según la función y la configuración, DeepSeek puede procesar directamente el contenido y las preguntas pertinentes, o estos pueden procesarse mediante OpenRouter y sus proveedores, o proveedores de OCR y traducción. DocTalk no vende sus datos ni los usa para entrenar modelos. Las condiciones de conservación y entrenamiento varían según el servicio y su configuración; no se ofrece una garantía universal de conservación cero.",
   "privacy.section2.title": "Uso de datos",
   "privacy.section3.content": "Los documentos están cifrados en reposo con AES-256. Puedes eliminar tus datos en cualquier momento desde la configuración de tu cuenta.",
+  "privacy.demoTrial": "En la demo pública registramos la página de entrada, el tipo de origen y los pasos hasta ver el pasaje citado. Los identificadores aleatorios agrupan los pasos de una visita. Estas métricas excluyen las preguntas y el contenido de los documentos y se eliminan en la limpieza diaria tras 90 días.",
   "privacy.section3.title": "Almacenamiento de datos",
   "privacy.section4.content": "Puede eliminar documentos individuales, o exportar los datos de la cuenta y eliminar su cuenta en Perfil → Cuenta. Para otras solicitudes de privacidad, contacte con privacy@doctalk.site.",
   "privacy.section4.title": "Tus derechos",

@@ -7,6 +7,7 @@ import { useDocTalkStore } from '../store';
 import type { Message } from '../types';
 import { triggerCreditsRefresh } from '../components/CreditsDisplay';
 import { errorCopy } from './errorCopy';
+import { demoQuestion, demoStep, linkDemoAnswer } from './demoTrial';
 import { trackEvent } from './analytics';
 import { messageShareAnchorFromId } from './shareAnchors';
 import { deriveUpgradePlan } from './billingLinks';
@@ -287,6 +288,12 @@ export function useChatStream({
     triggerCreditsRefresh();
     trackEvent('chat_message_completed', { source: 'chat_stream', mode: selectedMode });
     if (d.message_id) {
+      const state = useDocTalkStore.getState();
+      const answer = state.messages.at(-1);
+      if (state.isDemo && answer?.role === 'assistant' && answer.text.trim() && !answer.isError) {
+        linkDemoAnswer(sessionId, answer.id, d.message_id);
+        demoStep(sessionId, answer.id, 'answer');
+      }
       updateLastMessageMeta({
         backendId: d.message_id,
         ...(d.response_version !== undefined ? { responseVersion: d.response_version } : {}),
@@ -402,6 +409,7 @@ export function useChatStream({
         createdAt: Date.now(),
       };
 
+      if (useDocTalkStore.getState().isDemo) demoQuestion(sessionId, asstMsg.id);
       addMessage(userMsg);
       addMessage(asstMsg);
       // A new user message on this session is itself an accounting-relevant
@@ -419,7 +427,7 @@ export function useChatStream({
     } finally {
       release();
     }
-  }, [demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode, maxUserMessages]);
+  }, [demoLimitReached, onRequireAuth, addMessage, setStreaming, streamAssistantResponse, selectedMode, maxUserMessages, sessionId]);
 
   // Regenerate/continue add no new user message locally (they resend/extend
   // an existing turn), but the backend increments demo quota on both — so
@@ -489,7 +497,9 @@ export function useChatStream({
         ? { regenerate_of: originalAnswer.backendId, expected_response_version: originalAnswer.responseVersion ?? null }
         : { retry_latest_question: true, retry_after: msgs.slice(0, lastUserIdx).reverse().find(m => m.backendId)?.backendId ?? null };
       useDocTalkStore.getState().setMessages(msgs.slice(0, lastUserIdx + 1));
-      addMessage({ id: `m_${Date.now()}_a`, role: 'assistant', text: '', citations: [], createdAt: Date.now() });
+      const replacementId = `m_${Date.now()}_a`;
+      if (useDocTalkStore.getState().isDemo) demoQuestion(sessionId, replacementId);
+      addMessage({ id: replacementId, role: 'assistant', text: '', citations: [], createdAt: Date.now() });
       bumpDemoUsageForRegenOrContinue();
       const epoch = useDocTalkStore.getState().demoAccountingEpoch;
       const active = () => useDocTalkStore.getState().sessionId === sessionId

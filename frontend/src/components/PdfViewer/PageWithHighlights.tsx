@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useLayoutEffect, useRef } from 'react';
+import { demoStep } from '../../lib/demoTrial';
+import { useDocTalkStore } from '../../store';
 import { Page } from 'react-pdf';
 import type { PDFPageProxy } from 'pdfjs-dist/types/src/display/api';
 import { useLocale } from '../../i18n';
@@ -45,7 +47,7 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
   const textRenderRef = useRef<{ scale: number; searchQuery?: string } | null>(null);
   const [textFailed, setTextFailed] = useState(false);
   const [pageFailed, setPageFailed] = useState(false);
-  const [evidence, setEvidence] = useState<{ kind: EvidenceKind; rects: NormalizedBBox[]; ready: boolean }>({ kind: 'page', rects: [], ready: false });
+  const [evidence, setEvidence] = useState<{ navigationId?: number; kind: EvidenceKind; rects: NormalizedBBox[]; ready: boolean }>({ kind: 'page', rects: [], ready: false });
   const measuredRef = useRef<{ kind: EvidenceKind; rects: NormalizedBBox[]; ready: boolean; candidate: string | null | undefined; navigationId?: number; textEpoch: number } | null>(null);
   const onLoadSuccess = useCallback((page: PDFPageProxy) => {
     const viewport = page.getViewport({ scale: 1 });
@@ -133,7 +135,7 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
         || previous.rects.length !== rects.length || rects.some((rect, index) =>
           (['x', 'y', 'w', 'h'] as const).some(key => Math.abs(rect[key] - previous.rects[index][key]) > 0.00001));
       measuredRef.current = { kind, rects, ready, candidate, navigationId, textEpoch };
-      if (changed) setEvidence({ kind, rects, ready });
+      if (changed || previous?.navigationId !== navigationId) setEvidence(kind === 'exact' ? { kind, rects, ready, navigationId } : { kind, rects, ready });
       if (changed || previous?.navigationId !== navigationId) onEvidenceReady?.();
     };
     measure();
@@ -141,6 +143,25 @@ const PageWithHighlights = React.memo(function PageWithHighlights({ pageNumber, 
     observer.observe(element);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
   }, [pageDims, regions, candidate, textEpoch, textFailed, pageFailed, scale, searchQuery, navigationId, pageNumber, onEvidenceReady, syntheticBoxes]);
+
+  // A click or a page number alone does not prove that the source was shown.
+  React.useEffect(() => {
+    if (hidden || !evidence.ready || evidence.kind !== 'exact' || evidence.navigationId !== navigationId) return;
+    const state = useDocTalkStore.getState();
+    const target = state.citationTarget;
+    const anchor = root.current?.querySelector('[data-evidence-anchor="true"]');
+    if (!state.isDemo || !anchor || !target?.messageId || !citationIndex || target.citation.page !== pageNumber) return;
+    const observer = new IntersectionObserver(entries => {
+      const live = useDocTalkStore.getState();
+      if (live.citationTarget !== target || live.scrollNonce !== navigationId || live.sessionId !== state.sessionId) return;
+      if (document.visibilityState === 'visible' && entries.some(e => e.isIntersecting && e.intersectionRatio > 0)) {
+        demoStep(state.sessionId, target.messageId, 'source');
+        observer.disconnect();
+      }
+    });
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, [evidence, navigationId, citationIndex, pageNumber, hidden]);
 
   const badgeLeft = (regions.length ? Math.min(...regions.map(region => region.x)) : evidence.rects[0]?.x || 0) * (pageDims?.w || 0) * scale;
 

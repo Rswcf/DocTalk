@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { getDemoDocuments } from '../../../lib/api';
+import { enterDemo } from '../../../lib/demoTrial';
 import { useLocale } from '../../../i18n';
 
 /** Legacy demo route — redirects to /d/{documentId} for the matching demo slug. */
@@ -23,22 +24,26 @@ const SLUG_MAP: Record<string, string> = {
 export default function DemoRedirectPageClient() {
   const { sample } = useParams<{ sample: string }>();
   const router = useRouter();
+  const checkEarnings = useSearchParams().get('task') === 'check-earnings';
   const [error, setError] = useState(false);
   const { t } = useLocale();
 
   useEffect(() => {
+    enterDemo();
     const targetSlug = SLUG_MAP[sample] || sample;
     getDemoDocuments()
       .then((docs) => {
         const match = docs.find((d) => d.slug === targetSlug);
         if (match) {
-          router.replace(`/d/${match.document_id}`);
+          const question = 'What was consolidated Alphabet revenue in Q4 2025, and what 2026 CapEx range did management expect? Cite the original sentence for each.';
+          const query = targetSlug === 'alphabet-earnings' && checkEarnings ? '?question=' + encodeURIComponent(question) : '';
+          router.replace(`/d/${match.document_id}${query}`);
         } else {
           setError(true);
         }
       })
       .catch(() => setError(true));
-  }, [sample, router]);
+  }, [sample, router, checkEarnings]);
 
   if (error) {
     return (

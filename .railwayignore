@@ -24,11 +24,12 @@ frontend/
 .collab/
 docs/
 scripts/
-# Ship only the bounded refund and legacy-settlement operations CLIs.
+# Ship only the production operations and reporting CLIs.
 !backend/scripts/
 backend/scripts/*
 !backend/scripts/refund_ops.py
 !backend/scripts/legacy_credit_settlements.py
+!backend/scripts/demo_trial_report.py
 
 # Large non-runtime trees at repo root. The backend build context is the repo
 # root (Dockerfile: backend/Dockerfile), and `railway up`

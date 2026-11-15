@@ -152,3 +152,35 @@ test('trackEvent attaches attribution only to the pre-signup funnel events', asy
   // Caller-supplied params win over captured attribution.
   assert.equal(sent[2].properties.ref_host, 'explicit.example');
 });
+
+test('a demo visit keeps attribution and only counts a visible source for the clicked answer', async () => {
+  const posted = [];
+  const previousWindow = global.window;
+  const previousFetch = global.fetch;
+  global.window = {crypto: global.crypto};
+  global.fetch = async (_, options) => { posted.push(JSON.parse(options.body).properties); return {status: 204}; };
+  try {
+    const trial = loadTs('../src/lib/demoTrial.ts', {
+      './attribution': {getAttribution: () => ({
+        ref_host: 'www.google.com', landing_path: '/blog/ai-due-diligence-guide', utm_campaign: 'doctalk-qa',
+      })},
+    });
+    trial.enterDemo();
+    trial.enterDemo();
+    trial.demoQuestion('session', 'first');
+    trial.demoStep('session', 'first', 'source');
+    trial.demoStep('session', 'first', 'citation'); // Early click during streaming.
+    trial.demoStep('session', 'first', 'source');
+    trial.linkDemoAnswer('session', 'first', 'from-server');
+    trial.demoStep('session', 'from-server', 'answer');
+    trial.demoStep('session', 'from-server', 'source');
+    trial.demoStep('another-session', 'first', 'answer');
+    assert.deepEqual(posted.map(p => p.step), ['entry', 'question', 'citation', 'source', 'answer']);
+    assert.equal(new Set(posted.map(p => p.visit)).size, 1);
+    assert.equal(new Set(posted.slice(1).map(p => p.attempt)).size, 1);
+    assert.ok(posted.every(p => p.source === 'google' && p.qa && p.landing_path === '/blog/ai-due-diligence-guide'));
+  } finally {
+    global.window = previousWindow;
+    global.fetch = previousFetch;
+  }
+});

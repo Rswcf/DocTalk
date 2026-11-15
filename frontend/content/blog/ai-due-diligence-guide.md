@@ -1,8 +1,8 @@
 ---
-title: "AI-Powered Due Diligence: Analyze Documents 10x Faster"
+title: "AI Due Diligence: How to Verify Financial Claims Against the Source"
 description: "Learn how AI accelerates due diligence document review for M&A, investments, and partnerships. Covers workflow, document types, risk identification, and practical limitations."
 date: "2026-03-18"
-updated: "2026-03-18"
+updated: "2026-11-15"
 author: "DocTalk Team"
 category: "use-cases"
 tags: ["due diligence", "m&a", "legal", "finance", "document review", "risk analysis"]
@@ -11,11 +11,11 @@ imageAlt: "A professional reviewing stacks of due diligence documents with AI hi
 keywords: ["ai due diligence", "ai document review due diligence", "due diligence automation", "m&a document analysis ai", "ai legal document review", "due diligence technology"]
 ---
 
-Due diligence is the reason M&A deals take months instead of weeks. A typical mid-market acquisition generates a data room with 500 to 2,000 documents. Corporate acquisition teams, law firms, and private equity analysts review these documents manually — reading contracts one by one, building spreadsheets of key terms, flagging risks, and cross-referencing disclosures. The process is thorough by design, but it is also labor-intensive, expensive, and subject to human fatigue. A [Harvard Business Review analysis](https://hbr.org/topic/subject/mergers-and-acquisitions) of M&A processes consistently identifies document review as one of the most time-consuming phases of deal execution.
+A financial due diligence memo needs to distinguish reported results from management forecasts. Alphabet’s fourth-quarter 2025 earnings release makes a useful test. Its consolidated revenue was $113.8 billion for the quarter. Its expected capital expenditure of $175 billion to $185 billion covered the following **full year**. Both figures appear on page 1, in different passages.
 
-AI does not eliminate the need for due diligence. But it can dramatically accelerate the first-pass review — the stage where you read hundreds of documents to identify what deserves closer attention. Instead of spending 3 weeks having associates read every contract, you can use AI to screen documents in days, flag the provisions that matter, and focus human expertise on the 10-20% of documents that contain actual risks.
+[Run the two-citation check on Alphabet’s public earnings release](/demo/alphabet-earnings?task=check-earnings). The demo opens the report and asks for both figures. Open the revenue citation to read the quarterly result, then the CapEx citation to read management’s forecast. In your memo, label the period and mark the second figure as guidance.
 
-This guide covers how to build an AI-assisted due diligence workflow, which document types benefit most from AI analysis, and where human review remains essential.
+The same check applies across a data room. Use the workflow below to decide which documents to read together, what to ask first, and which conclusions still need specialist review.
 
 ## What Due Diligence Actually Involves
 

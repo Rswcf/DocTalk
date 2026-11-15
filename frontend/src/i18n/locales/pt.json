@@ -1802,6 +1802,7 @@
   "privacy.section2.item3": "Conforme o recurso e a configuração, conteúdos e perguntas relevantes podem ser processados diretamente pela DeepSeek, pelo OpenRouter e seus provedores, ou por provedores de OCR e tradução. O DocTalk não vende seus dados nem os usa para treinar modelos. Os termos de retenção e treinamento variam conforme o serviço e a configuração; não há uma garantia universal de retenção zero.",
   "privacy.section2.title": "Uso dos dados",
   "privacy.section3.content": "Os documentos são criptografados em repouso com AES-256. Você pode excluir seus dados a qualquer momento nas configurações da sua conta.",
+  "privacy.demoTrial": "Na demonstração pública, registramos a página de entrada, a categoria de origem e as etapas até a exibição do trecho citado. Identificadores aleatórios agrupam as etapas de uma visita. Essas métricas excluem o texto das perguntas e o conteúdo dos documentos e são removidas na limpeza diária após 90 dias.",
   "privacy.section3.title": "Armazenamento de dados",
   "privacy.section4.content": "Você pode excluir documentos individuais ou exportar os dados e excluir sua conta em Perfil → Conta. Para outras solicitações de privacidade, contate privacy@doctalk.site.",
   "privacy.section4.title": "Seus direitos",

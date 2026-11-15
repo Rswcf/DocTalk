@@ -63,6 +63,7 @@ celery_app.conf.beat_schedule = {
         "task": "cleanup_expired_verification_tokens",
         "schedule": 86400,  # Every 24 hours
     },
+    "cleanup-demo-trial-events-daily": {"task": "cleanup_demo_trial_events", "schedule": 86400},
     "cleanup-empty-demo-sessions-daily": {
         "task": "cleanup_empty_demo_sessions",
         "schedule": 86400,
