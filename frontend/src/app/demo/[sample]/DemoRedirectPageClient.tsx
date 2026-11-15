@@ -35,7 +35,7 @@ export default function DemoRedirectPageClient() {
       .then((docs) => {
         const match = docs.find((d) => d.slug === targetSlug);
         if (match) {
-          const question = 'What was consolidated Alphabet revenue in Q4 2025, and what 2026 CapEx range did management expect? Cite the original sentence for each.';
+          const question = 'On page 1, what Q4 2025 revenue does the bullet starting “Consolidated Alphabet revenues increased” report? What 2026 CapEx range does the sentence starting “To meet customer demand” give? Cite each source sentence separately.';
           const query = targetSlug === 'alphabet-earnings' && checkEarnings ? '?question=' + encodeURIComponent(question) : '';
           router.replace(`/d/${match.document_id}${query}`);
         } else {

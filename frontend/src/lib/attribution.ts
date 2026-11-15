@@ -36,7 +36,7 @@ export const ATTRIBUTED_EVENTS = new Set([
 
 // Hops that bring a visitor back rather than send one: sign-in providers,
 // payment return pages and webmail (magic-link emails).
-const IGNORED_REFERRER_HOSTS = new Set([
+export const IGNORED_REFERRER_HOSTS = new Set([
   'accounts.google.com',
   'accounts.youtube.com',
   'login.microsoftonline.com',

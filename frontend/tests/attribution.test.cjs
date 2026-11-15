@@ -157,14 +157,10 @@ test('a demo visit keeps attribution and only counts a visible source for the cl
   const posted = [];
   const previousWindow = global.window;
   const previousFetch = global.fetch;
-  global.window = {crypto: global.crypto};
+  global.window = {crypto: global.crypto, docTalkDemoOrigin: {landing: '/blog/ai-due-diligence-guide', source: 'google', qa: true}};
   global.fetch = async (_, options) => { posted.push(JSON.parse(options.body).properties); return {status: 204}; };
   try {
-    const trial = loadTs('../src/lib/demoTrial.ts', {
-      './attribution': {getAttribution: () => ({
-        ref_host: 'www.google.com', landing_path: '/blog/ai-due-diligence-guide', utm_campaign: 'doctalk-qa',
-      })},
-    });
+    const trial = loadTs('../src/lib/demoTrial.ts');
     trial.enterDemo();
     trial.enterDemo();
     trial.demoQuestion('session', 'first');
@@ -183,4 +179,28 @@ test('a demo visit keeps attribution and only counts a visible source for the cl
     global.window = previousWindow;
     global.fetch = previousFetch;
   }
+});
+
+test('a native demo link preserves the search origin without browser storage', () => {
+  const vm = require('node:vm');
+  const {installDemoEntry} = loadTs('../src/lib/demoEntry.ts');
+  class Link {
+    constructor(href) { this.href = href; }
+    closest() { return this; }
+  }
+  function open(href, referrer) {
+    const handlers = {};
+    const context = { URL, URLSearchParams, location: new URL(href), window: {}, Element: Link,
+      HTMLAnchorElement: Link, document: {referrer, addEventListener: (name, cb) => { handlers[name] = cb; }} };
+    vm.runInNewContext('(' + installDemoEntry.toString() + ')()', context);
+    return { origin: JSON.parse(JSON.stringify(context.window.docTalkDemoOrigin)), handlers };
+  }
+  const article = 'https://www.doctalk.site/blog/ai-due-diligence-guide';
+  const src = open(article + '?utm_campaign=doctalk-qa', 'https://www.google.com/');
+  const link = new Link('https://www.doctalk.site/demo/alphabet-earnings?task=check-earnings');
+  src.handlers.click({target: link});
+  const arrival = open(link.href, article);
+  assert.deepEqual(arrival.origin, {source: 'google', landing: '/blog/ai-due-diligence-guide', qa: true});
+  assert.equal(new URL(link.href).searchParams.get('task'), 'check-earnings');
+  assert.equal(open(link.href, '').origin.source, 'direct_unknown');
 });

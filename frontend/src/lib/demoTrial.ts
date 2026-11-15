@@ -1,29 +1,16 @@
 // One visit per page load, including client-side navigation. No cookies or storage.
 // Reader identifiers stay in memory; only independent random analytics IDs leave it.
-import { getAttribution } from './attribution';
+import type { DemoOrigin } from './demoEntry';
 
 type Step = 'question' | 'answer' | 'citation' | 'source';
 type Attempt = { id: string; steps: Set<Step> };
 let visit: string | undefined;
 const attempts = new Map<string, Attempt>();
 
-function channel() {
-  const { ref_host: host = '', utm_source, utm_medium } = getAttribution();
-  if (utm_medium && /^(cpc|ppc|paid|paidsearch|paid_search)$/.test(utm_medium)) return 'paid';
-  const origin = host.replace(/^(www\.|m\.)/, '');
-  if (/^google\.(com|[a-z]{2}|com\.[a-z]{2}|co\.[a-z]{2})$/.test(origin)) return 'google';
-  if (origin === 'bing.com') return 'bing';
-  if (/^(duckduckgo\.com|search\.yahoo\.com|search\.brave\.com|ecosia\.org|search\.yahoo\.co\.jp)$/.test(origin)) return 'other_search';
-  if (/^(chatgpt\.com|perplexity\.ai|claude\.ai|gemini\.google\.com|copilot\.microsoft\.com)$/.test(origin)) return 'ai';
-  if (utm_source) return 'campaign';
-  return host ? 'referral' : 'direct_unknown';
-}
-
 function emit(step: 'entry' | Step, attempt?: string) {
-  const { landing_path, utm_campaign } = getAttribution();
+  const origin: DemoOrigin = window.docTalkDemoOrigin || { landing: '/*', source: 'direct_unknown', qa: false };
   const body = JSON.stringify({ event_name: 'demo_trial', properties: {
-    step, visit, attempt, landing_path: landing_path || '/*', source: channel(),
-    qa: utm_campaign === 'doctalk-qa',
+    step, visit, attempt, landing_path: origin.landing, source: origin.source, qa: origin.qa,
   } });
   const send = () => fetch('/api/proxy/api/events', { method: 'POST', keepalive: true,
     headers: { 'Content-Type': 'application/json' }, body });

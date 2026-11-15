@@ -1,3 +1,5 @@
+import { IGNORED_REFERRER_HOSTS } from '../lib/attribution';
+import { installDemoEntry } from '../lib/demoEntry';
 import type { Metadata } from 'next'
 import { IBM_Plex_Sans, Sora, Fraunces, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
@@ -89,6 +91,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${plexSans.variable} ${sora.variable} ${fraunces.variable} ${plexMono.variable}`}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: `(${installDemoEntry.toString()})(${JSON.stringify([...IGNORED_REFERRER_HOSTS])});` }} />
         <meta name="google-site-verification" content="168G1TYJfQ7MNp4sNdF-7gC2wDWKGeds618LyLdkCUM" />
         <meta name="msvalidate.01" content="50E7D296303C85BC31C1BE98539EA393" />
         {/* Paper stage / warm near-black — the §5.3 tokens, so mobile browser
