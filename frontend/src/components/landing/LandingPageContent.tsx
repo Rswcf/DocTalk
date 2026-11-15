@@ -5,6 +5,7 @@ import { NIGHT_ROOT_CLASS, useNightDocument } from '../marketing/night';
 import EditorialHeader from './EditorialHeader';
 import EditorialFooter from './EditorialFooter';
 import HeroSection from './HeroSection';
+import ProductDemo from './ProductDemo';
 import FeatureGrid from './FeatureGrid';
 import HowItWorks from './HowItWorks';
 import SecuritySection from './SecuritySection';
@@ -42,6 +43,7 @@ export default function LandingPageContent() {
       <EditorialHeader />
       <main>
         <HeroSection />
+        <ProductDemo />
         <FeatureGrid />
         <HowItWorks />
         <SecuritySection />
