@@ -11,6 +11,9 @@ import { useDocTalkStore } from "../../store";
 
 interface SourcesStripProps {
   citations: Citation[];
+  /** The message these sources belong to: marks the chip of the citation the
+   *  reader is showing (citationTarget) and keeps it visible when collapsed. */
+  messageId?: string;
   onCitationClick?: (c: Citation) => void;
   /** True while the assistant reply is still streaming. If no citations
    *  have arrived yet but streaming is active, render a placeholder skeleton
@@ -40,11 +43,15 @@ interface SourcesStripProps {
  */
 export default function SourcesStrip({
   citations,
+  messageId,
   onCitationClick,
   isStreaming = false,
 }: SourcesStripProps) {
   const { t, tOr } = useLocale();
   const currentDocumentName = useDocTalkStore((s) => s.documentName);
+  const activeCitation = useDocTalkStore((s) =>
+    messageId && s.citationTarget?.messageId === messageId ? s.citationTarget.citation : null,
+  );
   const [expanded, setExpanded] = React.useState(false);
   const listId = React.useId();
 
@@ -63,6 +70,8 @@ export default function SourcesStrip({
     return out.sort((a, b) => a.refIndex - b.refIndex);
   }, [citations]);
   const multiDocument = React.useMemo(() => spansMultipleDocuments(unique), [unique]);
+  const isActive = (c: Citation) =>
+    Boolean(activeCitation) && activeCitation!.chunkId === c.chunkId && activeCitation!.refIndex === c.refIndex;
 
   // Streaming with no citations yet: render a skeleton placeholder so the
   // user sees "sources are coming" rather than a blank space that later
@@ -101,17 +110,18 @@ export default function SourcesStrip({
         {label}
       </div>
       <div className="flex flex-wrap items-center gap-2" id={listId}>
-        {visibleSources(unique, expanded).map((c) => {
+        {visibleSources(unique, expanded, isActive).map((c) => {
           const filename = c.documentFilename || currentDocumentName || "Document";
           const displayFilename = multiDocument
             ? shortSnippet(filename, 20)
-            : shortSnippet(citationPreview(c), 48) || tOr("citation.passageFallback", "Cited passage");
+            : shortSnippet(citationPreview(c)) || tOr("citation.passageFallback", "Cited passage");
           const jumpLabel = t("citation.jumpTo", { page: citationPageRange(c) });
           return (
             <button
               key={citationSourceKey(c)}
               type="button"
               onClick={() => onCitationClick?.(c)}
+              aria-current={isActive(c) ? "location" : undefined}
               title={jumpLabel}
               aria-label={`${filename} — ${jumpLabel}`}
               className="dt-source-chip group inline-flex max-w-xs items-center gap-2 rounded-md px-2.5 py-1.5 text-xs motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"

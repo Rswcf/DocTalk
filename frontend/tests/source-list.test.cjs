@@ -36,7 +36,7 @@ test('snippets are cut by code point and stripped of control characters', () => 
 });
 
 test('source lists render nothing below 12px and no mono uppercase labels', () => {
-  for (const file of ['components/Chat/SourcesStrip.tsx', 'components/Chat/CitationCard.tsx', 'components/Chat/SourceListToggle.tsx']) {
+  for (const file of ['components/Chat/SourcesStrip.tsx', 'components/Chat/SourceListToggle.tsx']) {
     const code = src(file);
     assert.ok(!/text-\[(?:[0-9]|1[01])px\]/.test(code), `${file} has text below 12px`);
     assert.ok(!/\buppercase\b|--dt-mono|font-mono/.test(code), `${file} uses a mono or uppercase label`);
@@ -69,4 +69,10 @@ test('the landing proof strip links each fact and adds no filled CTA', () => {
     ]) assert.ok(messages[key], `${file} is missing ${key}`);
     assert.ok(messages['chat.sources.showAll'].includes('{count}'), `${file} showAll lost {count}`);
   }
+});
+
+test('answers keep one source list: the CitationCard row below the answer is gone', () => {
+  assert.ok(!fs.existsSync(path.join(__dirname, '../src/components/Chat/CitationCard.tsx')));
+  assert.ok(!/CitationCard\b/.test(src('components/Chat/ChatPanel.tsx')));
+  assert.ok(/<SourcesStrip[\s\S]*?messageId=\{message\.id\}/.test(src('components/Chat/MessageBubble.tsx')));
 });
