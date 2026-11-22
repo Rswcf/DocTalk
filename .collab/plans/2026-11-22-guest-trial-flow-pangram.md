@@ -1,0 +1,77 @@
+# 先试用、后注册：Pangram 的访客流程与 DocTalk 对照（2026-11-22）
+
+状态：调研 + 建议，尚未实现。P1（访客上传）涉及安全与计费，实施前须走 Codex 对抗评审。
+
+## 1. 调研方法与局限
+
+- 用 Playwright（headless Chromium）打开 `https://www.pangram.com/`（桌面 1440×900、iPhone 13），截取首页各段与移动端。
+- Pangram 的应用 API（`web.pangram.com`）挂了 Cloudflare 机器人挑战（`cf-mitigated: challenge`），从云容器 IP 访问返回 403，所以 `/dashboard` 在这里只能停在 "Loading…"/"Connection problem"。**没有绕过挑战。**
+- 应用内部的流程来自 `www.pangram.com` 公开下发的前端 JS（Redux action 名、API 路径、埋点事件名、文案），以及首页 hero 的实际行为。下面凡是"代码显示"的内容都来自这些公开 bundle，未在真实账户里点过一遍。若要亲手走一遍，需要在本地浏览器打开。
+
+## 2. Pangram 的流程
+
+### 2.1 入口：hero 本身就是工具
+- 首屏右侧是可用的检测框：Text / Image / Video 标签、"Paste your text or drag and drop it here"、**"Try an example: Human · ChatGPT · AI + Human"** 一键填充示例、Upload 按钮、"Check for AI" 主按钮。
+- 移动端检测框上方有徽章 **"20 free credits daily"**：免费额度在动手前就讲清楚了。
+- 导航栏的 "Try It for Free" 直接链到 `/dashboard`，**不是注册页**。
+
+### 2.2 从 hero 到应用：保住用户的输入
+代码显示：在 hero 提交时，文本写入 `localStorage["pending_ai_check_text"]`，然后跳到 `/dashboard?pendingCheck=true&pendingType=text`，dashboard 自动执行这次检测。用户在营销页做的动作不会丢。
+
+### 2.3 dashboard 对访客开放
+- 访客看到的是真实产品界面，结果标记 `is_guest`；访客也有额度条（"Credits"）；模型选择器只对登录用户显示。
+- 额度接口 `GET /api/anonymous-scan/remaining/` 返回 `credits_remaining`、`credits_limited_by`（`visitor` / `device` / `network`）、`credit_pricing`。
+- 防滥用：Cloudflare Turnstile **按风险触发**（只有接口返回 `turnstile_required` 时才弹，action=`guest_scan`）；请求头带设备指纹 `x-guest-device-id`；按访客、设备、网络三层限额；API 域名本身也在 Cloudflare 机器人管理之后。
+- 检测是异步任务加轮询（`/api/anonymous-scan/status/{id}/`），刷新页面后会自动恢复未完成的访客检测（`resumeAnonymousScans`）。
+
+### 2.4 注册墙放在哪里
+- **额度用完**：402 `no_credits_remaining` → 额度耗尽 toast（`text_credits_exhausted_toast`）。
+- **超出字数**：`text_word_limit_dialog`。
+- **高级功能的锁点**，每个都带位置埋点：文件标签 `text_file_tab`、URL 标签 `text_url_tab`、分享 `result_share`、笔记 `result_notes`、查重 `result_plagiarism`、头像 `nav_profile`。统一事件 `Guest Signup CTA Clicked {location}`，还有 `Guest Scan Submitted`。
+- 被拦下时输入不丢：文本存回 `pending_ai_check_text`，进入 `guestScanNeedsSignup` 状态；注册/登录完成后回到 `/dashboard?pendingCheck=true`，自动续跑。
+- 登录页是合并的 "Login or sign up"：Google、邮箱 6 位验证码或魔法链接、SSO。
+- 另有 "email me the results"（`requestTextPredictionEmailResults`），用结果换邮箱。
+
+**一句话总结**：先交付价值（访客用自己的输入就能拿到结果），再在"额度用完"或"想要更多"的那一刻要求注册，而且注册不打断任务。
+
+## 3. DocTalk 现在的流程（2026-11-22 生产环境）
+
+| 步骤 | DocTalk | Pangram |
+|---|---|---|
+| 首屏 | 动画引用画布（演示，不能输入）+ "Start with a sample doc" + "Sign Up Free" | 可用的输入框 + 示例 chip + 上传 |
+| 第一次动手 | 点 CTA → `/demo` 选样例（多一次点击）→ `/d/<id>?question=` 自动提问 | 在 hero 粘贴或点示例，直接出结果 |
+| 访客能用自己的内容吗 | **不能**：`POST /api/documents/upload` 是 `require_auth`；`/demo` 写明 "Sign in to upload your own docs" | **能**，每天 20 credits |
+| 访客额度 | 每个（IP, 文档）24h 5 条，强制 Flash，10 req/min/IP；阅读器显示 "4/5 questions remaining · Sign in for free credits" | 每天 credits，按访客/设备/网络限额 |
+| 注册时机 | 想上传自己的文件时，在产生价值**之前** | 额度用完或点高级功能时，在产生价值**之后** |
+| 注册后续跑 | 无（`#auth` 弹窗，登录后需要重新操作） | 有（`pendingCheck`） |
+| 锁点埋点 | 有 `landing_cta_clicked` 等，但锁点没有统一的位置维度 | 统一 `Guest Signup CTA Clicked {location}` |
+
+DocTalk 的"样例文档 + 5 条免费"其实已经是轻量的先试后注册，引用跳转、高亮的体验在样例上也完整。**真正的差距是"啊哈时刻"不对**：用户想看的是*自己的* PDF 被精确引用，现在这一步必须先注册。
+
+## 4. 建议（分阶段）
+
+### P0：只改前端，风险低，先做
+1. **首屏变成入口，不只是演示。** hero 下方（或 `/demo` 顶部）放：
+   - 样例 chip："Try an example: Earnings release · Research paper · Court filing"，直接进 `/d/<id>?question=…`，省掉 `/demo` 这一步；
+   - 一个拖拽区 "Drop a PDF, DOCX or paste a URL"。
+   注意营销页的设计约束：Night 表面、每个视图只有一个实心 `.ed-cta`、`.ed-glass` 只能用在功能层（见 `.claude/rules/frontend.md`）。
+2. **待上传续跑（照搬 `pendingCheck`）。** 访客拖入文件 → 把 `File` 存进 IndexedDB（大小受 IndexedDB 限制，所以不用 localStorage）→ 弹认证框，文案类似 "Your file is ready. Sign in free to start, no card needed" → OAuth 或魔法链接回来后自动上传，然后进阅读器。魔法链接要是在另一台设备上打开，IndexedDB 里没有文件，就给一句"请重新拖入"作为兜底。
+   这一步还是"先注册后出结果"，但把注册前后的断裂消掉了。
+3. **统一锁点埋点**：Quote Finder、导出、分享、第二个文档、会话上限、额度耗尽都发 `guest_signup_cta_clicked {location}`（`frontend/src/lib/analytics.ts` 的 `trackEvent`），这样能看出哪个锁点最能带来注册。
+4. **额度提前讲清楚**：hero 和 `/demo` 都放一枚像 "5 free questions per document, no sign-up" 那样的徽章（跟现有营销承诺一致，11 种语言都要更新）。
+
+### P1：真正的访客上传（Pangram 模式），需要后端，放在开关后面做实验
+- **范围**：每个访客 24h 内 1 个文档，≤20 页 / ≤10 MB，PDF / DOCX / TXT / MD。先不开 URL 导入（SSRF 攻击面，Pangram 也锁了 URL 标签），不开版面翻译（成本敏感，CLAUDE.md 禁止绕过），只用 Flash，3–5 个问题，Quote Finder 继续是锁点。
+- **身份**：签名的 httpOnly 访客 cookie（`guest_id`）+ 现有 HMAC IP 信任链 + 可选设备哈希；上传时按风险触发 Turnstile；全局每日上限；开关 `GUEST_UPLOAD_ENABLED`。
+- **存储与生命周期**：R2 前缀 `guest/`，`documents.user_id` 为 NULL 并带 `guest_id`，不进公开列表；beat 任务 24–72h 后删除对象、向量和行（要同时清理 Qdrant 与 R2，参照现有删除路径）；隐私文案写清保留时长。
+- **注册后认领**：`POST /api/guest/claim` 凭访客 cookie 把文档转给新用户，单个事务完成；遵守行锁顺序 `documents` 先于 `users`；认领后计入新用户的文档槽位和页数上限。
+- **入口上限**：继续走现有的页数计数和密码 PDF 拒绝逻辑，在写对象存储和插入 `documents` 之前就拒绝。
+- **成本**：20 页的解析 + embedding 加 5 条 Flash 回答，单次成本很低。主要风险是滥用和违法内容存储，靠限额、TTL 和开关控制。
+- **指标**：guest_upload_started / parsed / first_answer / signup / claim，和现有 demo → 注册转化率对比。
+
+### P2：后续可选
+- 用回答换邮箱："把这个回答和引用发到我的邮箱"。
+- 访客分享链接作为锁点。
+
+## 5. 建议的顺序
+先做 P0（1–2 天，纯前端，收益是减少流失、拿到锁点数据），观察 1–2 周；P0 的数据如果显示"拖入文件后放弃注册"的比例高，再上 P1。P1 动到认证、计费和存储，按 CLAUDE.md 要走 Claude → Codex 多轮评审。
