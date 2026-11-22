@@ -299,6 +299,7 @@ function MessageBubble({
                   doesn't flicker into existence mid-answer. */}
               {isAssistant && (
                 <SourcesStrip
+                  messageId={message.id}
                   citations={displayCitations}
                   onCitationClick={onCitationClick}
                   isStreaming={isStreaming}

@@ -1,5 +1,6 @@
-// Display helpers for the per-answer source lists (SourcesStrip above the
-// answer, CitationCard row below it). Display only: which sources exist, their
+// Display helpers for the per-answer source list (SourcesStrip, above the
+// answer; the CitationCard row below it was removed on 2026-11-22 as a
+// duplicate). Display only: which sources exist, their
 // identity (citationSourceKey) and their jump targets are decided elsewhere.
 
 /** Sources shown before "Show all". An answer can cite 15+ passages; a full

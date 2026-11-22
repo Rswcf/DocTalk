@@ -7,10 +7,7 @@ import { exportConversationAsMarkdown } from '../../lib/export';
 import type { ChatArtifact, Citation, DocumentHierarchicalBrief, Message } from '../../types';
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
-import CitationCard from './CitationCard';
-import SourceListToggle from './SourceListToggle';
-import { visibleSources } from '../../lib/sourceList';
-import { citationPreview, uniqueCitationIndexes } from '../../lib/citationText';
+import { uniqueCitationIndexes } from '../../lib/citationText';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
 import PlusMenu from './PlusMenu';
@@ -78,7 +75,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   isAnonShareAnswer,
   onTryQuoteFinder,
 }: ChatMessageRowProps) {
-  const activeCitation = useDocTalkStore(state => state.citationTarget?.messageId === message.id ? state.citationTarget.citation : null);
   const handleCitation = useCallback((citation: Citation) => onCitationClick(citation, message.id), [onCitationClick, message.id]);
   const displayCitations = React.useMemo(() => {
     if (message.role !== 'assistant') return undefined;
@@ -90,24 +86,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
     () => (displayCitations ? { ...message, citations: displayCitations } : message),
     [displayCitations, message]
   );
-
-  const uniqueCitations = React.useMemo(() => {
-    if (!displayCitations || displayCitations.length === 0) return undefined;
-    return displayCitations
-      .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)
-      .sort((a, b) => a.refIndex - b.refIndex);
-  }, [displayCitations]);
-
-  const [sourcesExpanded, setSourcesExpanded] = useState(false);
-  const isActiveCitation = useCallback(
-    (citation: Citation) => activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex,
-    [activeCitation],
-  );
-  const shownCitations = React.useMemo(
-    () => (uniqueCitations ? visibleSources(uniqueCitations, sourcesExpanded, isActiveCitation) : undefined),
-    [uniqueCitations, sourcesExpanded, isActiveCitation],
-  );
-  const sourceListId = `citation-cards-${message.id}`;
 
   return (
     <MessageErrorBoundary messageId={message.id}>
@@ -125,27 +103,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           isAnonShareAnswer={isAnonShareAnswer}
           onTryQuoteFinder={onTryQuoteFinder}
         />
-        {uniqueCitations && shownCitations && uniqueCitations.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-0" id={sourceListId}>
-            {shownCitations.map((citation) => (
-              <CitationCard
-                key={`${message.id}-${citation.refIndex}`}
-                refIndex={citation.refIndex}
-                textSnippet={citationPreview(citation)}
-                page={citation.page}
-                pageEnd={citation.pageEnd}
-                active={isActiveCitation(citation)}
-                onClick={() => handleCitation(citation)}
-              />
-            ))}
-            <SourceListToggle
-              total={uniqueCitations.length}
-              expanded={sourcesExpanded}
-              onToggle={() => setSourcesExpanded((value) => !value)}
-              controls={sourceListId}
-            />
-          </div>
-        )}
       </div>
     </MessageErrorBoundary>
   );

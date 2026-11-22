@@ -213,7 +213,7 @@ mark[data-dt-evidence="exact"] {
 }
 [data-evidence-hidden="true"] mark[data-dt-evidence] { background-color: transparent; box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { mark[data-dt-evidence] { transition: none; } }
-.dt-citation-card[aria-current="location"] { border-color: var(--reader-evidence); background: var(--reader-evidence-soft); }
+.dt-source-chip[aria-current="location"] { border-color: var(--reader-evidence); background: var(--reader-evidence-soft); }
 
 /* Shiki dual-theme: switch CSS variables based on .dark class */
 .shiki-container .shiki,
@@ -537,32 +537,6 @@ mark[data-dt-evidence="exact"] {
 .dark .dt-source-index {
   background: #f7f7f8;
   color: #141416;
-}
-
-/* Group C: citation card → solid bg, hairline border */
-.dt-citation-card {
-  border: 1px solid #e4e4e7;
-  background: #ffffff;
-  color: var(--workbench-ink);
-  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.05);
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
-}
-
-.dt-citation-card:hover {
-  border-color: rgba(29, 78, 216, 0.3);
-  box-shadow: 0 8px 24px -10px rgba(24, 24, 27, 0.12);
-  transform: translateY(-1px);
-}
-
-.dark .dt-citation-card {
-  border-color: #27272a;
-  background: #18181b;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-.dark .dt-citation-card:hover {
-  border-color: rgba(96, 165, 250, 0.46);
-  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.5);
 }
 
 /* KEEP: dt-composer-shell — functional fade gradient, not a decorative wash */
