@@ -96,3 +96,16 @@ DocTalk 的"样例文档 + 5 条免费"其实已经是轻量的先试后注册�
 验证：`npm run build` 通过，`/` 和 `/demo` 仍是静态页；`npm run test:unit` 436/436 通过（新增 `tests/guest-pending-upload.test.cjs`，内含 IndexedDB 内存实现，测了只取一次、过期删除、替换、浏览器拒绝四种情况）；在 `next start` 下用 Playwright 走了一遍：hero 选择不支持的格式会报错，选 PDF 会弹出带文件名的认证框，IndexedDB 里有这个文件；mock 掉会话和上传接口后，不带参数访问 0 次上传，带参数 1 次上传、参数被清掉，刷新后不会重复上传；iPhone 13 视口下没有横向溢出。
 
 没验证：真实的 Google/Microsoft/邮件登录往返（本地没配登录提供方）。上线后需要在预览环境走一遍：hero → 选文件 → 邮件魔法链接 → 自动上传。
+
+### 6.1 独立评审后的修复（2026-11-22）
+
+本地云环境没有 codex CLI，所以先用一个独立子代理做了对抗评审（只读）。没有 blocker，3 个 major 都已修：
+1. **固定的 `?resumeUpload=1` 能被利用**（major）：共享电脑上，书签、历史记录或构造的 `/auth?callbackUrl=%2F%3FresumeUpload%3D1` 都能把上一位访客的文件传进别人的账户。改为每次保存生成 128 位随机 nonce，和文件存在一起，回调带 `?resumeUpload=<nonce>`；只有 nonce 匹配才交出文件，不匹配时原样保留。
+2. **过期文件一直留在浏览器里**（major）：以前只在取文件时删除过期项。现在根布局的 AuthModal 每次加载页面都会清理过期项（只有设置了 localStorage 标记时才打开 IndexedDB），退出登录（`clearAccountStorage`）时直接清空。
+3. **本地化页面首屏是英文**（major）：`guestUpload.` 加进了 `LANDING_PREFIXES` 和 `DEMO_PREFIXES`，并加了测试。
+次要问题：已登录用户选文件后直接上传，不再弹登录框；续跑会等 profile 加载完（埋点和上限用真实套餐）；文件取不到时 dashboard 会提示"请重新选择"；"浏览器无法保留文件"的提示改为在弹窗里显示；链接按钮加了 disabled 样式；`onversionchange` 时关闭数据库连接。
+没改：FinalCTA 的 `#auth` 链接被 Ctrl/中键点击时，本标签页会残留 `final_cta` 这个 location，影响很小。
+
+复验：`npm run test:unit` 446/446；`npm run build` 通过，`/` 和 `/demo` 仍是静态页。浏览器里在同一个上下文中先未登录选文件、再 mock 成已登录：`?resumeUpload=1` 和错误 nonce 都是 0 次上传并显示提示；正确 nonce 1 次上传，埋点 `plan: plus`；重放不会重复上传；已登录用户在 `/demo` 选文件时不弹登录框，直接上传；`/zh` 和 `/de/demo` 的服务端 HTML 已经是译文。
+
+**仍需在本地补跑 Codex 对抗评审**（CLAUDE.md 要求，云端没有 codex CLI）。

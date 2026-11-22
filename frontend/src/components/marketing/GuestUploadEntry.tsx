@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useCallback, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { FileUp } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { trackEvent } from '../../lib/analytics';
 import { openAuthModal } from '../../lib/auth-modal';
-import { GUEST_UPLOAD_MAX_MB, savePendingUpload } from '../../lib/pendingUpload';
+import { GUEST_UPLOAD_MAX_MB, resumeUploadCallback, savePendingUpload } from '../../lib/pendingUpload';
 import { UPLOAD_ACCEPT, isSupportedUploadFile } from '../../lib/uploadFormats';
 
 /**
@@ -15,14 +17,15 @@ import { UPLOAD_ACCEPT, isSupportedUploadFile } from '../../lib/uploadFormats';
  * Upload still needs an account. What this removes is the second trip: the
  * picked file waits in this browser (lib/pendingUpload.ts), the sign-in
  * dialog names it, and the dashboard uploads it when the visitor returns
- * signed in (`/?resumeUpload=1`). Nothing is sent before sign-in.
+ * signed in through the callback that carries this file's nonce
+ * (`/?resumeUpload=<nonce>`). Nothing is sent before sign-in. A visitor who
+ * is already signed in (these pages render for them too) goes straight to
+ * that URL instead of a sign-in dialog.
  *
  * Never a filled `.ed-cta`: each marketing view keeps its one filled action
  * (`link` is an `.ed-link`, `dropzone` uses `.ed-cta-quiet`). Kit rule: no
  * `.dt-editorial` root here; the page's MarketingShell / landing root owns it.
  */
-
-export const RESUME_UPLOAD_CALLBACK = '/?resumeUpload=1';
 
 type Props = {
   variant: 'link' | 'dropzone';
@@ -34,6 +37,9 @@ type Problem = 'unsupported' | 'too_large' | 'not_kept' | null;
 
 export default function GuestUploadEntry({ variant, location }: Props) {
   const { tOr } = useLocale();
+  const router = useRouter();
+  const { status } = useSession();
+  const signedIn = status === 'authenticated';
   const inputRef = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<Problem>(null);
   const [dragging, setDragging] = useState(false);
@@ -52,18 +58,26 @@ export default function GuestUploadEntry({ variant, location }: Props) {
     }
     setBusy(true);
     setProblem(null);
-    const kept = await savePendingUpload(file);
+    const nonce = await savePendingUpload(file);
     setBusy(false);
-    trackEvent('landing_cta_clicked', { source: location, reason: kept ? 'own_document' : 'own_document_not_kept' });
-    if (kept) {
-      openAuthModal({ callbackUrl: RESUME_UPLOAD_CALLBACK, location, pendingFileName: file.name });
-    } else {
-      // The browser would not keep the file (private window, storage full):
-      // sign-in still works, the visitor just picks the file again after.
+    trackEvent('landing_cta_clicked', {
+      source: location,
+      reason: nonce ? 'own_document' : 'own_document_not_kept',
+      signed_in: signedIn,
+    });
+    if (nonce && signedIn) {
+      router.push(resumeUploadCallback(nonce));
+    } else if (nonce) {
+      openAuthModal({ callbackUrl: resumeUploadCallback(nonce), location, pendingFileName: file.name });
+    } else if (signedIn) {
+      // The browser would not keep the file (private window, storage full).
       setProblem('not_kept');
-      openAuthModal({ callbackUrl: '/', location });
+    } else {
+      // Sign-in still works; the dialog says to pick the file again after.
+      setProblem('not_kept');
+      openAuthModal({ callbackUrl: '/', location, fileNotKept: true });
     }
-  }, [busy, location]);
+  }, [busy, location, router, signedIn]);
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

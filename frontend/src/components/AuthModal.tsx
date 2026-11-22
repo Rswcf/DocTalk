@@ -11,9 +11,11 @@ import {
   getUrlWithoutAuthHash,
   isAuthModalHash,
   peekAuthCallbackOverride,
+  peekAuthModalFileNotKept,
   peekAuthModalLocation,
   peekAuthModalPendingFileName,
 } from '../lib/auth-modal';
+import { sweepExpiredPendingUpload } from '../lib/pendingUpload';
 import { trackEvent } from '../lib/analytics';
 
 export function AuthModal() {
@@ -23,6 +25,14 @@ export function AuthModal() {
   const { t, tOr } = useLocale();
   const modalRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+
+  // The modal is mounted once in the root layout, so this runs on every page
+  // load: an abandoned guest pick (lib/pendingUpload.ts) is deleted once it
+  // expires instead of staying at rest in the browser. A no-op for visitors
+  // who never used that flow.
+  useEffect(() => {
+    void sweepExpiredPendingUpload();
+  }, []);
 
   useEffect(() => {
     const syncFromHash = () => setIsOpen(isAuthModalHash(window.location.hash));
@@ -109,6 +119,7 @@ export function AuthModal() {
   // Opened from "use your own document": the file is waiting in this browser
   // (lib/pendingUpload.ts) and the dashboard uploads it after sign-in.
   const pendingFileName = peekAuthModalPendingFileName();
+  const fileNotKept = peekAuthModalFileNotKept();
 
   const callbackUrl = (() => {
     const override = peekAuthCallbackOverride();
@@ -170,6 +181,10 @@ export function AuthModal() {
               {tOr('auth.pendingUpload.body', 'Sign in for free and it uploads automatically. No card needed.')}
             </p>
           </div>
+        ) : fileNotKept ? (
+          <p role="status" className="mb-6 text-sm text-amber-700 dark:text-amber-400">
+            {tOr('guestUpload.notKept', 'Your browser could not keep the file. Choose it again after you sign in.')}
+          </p>
         ) : (
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
             {t('auth.loginBenefits')}

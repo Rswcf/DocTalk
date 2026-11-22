@@ -4051,5 +4051,6 @@
   "guestUpload.unsupported": "यह फ़ॉर्मैट समर्थित नहीं है। PDF, DOCX, PPTX, XLSX, TXT या Markdown इस्तेमाल करें।",
   "guestUpload.tooLarge": "मुफ़्त प्लान में {max} MB तक की फ़ाइलें।",
   "guestUpload.notKept": "आपका ब्राउज़र फ़ाइल नहीं रख सका। साइन इन के बाद इसे फिर से चुनें।",
-  "demo.freeNoSignup": "हर दस्तावेज़ पर 5 मुफ़्त सवाल · साइन-अप की ज़रूरत नहीं"
+  "demo.freeNoSignup": "हर दस्तावेज़ पर 5 मुफ़्त सवाल · साइन-अप की ज़रूरत नहीं",
+  "guestUpload.resumeMissing": "साइन इन से पहले चुनी गई फ़ाइल इस ब्राउज़र में उपलब्ध नहीं है। इसे फिर से चुनें।"
 }

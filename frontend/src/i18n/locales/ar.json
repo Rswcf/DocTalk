@@ -4051,5 +4051,6 @@
   "guestUpload.unsupported": "هذا التنسيق غير مدعوم. استخدم PDF أو DOCX أو PPTX أو XLSX أو TXT أو Markdown.",
   "guestUpload.tooLarge": "الملفات حتى {max} ميغابايت في الخطة المجانية.",
   "guestUpload.notKept": "لم يتمكن متصفحك من الاحتفاظ بالملف. اختره مرة أخرى بعد تسجيل الدخول.",
-  "demo.freeNoSignup": "5 أسئلة مجانية لكل مستند · دون تسجيل"
+  "demo.freeNoSignup": "5 أسئلة مجانية لكل مستند · دون تسجيل",
+  "guestUpload.resumeMissing": "الملف الذي اخترته قبل تسجيل الدخول غير متاح في هذا المتصفح. اختره مرة أخرى."
 }

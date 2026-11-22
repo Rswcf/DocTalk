@@ -14,6 +14,7 @@ import { createMarketingLocalePage } from '../../../lib/marketingLocalePage';
 // Mirrors `LANDING_PREFIXES` in app/[locale]/page.tsx for the same reason.
 const DEMO_PREFIXES = [
   'demo.',
+  'guestUpload.',
   'footer.',
   'useCasesHub.breadcrumb.',
   'common.',

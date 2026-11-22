@@ -4051,5 +4051,6 @@
   "guestUpload.unsupported": "Ese formato no es compatible. Usa PDF, DOCX, PPTX, XLSX, TXT o Markdown.",
   "guestUpload.tooLarge": "Archivos de hasta {max} MB en el plan gratuito.",
   "guestUpload.notKept": "Tu navegador no pudo guardar el archivo. Vuelve a elegirlo después de iniciar sesión.",
-  "demo.freeNoSignup": "5 preguntas gratis por documento · sin registro"
+  "demo.freeNoSignup": "5 preguntas gratis por documento · sin registro",
+  "guestUpload.resumeMissing": "El archivo que elegiste antes de iniciar sesión no está disponible en este navegador. Vuelve a elegirlo."
 }

@@ -20,7 +20,7 @@ import { errorCopy, fileTooLargeCopy, parseWorkerErrorMsg, type ErrorCopy } from
 import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { sanitizeFilename } from '../../lib/utils';
-import { takePendingUpload } from '../../lib/pendingUpload';
+import { RESUME_UPLOAD_PARAM, takePendingUpload } from '../../lib/pendingUpload';
 import { UPLOAD_ACCEPT, isSupportedUploadFile } from '../../lib/uploadFormats';
 import { PrivacyBadge } from '../PrivacyBadge';
 import Header from '../Header';
@@ -83,7 +83,7 @@ export default function DashboardPageClient() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const upgradeNudgeTrackedRef = useRef(false);
   const isLoggedIn = status === 'authenticated';
-  const { profile } = useUserProfile();
+  const { profile, loading: profileLoading } = useUserProfile();
   const library = useDocumentLibrary(isLoggedIn, session?.user?.id || session?.user?.email || '');
   const { documents: serverDocs, setDocuments: setServerDocs, refresh: refreshDocuments } = library;
 
@@ -331,21 +331,33 @@ export default function DashboardPageClient() {
 
   // A file picked on the landing page or /demo before sign-in
   // (components/marketing/GuestUploadEntry.tsx) waits in IndexedDB. Upload it
-  // only when this visit is the return from THAT sign-in (`?resumeUpload=1`,
-  // its callback URL): on a shared browser, someone else signing in through
-  // the header must never upload the previous visitor's file into their
-  // account. takePendingUpload reads and deletes in one transaction, so a
-  // second tab or a StrictMode re-run finds nothing.
+  // only on the return from THAT sign-in: its callback carries the file's
+  // nonce (`?resumeUpload=<nonce>`), and takePendingUpload hands the file
+  // over only when the nonce matches, so on a shared browser a bookmark,
+  // history entry or crafted callback cannot pull a previous visitor's file
+  // into this account. The take reads and deletes in one transaction, so a
+  // second tab or a StrictMode re-run finds nothing. Waits for the profile so
+  // the upload runs with the real plan (caps and analytics).
   const pendingUploadCheckedRef = useRef(false);
   useEffect(() => {
-    if (!isLoggedIn || pendingUploadCheckedRef.current) return;
+    if (!isLoggedIn || profileLoading || pendingUploadCheckedRef.current) return;
     pendingUploadCheckedRef.current = true;
-    if (!new URLSearchParams(window.location.search).has('resumeUpload')) return;
+    const nonce = new URLSearchParams(window.location.search).get(RESUME_UPLOAD_PARAM);
+    if (nonce === null) return;
     router.replace('/', { scroll: false });
-    void takePendingUpload().then((file) => {
-      if (file) void onFiles(file, 'pending_upload_resume');
+    void takePendingUpload(nonce).then((file) => {
+      if (file) {
+        void onFiles(file, 'pending_upload_resume');
+      } else {
+        // Expired, opened in another browser (an email link on a phone), or
+        // not this visitor's file: say so instead of silently doing nothing.
+        setProgressText(tOr(
+          'guestUpload.resumeMissing',
+          'The file you picked before signing in is not available in this browser. Choose it again.',
+        ));
+      }
     });
-  }, [isLoggedIn, onFiles, router]);
+  }, [isLoggedIn, profileLoading, onFiles, router, tOr]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();

@@ -4051,5 +4051,6 @@
   "guestUpload.unsupported": "この形式には対応していません。PDF、DOCX、PPTX、XLSX、TXT、Markdown をお使いください。",
   "guestUpload.tooLarge": "無料プランでは {max} MB までのファイルに対応しています。",
   "guestUpload.notKept": "ブラウザがファイルを保持できませんでした。サインイン後にもう一度選択してください。",
-  "demo.freeNoSignup": "1 ドキュメントにつき 5 回まで無料で質問 · 登録不要"
+  "demo.freeNoSignup": "1 ドキュメントにつき 5 回まで無料で質問 · 登録不要",
+  "guestUpload.resumeMissing": "サインイン前に選んだファイルは、このブラウザでは利用できません。もう一度選択してください。"
 }

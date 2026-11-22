@@ -517,6 +517,11 @@
   color: var(--ed-signal);
   text-decoration-color: var(--ed-signal);
 }
+/* GuestUploadEntry's button while the picked file is being stored. */
+.dt-editorial button.ed-link:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
 
 .dt-editorial .ed-figure {
   border: 1px solid var(--ed-rule);

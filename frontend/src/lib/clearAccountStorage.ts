@@ -1,3 +1,5 @@
+import { clearPendingUpload } from "./pendingUpload";
+
 /**
  * Clear per-account localStorage state so the next user on the same device
  * does not inherit the previous user's documents, last-opened file, or
@@ -14,6 +16,8 @@ const KEEP_KEYS = new Set([
 
 export function clearAccountStorage(): void {
   if (typeof window === "undefined") return;
+  // A guest's file kept for after sign-in must not outlive a sign-out.
+  void clearPendingUpload();
   try {
     const toRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {

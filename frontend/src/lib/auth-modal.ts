@@ -17,21 +17,25 @@ type AuthModalContext = {
   location: AuthModalLocation | null;
   /** Name of the file kept for after sign-in (lib/pendingUpload.ts). */
   pendingFileName: string | null;
+  /** The visitor picked a file but this browser would not keep it. */
+  fileNotKept: boolean;
 };
 
-const EMPTY: AuthModalContext = { callbackUrl: null, location: null, pendingFileName: null };
+const EMPTY: AuthModalContext = { callbackUrl: null, location: null, pendingFileName: null, fileNotKept: false };
 let context: AuthModalContext = EMPTY;
 
 export function openAuthModal(options?: {
   callbackUrl?: string;
   location?: AuthModalLocation;
   pendingFileName?: string;
+  fileNotKept?: boolean;
 }): void {
   if (typeof window === 'undefined') return;
   context = {
     callbackUrl: options?.callbackUrl ?? null,
     location: options?.location ?? null,
     pendingFileName: options?.pendingFileName ?? null,
+    fileNotKept: options?.fileNotKept ?? false,
   };
   if (window.location.hash === AUTH_MODAL_HASH) return;
   window.location.hash = AUTH_MODAL_HASH.slice(1);
@@ -58,6 +62,10 @@ export function peekAuthModalLocation(): AuthModalLocation {
 
 export function peekAuthModalPendingFileName(): string | null {
   return context.pendingFileName;
+}
+
+export function peekAuthModalFileNotKept(): boolean {
+  return context.fileNotKept;
 }
 
 /** Clears everything openAuthModal set (callback override, location, file name). */

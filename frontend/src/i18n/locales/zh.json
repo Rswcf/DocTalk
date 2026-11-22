@@ -4090,5 +4090,6 @@
   "guestUpload.unsupported": "不支持该格式。请使用 PDF、DOCX、PPTX、XLSX、TXT 或 Markdown。",
   "guestUpload.tooLarge": "免费版支持最大 {max} MB 的文件。",
   "guestUpload.notKept": "你的浏览器无法保留该文件，请在登录后重新选择。",
-  "demo.freeNoSignup": "每个文档 5 次免费提问 · 无需注册"
+  "demo.freeNoSignup": "每个文档 5 次免费提问 · 无需注册",
+  "guestUpload.resumeMissing": "你登录前选择的文件在此浏览器中已不可用，请重新选择。"
 }
