@@ -4029,5 +4029,16 @@
   "billing.refund.submit": "환불 및 구독 종료 확인",
   "billing.refund.confirmAmount": "위에 표시된 전액 환불을 확인합니다.",
   "billing.refund.confirmCancel": "해당 구독의 즉시 종료에 동의합니다.",
-  "billing.refund.confirmCredits": "위에 표시된 미사용 크레딧의 회수에 동의합니다."
+  "billing.refund.confirmCredits": "위에 표시된 미사용 크레딧의 회수에 동의합니다.",
+  "auth.pendingUpload.title": "문서가 준비되었습니다",
+  "auth.pendingUpload.body": "무료로 로그인하면 자동으로 업로드됩니다. 카드 등록은 필요 없습니다.",
+  "guestUpload.cta": "내 문서로 써 보기",
+  "guestUpload.title": "또는 내 문서로 써 보기",
+  "guestUpload.body": "PDF, DOCX, PPTX, XLSX, TXT 또는 Markdown 파일을 끌어다 놓으세요. 무료로 로그인하면 바로 업로드됩니다. 로그인하기 전에는 파일이 브라우저 밖으로 나가지 않습니다.",
+  "guestUpload.choose": "파일 선택",
+  "guestUpload.dropHint": "또는 여기로 끌어다 놓기",
+  "guestUpload.unsupported": "지원하지 않는 형식입니다. PDF, DOCX, PPTX, XLSX, TXT 또는 Markdown을 사용하세요.",
+  "guestUpload.tooLarge": "무료 플랜에서는 최대 {max}MB 파일까지 지원합니다.",
+  "guestUpload.notKept": "브라우저가 파일을 보관하지 못했습니다. 로그인한 뒤 다시 선택하세요.",
+  "demo.freeNoSignup": "문서당 무료 질문 5개 · 가입 필요 없음"
 }

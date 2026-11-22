@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useLocale } from '../../i18n';
 import { trackEvent } from '../../lib/analytics';
+import { noteAuthModalLocation } from '../../lib/auth-modal';
 
 export default function FinalCTA() {
   const { t } = useLocale();
@@ -30,7 +31,10 @@ export default function FinalCTA() {
                   next/link updates the hash via history API without firing it. */}
               <a
                 href="#auth"
-                onClick={() => trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'sign_up' })}
+                onClick={() => {
+                  trackEvent('landing_cta_clicked', { source: 'final_cta', reason: 'sign_up' });
+                  noteAuthModalLocation('final_cta');
+                }}
                 className="ed-link"
               >
                 {t('landing.finalCta.signUp')}

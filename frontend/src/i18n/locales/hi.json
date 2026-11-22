@@ -4029,5 +4029,16 @@
   "billing.refund.submit": "धनवापसी की पुष्टि करें और सदस्यता समाप्त करें",
   "billing.refund.confirmAmount": "मैं ऊपर दिखाई गई पूरी धनवापसी राशि की पुष्टि करता/करती हूँ।",
   "billing.refund.confirmCancel": "मैं संबंधित सदस्यता को तुरंत समाप्त करने के लिए सहमत हूँ।",
-  "billing.refund.confirmCredits": "मैं ऊपर दिखाए गए अप्रयुक्त क्रेडिट हटाने के लिए सहमत हूँ।"
+  "billing.refund.confirmCredits": "मैं ऊपर दिखाए गए अप्रयुक्त क्रेडिट हटाने के लिए सहमत हूँ।",
+  "auth.pendingUpload.title": "आपका दस्तावेज़ तैयार है",
+  "auth.pendingUpload.body": "मुफ़्त में साइन इन करें, यह अपने आप अपलोड हो जाएगा। कार्ड की ज़रूरत नहीं।",
+  "guestUpload.cta": "अपने दस्तावेज़ से आज़माएँ",
+  "guestUpload.title": "या अपने दस्तावेज़ से आज़माएँ",
+  "guestUpload.body": "PDF, DOCX, PPTX, XLSX, TXT या Markdown फ़ाइल यहाँ छोड़ें। मुफ़्त में साइन इन करें और यह तुरंत अपलोड हो जाएगी। साइन इन से पहले कुछ भी आपके ब्राउज़र से बाहर नहीं जाता।",
+  "guestUpload.choose": "फ़ाइल चुनें",
+  "guestUpload.dropHint": "या इसे यहाँ खींचें",
+  "guestUpload.unsupported": "यह फ़ॉर्मैट समर्थित नहीं है। PDF, DOCX, PPTX, XLSX, TXT या Markdown इस्तेमाल करें।",
+  "guestUpload.tooLarge": "मुफ़्त प्लान में {max} MB तक की फ़ाइलें।",
+  "guestUpload.notKept": "आपका ब्राउज़र फ़ाइल नहीं रख सका। साइन इन के बाद इसे फिर से चुनें।",
+  "demo.freeNoSignup": "हर दस्तावेज़ पर 5 मुफ़्त सवाल · साइन-अप की ज़रूरत नहीं"
 }

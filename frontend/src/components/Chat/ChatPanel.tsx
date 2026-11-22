@@ -200,7 +200,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       setPaywallReason(reason ?? null);
       setShowPaywall(true);
     },
-    onRequireAuth: () => openAuthModal(),
+    onRequireAuth: () => openAuthModal({ location: 'chat_require_auth' }),
   });
 
   useEffect(() => {
@@ -356,7 +356,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       plan: 'plus',
       period: 'monthly',
     });
-    openAuthModal({ callbackUrl: '/' });
+    openAuthModal({ callbackUrl: '/', location: 'demo_limit_panel' });
   }, []);
 
   const handleBillingRedirect = useCallback((intent: { plan: 'plus' | 'pro'; reason: string }) => {
@@ -497,7 +497,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
     trackEvent('upgrade_click', { source: 'demo_share_attempt' });
     // Anonymous transcripts are not preserved through signup (no session
     // adoption yet) — this is a conversion affordance, not a working share.
-    openAuthModal();
+    openAuthModal({ location: 'chat_share' });
   }, []);
 
   const canUseCustomInstructions = !!onOpenSettings;
@@ -672,7 +672,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
               <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
                 {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
               </span>
-              <button type="button" onClick={() => openAuthModal()} className="text-sm text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
+              <button type="button" onClick={() => openAuthModal({ location: 'demo_questions_remaining' })} className="text-sm text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
                 {t('demo.signInForUnlimited')}
               </button>
             </div>

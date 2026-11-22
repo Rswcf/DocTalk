@@ -4068,5 +4068,16 @@
   "billing.refund.submit": "确认退款并终止订阅",
   "billing.refund.confirmAmount": "我确认退还上方显示的全部金额。",
   "billing.refund.confirmCancel": "我同意立即终止对应订阅。",
-  "billing.refund.confirmCredits": "我同意撤销上方显示的未用积分。"
+  "billing.refund.confirmCredits": "我同意撤销上方显示的未用积分。",
+  "auth.pendingUpload.title": "你的文档已准备好",
+  "auth.pendingUpload.body": "免费登录后会自动上传，无需绑卡。",
+  "guestUpload.cta": "试试你自己的文档",
+  "guestUpload.title": "或者试试你自己的文档",
+  "guestUpload.body": "拖入 PDF、DOCX、PPTX、XLSX、TXT 或 Markdown 文件。免费登录后立即上传。登录前文件不会离开你的浏览器。",
+  "guestUpload.choose": "选择文件",
+  "guestUpload.dropHint": "或拖到这里",
+  "guestUpload.unsupported": "不支持该格式。请使用 PDF、DOCX、PPTX、XLSX、TXT 或 Markdown。",
+  "guestUpload.tooLarge": "免费版支持最大 {max} MB 的文件。",
+  "guestUpload.notKept": "你的浏览器无法保留该文件，请在登录后重新选择。",
+  "demo.freeNoSignup": "每个文档 5 次免费提问 · 无需注册"
 }

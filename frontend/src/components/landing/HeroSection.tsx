@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import Link from 'next/link';
 import { useLocale } from '../../i18n';
 import { trackEvent } from '../../lib/analytics';
+import GuestUploadEntry from '../marketing/GuestUploadEntry';
 import CitationField, { type CitationFieldLayout, type CitationFieldSettings } from './CitationField';
 
 /**
@@ -231,16 +232,10 @@ export default function HeroSection() {
             >
               {t('landing.cta.demo')}
             </Link>
-            {/* Plain <a> (not next/link): a native hash anchor fires the
-                `hashchange` event AuthModal listens for, so the modal opens.
-                next/link updates the hash via history API without firing it. */}
-            <a
-              href="#auth"
-              onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: 'sign_up' })}
-              className="ed-link"
-            >
-              {t('hero.signUpFree')}
-            </a>
+            {/* The secondary action takes the visitor's own file into
+                sign-in (plan 2026-11-22-guest-trial-flow-pangram, P0); the
+                masthead's Sign In stays the plain sign-up path. */}
+            <GuestUploadEntry variant="link" location="hero" />
           </div>
         </div>
 

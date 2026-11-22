@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { getProviders, signIn } from "next-auth/react";
 import { useLocale } from "../i18n";
 import { trackEvent } from "../lib/analytics";
+import { peekAuthModalLocation } from "../lib/auth-modal";
 
 interface AuthFormContentProps {
   callbackUrl: string;
@@ -61,6 +62,7 @@ export function AuthFormContent({ callbackUrl, surface = "page" }: AuthFormConte
     trackEvent("auth_provider_clicked", {
       source: authEventSource,
       provider,
+      ...(surface === "modal" ? { location: peekAuthModalLocation() } : {}),
     });
     void signIn(provider, { callbackUrl });
   };

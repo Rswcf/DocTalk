@@ -4029,5 +4029,16 @@
   "billing.refund.submit": "Erstattung bestätigen und Abonnement beenden",
   "billing.refund.confirmAmount": "Ich bestätige die vollständige Erstattung des oben angezeigten Betrags.",
   "billing.refund.confirmCancel": "Ich stimme der sofortigen Beendigung des zugehörigen Abonnements zu.",
-  "billing.refund.confirmCredits": "Ich stimme der Entfernung des oben angezeigten ungenutzten Guthabens zu."
+  "billing.refund.confirmCredits": "Ich stimme der Entfernung des oben angezeigten ungenutzten Guthabens zu.",
+  "auth.pendingUpload.title": "Dein Dokument ist bereit",
+  "auth.pendingUpload.body": "Melde dich kostenlos an, dann wird es automatisch hochgeladen. Keine Karte nötig.",
+  "guestUpload.cta": "Mit eigenem Dokument testen",
+  "guestUpload.title": "Oder mit eigenem Dokument testen",
+  "guestUpload.body": "Lege eine PDF-, DOCX-, PPTX-, XLSX-, TXT- oder Markdown-Datei ab. Melde dich kostenlos an, dann wird sie sofort hochgeladen. Vor der Anmeldung verlässt nichts deinen Browser.",
+  "guestUpload.choose": "Datei auswählen",
+  "guestUpload.dropHint": "oder hierher ziehen",
+  "guestUpload.unsupported": "Dieses Format wird nicht unterstützt. Verwende PDF, DOCX, PPTX, XLSX, TXT oder Markdown.",
+  "guestUpload.tooLarge": "Im kostenlosen Plan sind Dateien bis {max} MB möglich.",
+  "guestUpload.notKept": "Dein Browser konnte die Datei nicht behalten. Wähle sie nach der Anmeldung erneut aus.",
+  "demo.freeNoSignup": "5 kostenlose Fragen pro Dokument · ohne Anmeldung"
 }

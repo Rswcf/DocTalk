@@ -1,6 +1,6 @@
 # 先试用、后注册：Pangram 的访客流程与 DocTalk 对照（2026-11-22）
 
-状态：调研 + 建议，尚未实现。P1（访客上传）涉及安全与计费，实施前须走 Codex 对抗评审。
+状态：P0 已实现（2026-11-22，见 §6）；P1 未开始，涉及安全与计费，实施前须走 Codex 对抗评审。
 
 ## 1. 调研方法与局限
 
@@ -75,3 +75,24 @@ DocTalk 的"样例文档 + 5 条免费"其实已经是轻量的先试后注册�
 
 ## 5. 建议的顺序
 先做 P0（1–2 天，纯前端，收益是减少流失、拿到锁点数据），观察 1–2 周；P0 的数据如果显示"拖入文件后放弃注册"的比例高，再上 P1。P1 动到认证、计费和存储，按 CLAUDE.md 要走 Claude → Codex 多轮评审。
+
+## 6. P0 实现记录（2026-11-22）
+
+做了什么：
+- `lib/pendingUpload.ts`：IndexedDB 暂存，读取和删除在同一个 readwrite 事务里完成（只能取一次），30 分钟过期，浏览器拒绝存储时返回失败，照常登录。
+- `components/marketing/GuestUploadEntry.tsx`：首页 hero 的次要操作从 "Sign Up Free" 换成 "Try your own document"（`.ed-link`）；`/demo` 样例卡片下方加了虚线拖拽区（`.ed-cta-quiet`）。
+- 认证弹窗：从这条路径打开时，标题是 "Your document is ready"，并显示文件名；回调地址 `/?resumeUpload=1`。
+- dashboard：只有带 `?resumeUpload` 时才取出文件，走原来的 `onFiles` 上传（服务端的所有上限照常生效），埋点 `document_upload_created {source: 'pending_upload_resume'}`。
+- `lib/uploadFormats.ts`：支持的格式列表抽出来，dashboard 和访客入口共用。
+- 所有 `openAuthModal` 调用都带 `location`；`auth_modal_opened` / `auth_provider_clicked` 带 `location` 和 `pending_upload`。
+- `/demo` 额度说明改为 "5 free questions per document · no sign-up needed"。11 种语言都已补齐。
+
+和 §4 计划的偏差：
+1. **hero 没有加样例 chip 和拖拽区**，只替换了次要操作。hero 的 "一个主张、一句话、一个实心操作、不要数据带" 是 owner 的设计决定（plan 2026-09-20 §5.2，HeroSection 文件头注释）；完整拖拽区放在 `/demo`。要在 hero 加 chip，需要 owner 先改这条决定。
+2. **埋点没有新增事件名**：给现有的 `auth_modal_opened` / `auth_provider_clicked` 加了 `location` 字段，后端白名单不用改，也就没有"后端先部署"的顺序要求。
+3. **续跑必须带 `?resumeUpload`**（计划里写的是只要 IndexedDB 里有文件就续跑）：共享电脑上，B 从页头正常登录时，不能把 A 留下的文件传进 B 的账户。
+4. 额度徽章只放在 `/demo`，hero 没有放，原因同第 1 条。
+
+验证：`npm run build` 通过，`/` 和 `/demo` 仍是静态页；`npm run test:unit` 436/436 通过（新增 `tests/guest-pending-upload.test.cjs`，内含 IndexedDB 内存实现，测了只取一次、过期删除、替换、浏览器拒绝四种情况）；在 `next start` 下用 Playwright 走了一遍：hero 选择不支持的格式会报错，选 PDF 会弹出带文件名的认证框，IndexedDB 里有这个文件；mock 掉会话和上传接口后，不带参数访问 0 次上传，带参数 1 次上传、参数被清掉，刷新后不会重复上传；iPhone 13 视口下没有横向溢出。
+
+没验证：真实的 Google/Microsoft/邮件登录往返（本地没配登录提供方）。上线后需要在预览环境走一遍：hero → 选文件 → 邮件魔法链接 → 自动上传。

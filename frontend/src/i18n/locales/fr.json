@@ -4029,5 +4029,16 @@
   "billing.refund.submit": "Confirmer le remboursement et résilier l’abonnement",
   "billing.refund.confirmAmount": "Je confirme le remboursement intégral du montant indiqué ci-dessus.",
   "billing.refund.confirmCancel": "J’accepte la résiliation immédiate de l’abonnement concerné.",
-  "billing.refund.confirmCredits": "J’accepte le retrait des crédits inutilisés indiqués ci-dessus."
+  "billing.refund.confirmCredits": "J’accepte le retrait des crédits inutilisés indiqués ci-dessus.",
+  "auth.pendingUpload.title": "Votre document est prêt",
+  "auth.pendingUpload.body": "Connectez-vous gratuitement et il sera importé automatiquement. Aucune carte requise.",
+  "guestUpload.cta": "Essayer avec votre document",
+  "guestUpload.title": "Ou essayez avec votre propre document",
+  "guestUpload.body": "Déposez un fichier PDF, DOCX, PPTX, XLSX, TXT ou Markdown. Connectez-vous gratuitement et il est importé aussitôt. Rien ne quitte votre navigateur avant la connexion.",
+  "guestUpload.choose": "Choisir un fichier",
+  "guestUpload.dropHint": "ou glissez-le ici",
+  "guestUpload.unsupported": "Ce format n'est pas pris en charge. Utilisez PDF, DOCX, PPTX, XLSX, TXT ou Markdown.",
+  "guestUpload.tooLarge": "Fichiers jusqu'à {max} Mo avec l'offre gratuite.",
+  "guestUpload.notKept": "Votre navigateur n'a pas pu conserver le fichier. Choisissez-le à nouveau après vous être connecté.",
+  "demo.freeNoSignup": "5 questions gratuites par document · sans inscription"
 }

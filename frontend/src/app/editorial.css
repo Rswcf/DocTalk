@@ -565,6 +565,32 @@ html.dt-night-doc {
   padding: 22px;
 }
 
+/* Guest "try your own document" drop zone (components/marketing/
+   GuestUploadEntry.tsx): an .ed-card whose dashed hairline says "drop here".
+   Tokens only, so the light, dark and Night themes all follow. */
+.dt-editorial .ed-guest-drop {
+  border-style: dashed;
+  border-color: var(--ed-control-border);
+  transition: border-color var(--ed-dur-1) var(--ed-ease),
+    background-color var(--ed-dur-1) var(--ed-ease);
+}
+.dt-editorial .ed-guest-drop[data-dragging='true'] {
+  border-color: var(--ed-signal);
+  background: var(--ed-paper-2);
+}
+.dt-editorial .ed-guest-drop-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-2);
+  background: var(--ed-paper-2);
+  color: var(--ed-ink-2);
+}
+
 /* Breadcrumb trail link — sentence case Plex Sans at the 13px floor. */
 .dt-editorial .ed-crumb {
   font-family: var(--dt-body);

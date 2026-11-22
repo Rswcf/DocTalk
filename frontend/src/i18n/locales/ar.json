@@ -4029,5 +4029,16 @@
   "billing.refund.submit": "تأكيد الاسترداد وإنهاء الاشتراك",
   "billing.refund.confirmAmount": "أؤكد استرداد كامل المبلغ الموضح أعلاه.",
   "billing.refund.confirmCancel": "أوافق على إنهاء الاشتراك المعني فوراً.",
-  "billing.refund.confirmCredits": "أوافق على إزالة الأرصدة غير المستخدمة الموضحة أعلاه."
+  "billing.refund.confirmCredits": "أوافق على إزالة الأرصدة غير المستخدمة الموضحة أعلاه.",
+  "auth.pendingUpload.title": "مستندك جاهز",
+  "auth.pendingUpload.body": "سجّل الدخول مجانًا وسيُرفع تلقائيًا. لا حاجة إلى بطاقة.",
+  "guestUpload.cta": "جرّب مستندك الخاص",
+  "guestUpload.title": "أو جرّب مستندك الخاص",
+  "guestUpload.body": "أفلت ملف PDF أو DOCX أو PPTX أو XLSX أو TXT أو Markdown. سجّل الدخول مجانًا وسيُرفع فورًا. لا يغادر أي شيء متصفحك قبل تسجيل الدخول.",
+  "guestUpload.choose": "اختر ملفًا",
+  "guestUpload.dropHint": "أو اسحبه إلى هنا",
+  "guestUpload.unsupported": "هذا التنسيق غير مدعوم. استخدم PDF أو DOCX أو PPTX أو XLSX أو TXT أو Markdown.",
+  "guestUpload.tooLarge": "الملفات حتى {max} ميغابايت في الخطة المجانية.",
+  "guestUpload.notKept": "لم يتمكن متصفحك من الاحتفاظ بالملف. اختره مرة أخرى بعد تسجيل الدخول.",
+  "demo.freeNoSignup": "5 أسئلة مجانية لكل مستند · دون تسجيل"
 }

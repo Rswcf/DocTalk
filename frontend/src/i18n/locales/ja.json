@@ -4029,5 +4029,16 @@
   "billing.refund.submit": "返金と契約終了を確定",
   "billing.refund.confirmAmount": "上記の全額返金を確認します。",
   "billing.refund.confirmCancel": "対応する契約を直ちに終了することに同意します。",
-  "billing.refund.confirmCredits": "上記の未使用クレジットの取り消しに同意します。"
+  "billing.refund.confirmCredits": "上記の未使用クレジットの取り消しに同意します。",
+  "auth.pendingUpload.title": "ドキュメントの準備ができました",
+  "auth.pendingUpload.body": "無料でサインインすると自動でアップロードされます。カード登録は不要です。",
+  "guestUpload.cta": "自分のドキュメントで試す",
+  "guestUpload.title": "または自分のドキュメントで試す",
+  "guestUpload.body": "PDF、DOCX、PPTX、XLSX、TXT、Markdown ファイルをドロップしてください。無料でサインインするとすぐにアップロードされます。サインインするまでファイルはブラウザの外に出ません。",
+  "guestUpload.choose": "ファイルを選択",
+  "guestUpload.dropHint": "またはここにドラッグ",
+  "guestUpload.unsupported": "この形式には対応していません。PDF、DOCX、PPTX、XLSX、TXT、Markdown をお使いください。",
+  "guestUpload.tooLarge": "無料プランでは {max} MB までのファイルに対応しています。",
+  "guestUpload.notKept": "ブラウザがファイルを保持できませんでした。サインイン後にもう一度選択してください。",
+  "demo.freeNoSignup": "1 ドキュメントにつき 5 回まで無料で質問 · 登録不要"
 }

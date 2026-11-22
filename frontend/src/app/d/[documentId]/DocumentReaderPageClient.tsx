@@ -199,7 +199,7 @@ export default function DocumentReaderPageClient() {
 
   const handleOpenLayoutTranslation = useCallback(() => {
     if (!isLoggedIn) {
-      openAuthModal();
+      openAuthModal({ location: 'layout_translation' });
       return;
     }
     setLayoutTranslationError(null);
@@ -209,7 +209,7 @@ export default function DocumentReaderPageClient() {
   const handleLayoutTranslationSubmit = useCallback(async ({ targetLanguage, addToLibrary }: { targetLanguage: string; addToLibrary: boolean }) => {
     if (layoutTranslationBusy) return;
     if (!isLoggedIn) {
-      openAuthModal();
+      openAuthModal({ location: 'layout_translation' });
       return;
     }
     setLayoutTranslationBusy(true);
@@ -326,7 +326,7 @@ export default function DocumentReaderPageClient() {
   ) : (
     <button
       type="button"
-      onClick={() => openAuthModal()}
+      onClick={() => openAuthModal({ location: 'quote_finder_toolbar' })}
       className="flex min-h-8 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-white/70 dark:text-zinc-400 dark:hover:bg-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500"
       title={tOr('quoteFinder.signInCta', 'Sign in to use Quote Finder')}
     >
@@ -490,7 +490,7 @@ export default function DocumentReaderPageClient() {
   // hit Find quotes (or edit the topic first).
   const handleTryQuoteFinder = useCallback((topic: string) => {
     if (!isLoggedIn) {
-      openAuthModal();
+      openAuthModal({ location: 'quote_finder_chip' });
       return;
     }
     trackEvent('quote_finder_chip_clicked', { source: 'chat_message' });

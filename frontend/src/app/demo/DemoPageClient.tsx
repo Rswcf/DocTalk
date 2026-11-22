@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { enterDemo } from '../../lib/demoTrial';
 import Link from 'next/link';
+import GuestUploadEntry from '../../components/marketing/GuestUploadEntry';
 import { ArrowRight, BookOpen, FileCheck2, FileSignature, FileText, Loader2, Quote } from 'lucide-react';
 import { useLocale } from '../../i18n';
 import { localizedHrefIfAvailable } from '../../i18n/routing';
@@ -89,7 +90,9 @@ export default function DemoPageClient() {
                 size={14}
                 style={{ color: 'var(--ed-ink-3)' }}
               />
-              <span className="ed-caption">{t('demo.freeMessages')}</span>
+              <span className="ed-caption">
+                {tOr('demo.freeNoSignup', '5 free questions per document · no sign-up needed')}
+              </span>
             </span>
             <span className="inline-flex items-center gap-2">
               <Quote
@@ -264,6 +267,10 @@ export default function DemoPageClient() {
         <p className="ed-caption" style={{ marginTop: '32px' }}>
           {t('demo.hint')}
         </p>
+
+        <div style={{ marginTop: '32px' }}>
+          <GuestUploadEntry variant="dropzone" location="demo_dropzone" />
+        </div>
       </EdSection>
 
       <EdSection title={tOr('demo.flow.title', 'What you will test')}>

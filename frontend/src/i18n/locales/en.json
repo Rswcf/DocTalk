@@ -4031,5 +4031,16 @@
   "billing.refund.submit": "Confirm refund and end subscription",
   "billing.refund.confirmAmount": "I confirm the full refund amount shown above.",
   "billing.refund.confirmCancel": "I agree to end the corresponding subscription immediately.",
-  "billing.refund.confirmCredits": "I agree to remove the unused credits shown above."
+  "billing.refund.confirmCredits": "I agree to remove the unused credits shown above.",
+  "auth.pendingUpload.title": "Your document is ready",
+  "auth.pendingUpload.body": "Sign in for free and it uploads automatically. No card needed.",
+  "guestUpload.cta": "Try your own document",
+  "guestUpload.title": "Or try your own document",
+  "guestUpload.body": "Drop a PDF, DOCX, PPTX, XLSX, TXT or Markdown file. Sign in for free and it uploads right away. Nothing leaves your browser before you sign in.",
+  "guestUpload.choose": "Choose a file",
+  "guestUpload.dropHint": "or drag it here",
+  "guestUpload.unsupported": "That format is not supported. Use PDF, DOCX, PPTX, XLSX, TXT or Markdown.",
+  "guestUpload.tooLarge": "Files up to {max} MB on the free plan.",
+  "guestUpload.notKept": "Your browser could not keep the file. Choose it again after you sign in.",
+  "demo.freeNoSignup": "5 free questions per document · no sign-up needed"
 }
