@@ -9,6 +9,7 @@ import EdLanguageSelector from "./EdLanguageSelector";
 import { useLocale } from "../../i18n";
 import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
 import type { ChromeStrings } from "../../i18n/chrome";
+import { trackEvent } from "../../lib/analytics";
 
 export interface Crumb {
   label: string;
@@ -41,7 +42,8 @@ export default function EditorialHeaderBase({
   const [mobileOpen, setMobileOpen] = useState(false);
   // Derive the URL locale from the path so nav links stay in-language on
   // localized pages (`/de/...`). Targets not yet localized fall back to English.
-  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
+  const pathname = usePathname() || "/";
+  const { locale: urlLocale } = splitLocaleFromPath(pathname);
   const navHref = (path: string) => localizedHrefIfAvailable(urlLocale, path);
   // Prefer server-resolved chrome strings (correct language in initial HTML on
   // localized pages); otherwise the client-locale text.
@@ -50,7 +52,12 @@ export default function EditorialHeaderBase({
     pricing: chrome?.navPricing ?? t("footer.pricing"),
     trust: chrome?.navTrust ?? tOr("footer.links.trust", "Security"),
     signIn: chrome?.signIn ?? t("auth.signIn"),
+    trySample: chrome?.trySample ?? tOr("header.trySample", "Try a sample"),
   };
+  // The masthead's one action (plan 2026-11-22-ui-ux-pangram-learnings, M3):
+  // a quiet pill to the samples, on every marketing page but /demo itself.
+  // Always quiet, never filled, so each page keeps its own single .ed-cta.
+  const onDemoPage = pathname === "/demo" || /^\/[a-z]{2}\/demo$/.test(pathname);
   const NAV_LINKS = [
     { href: navHref("/features"), label: labels.features },
     { href: navHref("/pricing"), label: labels.pricing },
@@ -120,7 +127,7 @@ export default function EditorialHeaderBase({
 
             {/* Right — nav links + CTA */}
             <nav
-              className="flex items-center gap-6"
+              className="flex items-center gap-3 md:gap-6"
               aria-label={t('header.aria.nav')}
             >
               {NAV_LINKS.map((item) => (
@@ -147,17 +154,33 @@ export default function EditorialHeaderBase({
                   {item.label}
                 </Link>
               ))}
-              {/* Language selector — always visible so locale is switchable on
-                  every editorial page (restores the switcher the redesign dropped). */}
-              <EdLanguageSelector languageLabel={chrome?.language} />
-              {/* Mobile hamburger — sits left of the Sign-In CTA, md:hidden */}
+              {/* Language selector: in the bar from md up; on phones it moves
+                  into the menu so the bar holds only the logo, the masthead's
+                  action and the menu button. */}
+              <span className="hidden md:inline-flex">
+                <EdLanguageSelector languageLabel={chrome?.language} />
+              </span>
+              <Link href="/auth" className="ed-masthead-link hidden md:inline-block">
+                {labels.signIn}
+              </Link>
+              {!onDemoPage && (
+                <Link
+                  href={navHref("/demo")}
+                  className="ed-cta-quiet"
+                  style={{ padding: "8px 17px", fontSize: "13px" }}
+                  onClick={() => trackEvent("landing_cta_clicked", { source: "header", reason: "demo" })}
+                >
+                  {labels.trySample}
+                </Link>
+              )}
+              {/* Mobile menu button, last in the bar on phones */}
               <button
                 type="button"
                 onClick={() => setMobileOpen((open) => !open)}
                 className="md:hidden inline-flex items-center justify-center"
                 style={{
-                  width: "36px",
-                  height: "36px",
+                  width: "44px",
+                  height: "44px",
                   background: "transparent",
                   border: "none",
                   padding: 0,
@@ -173,16 +196,6 @@ export default function EditorialHeaderBase({
                   <Menu aria-hidden="true" size={20} color="var(--ed-ink-2)" />
                 )}
               </button>
-              {/* Quiet, not filled: the masthead is on every marketing page, and a
-                  filled terracotta Sign In here competed with each page's own
-                  primary action — two filled pills above the fold (plan §5.2). */}
-              <Link
-                href="/auth"
-                className="ed-cta-quiet"
-                style={{ padding: "8px 17px", fontSize: "13px" }}
-              >
-                {labels.signIn}
-              </Link>
             </nav>
           </div>
         </div>
@@ -217,6 +230,23 @@ export default function EditorialHeaderBase({
               {item.label}
             </Link>
           ))}
+          <Link
+            href="/auth"
+            onClick={() => setMobileOpen(false)}
+            className="block"
+            style={{
+              padding: "12px 24px",
+              fontSize: "16px",
+              color: "var(--ed-ink)",
+              textDecoration: "none",
+              borderTop: "1px solid var(--ed-rule)",
+            }}
+          >
+            {labels.signIn}
+          </Link>
+          <div style={{ padding: "8px 16px 12px", borderTop: "1px solid var(--ed-rule)" }}>
+            <EdLanguageSelector languageLabel={chrome?.language} />
+          </div>
         </nav>
       )}
 

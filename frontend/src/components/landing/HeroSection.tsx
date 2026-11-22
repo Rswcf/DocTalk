@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLocale } from '../../i18n';
 import { trackEvent } from '../../lib/analytics';
 import GuestUploadEntry from '../marketing/GuestUploadEntry';
+import { DEMO_SAMPLES, demoSampleHref } from '../../lib/demoSamples';
 import CitationField, { type CitationFieldLayout, type CitationFieldSettings } from './CitationField';
 
 /**
@@ -210,7 +211,10 @@ export default function HeroSection() {
           <CitationField settings={settings} onLayout={onLayout} onCited={onCited} />
         </div>
 
-        <div ref={claimRef} className="ed-night-claim">
+        {/* lang: the claim is in the page's language from the server render,
+            so the :lang() rules for it (editorial.css) apply without a shift
+            at hydration; the root <html lang> is only set client-side. */}
+        <div ref={claimRef} className="ed-night-claim" lang={locale}>
           <h1 id="landing-hero-title" className="ed-display">
             {headlineLines.map((line: string, i: number) => (
               <React.Fragment key={i}>
@@ -236,6 +240,32 @@ export default function HeroSection() {
                 sign-in (plan 2026-11-22-guest-trial-flow-pangram, P0); the
                 masthead's Sign In stays the plain sign-up path. */}
             <GuestUploadEntry variant="link" location="hero" />
+          </div>
+
+          {/* The entry row (plan 2026-11-22-ui-ux-pangram-learnings, M1): the
+              free allowance before anyone has to ask, and one click from here
+              to a sample answering its suggested question. Chips are links
+              with an opaque fill, never a second filled CTA; the row also
+              lifts the actions above the field's fade into the passage. */}
+          <div className="ed-night-entry">
+            <p className="ed-night-quota">
+              {tOr('demo.freeNoSignup', '5 free questions per document · no sign-up needed')}
+            </p>
+            <div className="ed-night-samples" role="group" aria-labelledby="landing-samples-label">
+              <span id="landing-samples-label" className="ed-night-samples-label">
+                {tOr('landing.entry.tryLabel', 'Try a sample:')}
+              </span>
+              {DEMO_SAMPLES.map((sample) => (
+                <Link
+                  key={sample.slug}
+                  href={demoSampleHref(sample, t(sample.questionKey))}
+                  onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: `sample_${sample.route}` })}
+                  className="ed-chip"
+                >
+                  {tOr(sample.chipKey, sample.chipFallback)}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 

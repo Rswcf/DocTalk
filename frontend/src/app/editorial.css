@@ -1005,6 +1005,94 @@ html.dt-night-doc {
   margin-top: clamp(24px, 3.8svh, 34px);
 }
 
+/* Masthead text link (EditorialHeaderBase: Sign in, beside the quiet pill). */
+.dt-editorial .ed-masthead-link {
+  font-family: var(--dt-body);
+  font-size: 13px;
+  color: var(--ed-ink-2);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+.dt-editorial .ed-masthead-link:hover { color: var(--ed-signal); }
+.dt-editorial .ed-masthead-link:focus-visible {
+  outline: 2px solid var(--ed-ink);
+  outline-offset: 3px;
+  border-radius: var(--ed-r-1);
+}
+
+/* The hero's entry row (HeroSection): the free allowance, then the samples.
+   The badge and chips carry an opaque fill: the row sits where the field's
+   fade gives way to the passage, so text behind them must not show through. */
+.dt-editorial .ed-night-entry {
+  /* One line on desktop: the claim, the passage and the answer must still
+     share a laptop's first screen (review 2026-09-21, MAJOR-3), so the row
+     may run wider than the claim column rather than wrap. Centred on the
+     claim either way (left + translate is direction-neutral). */
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(980px, calc(100vw - 48px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  margin-top: 16px;
+  margin-top: clamp(12px, 2svh, 16px);
+}
+.dt-editorial .ed-night-quota {
+  margin: 0;
+  padding: 4px 12px;
+  background: var(--ed-paper);
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-pill);
+  color: var(--ed-ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dt-editorial .ed-night-samples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.dt-editorial .ed-night-samples-label {
+  color: var(--ed-ink-3);
+  font-size: 14px;
+  line-height: 1.4;
+  margin-inline-end: 4px;
+}
+/* A small quiet link with an opaque fill: lighter than .ed-cta-quiet, never a
+   filled action. */
+.dt-editorial .ed-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 14px;
+  background: var(--ed-paper);
+  color: var(--ed-ink);
+  border: 1px solid var(--ed-control-border);
+  border-radius: var(--ed-r-pill);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: background-color var(--ed-dur-1) var(--ed-ease),
+    border-color var(--ed-dur-1) var(--ed-ease);
+}
+.dt-editorial .ed-chip:hover {
+  background: var(--ed-paper-2);
+  border-color: var(--ed-ink-3);
+}
+.dt-editorial .ed-chip:focus-visible {
+  outline: 2px solid var(--ed-ink);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-editorial .ed-chip { transition: none; }
+}
+
 /* The answer. Physical `left`, not inline-start: it annotates the document,
    which is left-to-right in every locale. It aligns with the document's text
    column; HeroSection moves it directly under the passage once the field
@@ -1141,6 +1229,20 @@ html.dt-night-doc {
   .dt-editorial .ed-night-actions { margin-top: 20px; }
   .dt-editorial .ed-night-card .ed-frame-a { font-size: 14px; line-height: 1.45; }
 }
+/* The entry row gives way on the shortest desktop windows (1280x720,
+   1366x680), where claim + passage + answer only just share the first screen;
+   the filled CTA still leads to the samples, and /demo and the reader state
+   the free allowance. Measured 2026-11-22: with the row, de/ja put the card
+   20-30px under the fold there. */
+@media (min-width: 768px) and (max-height: 760px) {
+  .dt-editorial .ed-night-entry { display: none; }
+}
+/* ja, ko and hi set the headline on three lines, which leaves no room for the
+   row up to 920px tall (1366x768 ko, 1440x900 ja/hi, 1536x864 ja/ko/hi put the
+   card 10-60px under the fold with it). */
+@media (min-width: 768px) and (max-height: 920px) {
+  .dt-editorial .ed-night-claim:is(:lang(ja), :lang(ko), :lang(hi)) .ed-night-entry { display: none; }
+}
 /* The same compact card wherever HeroSection measures that the full one
    would end below the first screen (the three-line ja/hi headlines at
    1440x900), at any viewport height. */
@@ -1158,6 +1260,14 @@ html.dt-night-doc {
     padding: 48px 20px 36px;
   }
   .dt-editorial .ed-night-claim { order: 1; }
+  .dt-editorial .ed-night-entry {
+    left: auto;
+    transform: none;
+    width: auto;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
   /* The headline's authored break suits two desktop lines; on a phone it
      strands a word ("cites", "zitiert") on a line of its own. Drop it and let
      text-wrap: balance set the whole headline. */

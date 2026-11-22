@@ -9,6 +9,7 @@ import { useLocale } from '../../i18n';
 import { localizedHrefIfAvailable } from '../../i18n/routing';
 import { getDemoDocuments, type DemoDocument } from '../../lib/api';
 import { usePageTitle } from '../../lib/usePageTitle';
+import { demoQuestionKey } from '../../lib/demoSamples';
 import MarketingShell from '../../components/marketing/MarketingShell';
 import EdPageHero from '../../components/marketing/EdPageHero';
 import EdSection from '../../components/marketing/EdSection';
@@ -26,7 +27,7 @@ const SAMPLE_CONFIG: Record<string, {
     icon: FileText,
     titleKey: 'demo.sample.earnings.title',
     descKey: 'demo.sample.earnings.desc',
-    questionKey: 'demo.sample.earnings.question',
+    questionKey: demoQuestionKey('alphabet-earnings'),
     badge: 'Finance',
     pages: 'Q4 report',
   },
@@ -34,7 +35,7 @@ const SAMPLE_CONFIG: Record<string, {
     icon: BookOpen,
     titleKey: 'demo.sample.paper.title',
     descKey: 'demo.sample.paper.desc',
-    questionKey: 'demo.sample.paper.question',
+    questionKey: demoQuestionKey('attention-paper'),
     badge: 'Research',
     pages: 'AI paper',
   },
@@ -42,7 +43,7 @@ const SAMPLE_CONFIG: Record<string, {
     icon: FileSignature,
     titleKey: 'demo.sample.court.title',
     descKey: 'demo.sample.court.desc',
-    questionKey: 'demo.sample.court.question',
+    questionKey: demoQuestionKey('court-filing'),
     badge: 'Legal',
     pages: 'Court filing',
   },

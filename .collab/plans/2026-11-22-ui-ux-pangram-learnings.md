@@ -1,6 +1,11 @@
 # 参考 Pangram 的 UI/UX：DocTalk 营销页与应用内优化方案（2026-11-22）
 
-状态：**调研 + 建议，尚未实现**，等 owner 选定条目后再动代码。
+状态：第一批（X1、A1、M6、M2）与第二批（M1、M3）已实现（2026-11-22，分支 `claude/gallant-thompson-3oyisp`）；其余待定。
+
+实施记录：
+- A1 追加：owner 决定只保留回答上方的来源条，删除下方 CitationCard 行；来源条接管"当前引用"标记（`aria-current`），折叠时保持可见。
+- M1：访客上传入口由访客流程方案实现（`GuestUploadEntry`，hero 的 "Try your own document"），本方案只加了额度徽章（复用 `demo.freeNoSignup`）和三个样例 chip（`lib/demoSamples.ts`，经 `/demo/<route>?question=` 进入阅读器）。为守住"标题 + 引文 + 回答卡同屏"的约定（review 2026-09-21 MAJOR-3），入口行在桌面单行显示；桌面窗口高度 ≤760px 时隐藏，ja/ko/hi（三行标题）在 ≤920px 时隐藏。6 种尺寸 × 11 种语言实测，回答卡不再因入口行掉出首屏。
+- M3：头部改为 "Sign in" 文字链 + 常驻 quiet 胶囊 "Try a sample"（/demo 页不显示）；手机顶栏只剩 Logo、胶囊、菜单，语言与登录移入菜单。没有做"滚动后升级为实心按钮"，以保证每屏只有一个实心 CTA。
 关联：`.collab/plans/2026-11-22-guest-trial-flow-pangram.md`（访客流程方向）。其中 **P0-2 待上传续跑、P1 访客上传（后端）不在本方案范围**；本方案只覆盖入口区（样例 chip、拖拽区、额度徽章）的视觉与布局。
 
 ## 1. 方法
