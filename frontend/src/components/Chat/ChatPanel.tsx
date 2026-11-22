@@ -8,6 +8,8 @@ import type { ChatArtifact, Citation, DocumentHierarchicalBrief, Message } from 
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
 import CitationCard from './CitationCard';
+import SourceListToggle from './SourceListToggle';
+import { visibleSources } from '../../lib/sourceList';
 import { citationPreview, uniqueCitationIndexes } from '../../lib/citationText';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
@@ -96,6 +98,17 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
       .sort((a, b) => a.refIndex - b.refIndex);
   }, [displayCitations]);
 
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
+  const isActiveCitation = useCallback(
+    (citation: Citation) => activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex,
+    [activeCitation],
+  );
+  const shownCitations = React.useMemo(
+    () => (uniqueCitations ? visibleSources(uniqueCitations, sourcesExpanded, isActiveCitation) : undefined),
+    [uniqueCitations, sourcesExpanded, isActiveCitation],
+  );
+  const sourceListId = `citation-cards-${message.id}`;
+
   return (
     <MessageErrorBoundary messageId={message.id}>
       <div data-message-id={message.id} tabIndex={-1}>
@@ -112,19 +125,25 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           isAnonShareAnswer={isAnonShareAnswer}
           onTryQuoteFinder={onTryQuoteFinder}
         />
-        {uniqueCitations && uniqueCitations.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
-            {uniqueCitations.map((citation) => (
+        {uniqueCitations && shownCitations && uniqueCitations.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-0" id={sourceListId}>
+            {shownCitations.map((citation) => (
               <CitationCard
                 key={`${message.id}-${citation.refIndex}`}
                 refIndex={citation.refIndex}
                 textSnippet={citationPreview(citation)}
                 page={citation.page}
                 pageEnd={citation.pageEnd}
-                active={activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex}
+                active={isActiveCitation(citation)}
                 onClick={() => handleCitation(citation)}
               />
             ))}
+            <SourceListToggle
+              total={uniqueCitations.length}
+              expanded={sourcesExpanded}
+              onToggle={() => setSourcesExpanded((value) => !value)}
+              controls={sourceListId}
+            />
           </div>
         )}
       </div>

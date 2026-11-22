@@ -157,18 +157,27 @@ export function CookieConsentBanner() {
     );
   }
 
+  // App surface: one compact row. In the reader the old two-row card sat at the
+  // top right, over the PDF toolbar (the "Sign in for Quote Finder" entry), and
+  // on phones over the first lines of the answer (2026-11-22 screenshots).
+  //   - Workspace routes, sm and up: bottom right, over the document pane's
+  //     margin rather than its toolbar; the chat composer is on the other side.
+  //   - Workspace routes on phones: still below the header (the composer and
+  //     the Chat/Document tab bar own the bottom edge), but one row high.
+  //   - Other app routes keep the bottom placement.
+  // Decline and Accept stay the same size and weight.
   return (
     <div
-      className={`fixed z-40 rounded-2xl border border-[var(--workbench-border)] bg-[var(--workbench-panel-solid)] px-4 py-3 text-[var(--workbench-ink)] shadow-2xl shadow-slate-900/10 backdrop-blur-2xl dark:shadow-black/35
+      className={`fixed z-40 rounded-2xl border border-[var(--workbench-border)] bg-[var(--workbench-panel-solid)] px-3 py-2 text-[var(--workbench-ink)] shadow-2xl shadow-slate-900/10 backdrop-blur-2xl dark:shadow-black/35
                  animate-[slideUp_0.3s_ease-out] motion-reduce:animate-none
                  ${isWorkspaceRoute
-                   ? `${isCollectionWorkspace ? 'top-[calc(env(safe-area-inset-top,0px)+9.5rem)] sm:top-[calc(env(safe-area-inset-top,0px)+4.75rem)]' : 'top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'} left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))]`
-                   : 'bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(28rem,calc(100vw-2rem))]'}`}
+                   ? `${isCollectionWorkspace ? 'top-[calc(env(safe-area-inset-top,0px)+9.5rem)]' : 'top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'} left-3 right-3 sm:top-auto sm:bottom-4 sm:left-auto sm:right-4 sm:w-[min(30rem,calc(100vw-2rem))]`
+                   : 'bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(30rem,calc(100vw-2rem))]'}`}
       role="region"
       aria-label={t('consent.message')}
     >
-      <div className="flex flex-col gap-3">
-        <p className="text-sm leading-6 text-[var(--workbench-muted)]">
+      <div className="flex items-center gap-3">
+        <p className="min-w-0 flex-1 text-[13px] leading-[1.4] text-[var(--workbench-muted)]">
           {t('consent.message')}{' '}
           <Link
             href="/privacy"
@@ -177,16 +186,16 @@ export function CookieConsentBanner() {
             {t('consent.learnMore')}
           </Link>
         </p>
-        <div className="flex justify-end gap-2">
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={handleDecline}
-            className="rounded-full border border-[var(--workbench-border)] px-4 py-1.5 text-sm text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-[var(--workbench-ink)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:hover:bg-white/10 dark:focus-visible:ring-offset-zinc-950"
+            className="min-h-[44px] sm:min-h-[36px] rounded-full border border-[var(--workbench-border)] px-3 text-[13px] text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-[var(--workbench-ink)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:hover:bg-white/10 dark:focus-visible:ring-offset-zinc-950"
           >
             {t('consent.decline')}
           </button>
           <button
             onClick={handleAccept}
-            className="dt-stitch-primary rounded-full px-4 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            className="dt-stitch-primary min-h-[44px] sm:min-h-[36px] rounded-full px-3 text-[13px] transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           >
             {t('consent.accept')}
           </button>

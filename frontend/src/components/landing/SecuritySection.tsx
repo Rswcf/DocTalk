@@ -14,7 +14,7 @@ export default function SecuritySection() {
   const { t } = useLocale();
 
   return (
-    <section className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)', borderBottom: '1px solid var(--ed-rule)', background: 'var(--ed-paper-2)' }}>
+    <section id="security" className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)', borderBottom: '1px solid var(--ed-rule)', background: 'var(--ed-paper-2)' }}>
       <div className="ed-shell">
         <div>
           <div className="mb-10">
@@ -26,7 +26,6 @@ export default function SecuritySection() {
 
         <div className="grid grid-cols-1 md:grid-cols-2">
           {cards.map(({ titleKey, descKey }, index) => {
-            const num = String(index + 1).padStart(2, '0');
             const isRight = index % 2 === 1;
             const isLastRow = index >= cards.length - 2;
             return (
@@ -42,10 +41,6 @@ export default function SecuritySection() {
                     borderColor: 'var(--ed-rule)',
                   }}
                 >
-                  <p className="ed-label mb-4">
-                    <span className="ed-label-num">{num}</span>
-                    {' '}— {t('landing.security.itemEyebrow')}
-                  </p>
                   <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
                   <p className="ed-body">{t(descKey)}</p>
                 </div>

@@ -14,7 +14,7 @@ export default function FAQ() {
   };
 
   return (
-    <section className="ed-section">
+    <section id="faq" className="ed-section">
       <div className="ed-shell">
         <div>
           <div className="max-w-[760px]">
