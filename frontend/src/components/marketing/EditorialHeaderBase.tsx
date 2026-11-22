@@ -208,10 +208,7 @@ export default function EditorialHeaderBase({
               className="block"
               style={{
                 padding: "12px 24px",
-                fontFamily: "var(--dt-mono)",
-                fontSize: "12px",
-                textTransform: "uppercase",
-                letterSpacing: "0.10em",
+                fontSize: "16px",
                 color: "var(--ed-ink-2)",
                 textDecoration: "none",
                 borderTop: idx === 0 ? "none" : "1px solid var(--ed-rule)",

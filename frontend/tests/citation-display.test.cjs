@@ -22,7 +22,8 @@ const api = load('lib/api.ts');
 const { chatStream } = load('lib/sse.ts', { './api': api });
 const { default: CitationCard } = load('components/Chat/CitationCard.tsx', {
   '../../lib/citationText': load('lib/citationText.ts'),
-  '../../i18n': { useLocale: () => ({ t: (key, values) => `${key} ${JSON.stringify(values)}` }) },
+  '../../i18n': { useLocale: () => ({ t: (key, values) => `${key} ${JSON.stringify(values)}`, tOr: (_key, fallback) => fallback }) },
+  '../../lib/sourceList': load('lib/sourceList.ts'),
 });
 const focus = 'This document does not state the company founding year.';
 const payload = { ref_index: 1, chunk_id: 'chunk', page: 3, page_end: 3, text_snippet: focus, focus_snippet: focus, bboxes: [], offset: 6 };
@@ -45,4 +46,10 @@ test('initial stream, refined stream and restored API preserve projected excerpt
       assert.ok(html.includes('3'));
     }
   } finally { global.fetch = original; }
+});
+
+test('a cross-page citation card names the passage instead of rendering an empty excerpt', () => {
+  const html = renderToStaticMarkup(React.createElement(CitationCard, { refIndex: 9, textSnippet: '', page: 4, pageEnd: 5 }));
+  assert.ok(html.includes('Cited passage'));
+  assert.ok(!/text-\[1[01]px\]/.test(html), 'app UI renders nothing below 12px');
 });

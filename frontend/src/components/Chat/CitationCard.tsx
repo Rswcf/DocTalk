@@ -3,6 +3,7 @@
 import { citationPageRange } from '../../lib/citationText';
 import React from 'react';
 import { useLocale } from '../../i18n';
+import { shortSnippet } from '../../lib/sourceList';
 
 interface CitationCardProps {
   refIndex: number;
@@ -13,22 +14,12 @@ interface CitationCardProps {
   active?: boolean;
 }
 
-/**
- * Sanitize text to prevent any potential XSS through text content.
- * React already escapes text nodes, but this adds an extra layer of safety
- * by removing control characters and normalizing the text.
- */
-function sanitizeText(text: string | null | undefined): string {
-  if (!text || typeof text !== 'string') return '';
-  // Remove control characters except common whitespace
-  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-}
-
 export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onClick, active = false }: CitationCardProps) {
-  const { t } = useLocale();
-  // Sanitize and truncate the snippet
-  const sanitized = sanitizeText(textSnippet);
-  const snippet = sanitized.length > 60 ? sanitized.slice(0, 60) + '…' : sanitized;
+  const { t, tOr } = useLocale();
+  // Control characters stripped, cut to 60 code points. A cross-page citation
+  // has no previewable excerpt (citationPreview returns ''): name it instead of
+  // rendering an empty card that only says "Page 4–5".
+  const snippet = shortSnippet(textSnippet) || tOr('citation.passageFallback', 'Cited passage');
 
   // Validate page number
   const validPage = citationPageRange({ page, pageEnd });
@@ -41,12 +32,9 @@ export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onC
       className="dt-citation-card inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-start text-xs focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
       aria-label={t('citation.cardLabel', { index: refIndex, page: validPage })}
     >
-      <span className="dt-source-index inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold leading-none">{refIndex}</span>
+      <span className="dt-source-index inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-xs font-bold leading-none tabular-nums">{refIndex}</span>
       <span dir="auto" className="max-w-[220px] truncate text-[var(--reader-muted)]">{snippet}</span>
-      <span
-        className="shrink-0 text-[10px] text-[var(--reader-muted)]"
-        style={{ fontFamily: 'var(--dt-mono)' }}
-      >{t('citation.page', { page: validPage })}</span>
+      <span className="shrink-0 text-xs tabular-nums text-[var(--reader-muted)]">{t('citation.page', { page: validPage })}</span>
     </button>
   );
 }

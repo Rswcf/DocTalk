@@ -145,7 +145,7 @@ export default function DemoPageClient() {
             const cardContent = (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="ed-caption uppercase">
+                  <span className="ed-caption">
                     {tOr(`demo.sample.${slug}.badge`, config.badge)}
                   </span>
                   <span className="ed-caption">
@@ -199,7 +199,7 @@ export default function DemoPageClient() {
                     padding: '12px 14px',
                   }}
                 >
-                  <p className="ed-caption uppercase">
+                  <p className="ed-caption">
                     {tOr('demo.suggestedQuestion', 'Suggested question')}
                   </p>
                   <p
