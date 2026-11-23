@@ -4,7 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 require('./_load-ts.cjs');
 const {
-  SOURCE_PREVIEW_LIMIT, visibleSources, spansMultipleDocuments, shortSnippet,
+  SOURCE_PREVIEW_LIMIT, visibleSources, showsDocumentNames, shortSnippet,
 } = require('../src/lib/sourceList.ts');
 
 const src = (p) => fs.readFileSync(path.join(__dirname, '../src', p), 'utf8');
@@ -21,11 +21,28 @@ test('the active citation stays visible in a collapsed list', () => {
   assert.deepEqual(visibleSources(items, false, (n) => n === 12), [1, 2, 3, 4, 5, 12]);
 });
 
-test('file names only label chips when the answer cites several documents', () => {
-  assert.equal(spansMultipleDocuments([{}, {}, {}]), false);
-  assert.equal(spansMultipleDocuments([{ documentId: 'a' }, { documentId: 'a' }, {}]), false);
-  assert.equal(spansMultipleDocuments([{ documentId: 'a' }, { documentId: 'b' }]), true);
-  assert.equal(spansMultipleDocuments([{ documentFilename: 'x.pdf' }, { documentFilename: 'y.pdf' }]), true);
+test('chips name their file only in collection answers (the payload carries document_filename there only)', () => {
+  assert.equal(showsDocumentNames([{}, {}, {}]), false);
+  assert.equal(showsDocumentNames([{ documentId: 'a' }, { documentId: 'a' }]), false);
+  // A collection answer citing one document still names it (review 2026-11-23 F7).
+  assert.equal(showsDocumentNames([{ documentFilename: 'x.pdf' }, { documentFilename: 'x.pdf' }]), true);
+  assert.equal(showsDocumentNames([{ documentFilename: 'x.pdf' }, { documentFilename: 'y.pdf' }]), true);
+});
+
+test('cookie banner: app placements keep clear of the chat composer (review 2026-11-23 F2)', () => {
+  const banner = src('components/CookieConsentBanner.tsx');
+  const pick = (cond) => {
+    const i = banner.indexOf(cond);
+    assert.ok(i > 0, `${cond} branch missing`);
+    return banner.slice(i, banner.indexOf("'", banner.indexOf("'", i) + 1));
+  };
+  const collection = pick('isCollectionWorkspace\n                   ? ');
+  assert.match(collection, /top-\[/);
+  assert.doesNotMatch(collection, /bottom-/, 'collections: the composer owns the bottom edge');
+  const reader = pick('isReaderRoute\n                     ? ');
+  assert.match(reader, /sm:left-4/);
+  assert.match(reader, /lg:bottom-4/);
+  assert.doesNotMatch(reader.replace(/lg:[^ ']+/g, ''), /bottom-/, 'reader below lg: never a bottom corner');
 });
 
 test('snippets are cut by code point and stripped of control characters', () => {

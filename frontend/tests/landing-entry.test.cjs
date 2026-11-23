@@ -17,6 +17,11 @@ test('sample links carry the question through /demo/<route>, encoded and capped'
   assert.equal(demoSampleHref(earnings, ' What & why? '), '/demo/earnings?question=What%20%26%20why%3F');
   const long = decodeURIComponent(demoSampleHref(earnings, 'x'.repeat(1000)).split('question=')[1]);
   assert.equal(long.length, DEMO_QUESTION_MAX);
+  // An emoji across the cut must not split into a lone surrogate (review 2026-11-23 F4).
+  const edge = 'x'.repeat(DEMO_QUESTION_MAX - 1) + '😀😀';
+  const cut = decodeURIComponent(demoSampleHref(earnings, edge).split('question=')[1]);
+  assert.equal(Array.from(cut).length, DEMO_QUESTION_MAX);
+  assert.ok(cut.endsWith('😀'));
 });
 
 test('every sample route resolves in the /demo/<sample> redirect, which forwards ?question=', () => {
@@ -25,7 +30,7 @@ test('every sample route resolves in the /demo/<sample> redirect, which forwards
     assert.match(redirect, new RegExp(`'${sample.route}': '${sample.slug}'`), `${sample.route} is not mapped to ${sample.slug}`);
   }
   assert.match(redirect, /searchParams\.get\('question'\)/);
-  assert.match(redirect, /DEMO_QUESTION_MAX/);
+  assert.match(redirect, /Array\.from\([\s\S]{0,80}\)\.slice\(0, DEMO_QUESTION_MAX\)/, 'the redirect cuts by code point too');
 });
 
 test('/demo cards and the hero chips ask the same suggested questions', () => {
@@ -56,7 +61,7 @@ test('the masthead action is quiet, skips /demo, and phones get language and sig
   const header = src('components/marketing/EditorialHeaderBase.tsx');
   assert.doesNotMatch(header, /className="ed-cta"/, 'the masthead never carries a filled CTA');
   assert.match(header, /!onDemoPage && \(/);
-  assert.match(header, /className="ed-cta-quiet"[\s\S]{0,200}labels\.trySample|labels\.trySample[\s\S]{0,10}/);
+  assert.match(header, /className="ed-cta-quiet ed-masthead-pill"[\s\S]{0,300}?\{labels\.trySample\}/);
   const panel = header.slice(header.indexOf('id="ed-mobile-nav"'));
   assert.match(panel, /labels\.signIn/);
   assert.match(panel, /<EdLanguageSelector/);
@@ -67,4 +72,16 @@ test('entry-row and masthead strings exist in all 11 locales', () => {
   const keys = ['header.trySample', 'landing.entry.tryLabel', 'landing.entry.sample.earnings', 'landing.entry.sample.paper', 'landing.entry.sample.court', 'demo.freeNoSignup'];
   for (const sample of DEMO_SAMPLES) keys.push(sample.questionKey, sample.chipKey);
   for (const l of LOCALES) for (const k of keys) assert.ok(messages[l][k], `${l}.json is missing ${k}`);
+});
+
+test('the language menu opens inside the viewport from a trigger near either edge (review 2026-11-23 F1)', () => {
+  const sel = src('components/marketing/EdLanguageSelector.tsx');
+  assert.match(sel, /if \(r\.right - MENU_MIN_WIDTH < 12\) \{[\s\S]*?left: Math\.max\(12, Math\.min\(r\.left, window\.innerWidth - MENU_MIN_WIDTH - 12\)\)/);
+  assert.match(sel, /left: pos\.left,\s*right: pos\.right,/);
+});
+
+test('How it works renders step buttons only where they switch a picture (review 2026-11-23 F6)', () => {
+  const how = src('components/landing/HowItWorks.tsx');
+  assert.match(how, /useState\(false\)[\s\S]*matchMedia\('\(min-width: 1024px\)'\)/);
+  assert.match(how, /\{linked \? \(\s*<button/);
 });

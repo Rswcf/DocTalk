@@ -30,7 +30,7 @@ export default function DemoRedirectPageClient() {
   // The landing's sample chips pass the sample's suggested question in the
   // visitor's language (lib/demoSamples.ts). The reader accepts ?question=
   // from any link already; this only carries it across the id lookup.
-  const askedQuestion = (searchParams.get('question') || '').trim().slice(0, DEMO_QUESTION_MAX);
+  const askedQuestion = Array.from((searchParams.get('question') || '').trim()).slice(0, DEMO_QUESTION_MAX).join('');
   const [error, setError] = useState(false);
   const { t } = useLocale();
 

@@ -75,3 +75,15 @@ test('the source strip marks the citation the reader shows and keeps it visible 
     storeState = { documentName: 'Report.pdf', citationTarget: null };
   }
 });
+
+test('each source chip is named by its visible text: number, excerpt, page (review 2026-11-23 F3)', () => {
+  const citations = [1, 2].map((n) => ({ refIndex: n, chunkId: `k${n}`, textSnippet: `Distinct passage ${n}.`, page: 4, pageEnd: 4, bboxes: [] }));
+  const html = strip(citations);
+  assert.doesNotMatch(html, /dt-source-chip[^>]*aria-label=/, 'an aria-label would hide the number and the excerpt');
+  for (const n of [1, 2]) {
+    const chip = html.match(new RegExp(`<button[^>]*aria-describedby="([^"]+-jump-${n})"[^>]*>([\\s\\S]*?)</button>`));
+    assert.ok(chip, `chip ${n} has no description`);
+    assert.ok(chip[2].includes(`>${n}<`) && chip[2].includes(`Distinct passage ${n}.`));
+    assert.match(html, new RegExp(`id="${chip[1]}"[^>]*>citation\\.jumpTo`));
+  }
+});

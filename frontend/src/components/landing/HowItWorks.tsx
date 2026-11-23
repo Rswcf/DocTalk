@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { useLocale } from '../../i18n';
 import { HOW_IT_WORKS_STEPS as steps } from './landingSchemaSources';
 import { AnswerVignette, FormatsVignette, PassageVignette } from '../marketing/ProductVignettes';
@@ -22,6 +22,18 @@ export default function HowItWorks() {
   const { t, tOr } = useLocale();
   const [active, setActive] = useState(0);
   const panelId = useId();
+  // The step titles are buttons only where they switch a picture (lg and up).
+  // Below lg every step shows its own picture, and a button that does nothing
+  // would only add dead tab stops (review 2026-11-23 F6). Starts false, as on
+  // the server, so hydration matches; the effect upgrades desktop.
+  const [linked, setLinked] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setLinked(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   const frame = {
     question: t('landing.frame.question'),
@@ -50,23 +62,25 @@ export default function HowItWorks() {
                 <li
                   key={num}
                   className={`ed-how-step${idx === active ? ' is-active' : ''}`}
-                  onMouseEnter={() => setActive(idx)}
+                  onMouseEnter={linked ? () => setActive(idx) : undefined}
                 >
                   <div className="ed-num ed-how-num" aria-hidden="true">{num}</div>
                   <div className="min-w-0">
                     <h3 className="ed-h3">
-                      {/* The button only switches the picture beside the list
-                          (lg and up); its text is the step title either way. */}
-                      <button
-                        type="button"
-                        className="ed-how-trigger"
-                        aria-controls={panelId}
-                        aria-current={idx === active ? 'step' : undefined}
-                        onClick={() => setActive(idx)}
-                        onFocus={() => setActive(idx)}
-                      >
-                        {t(titleKey)}
-                      </button>
+                      {linked ? (
+                        <button
+                          type="button"
+                          className="ed-how-trigger"
+                          aria-controls={panelId}
+                          aria-current={idx === active ? 'step' : undefined}
+                          onClick={() => setActive(idx)}
+                          onFocus={() => setActive(idx)}
+                        >
+                          {t(titleKey)}
+                        </button>
+                      ) : (
+                        t(titleKey)
+                      )}
                     </h3>
                     <p className="ed-body mt-3">{t(descKey)}</p>
                     <div className="ed-how-inline">{visuals[idx]}</div>

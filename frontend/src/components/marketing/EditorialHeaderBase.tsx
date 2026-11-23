@@ -79,6 +79,7 @@ export default function EditorialHeaderBase({
             >
               <DocTalkLogo size={24} />
               <span
+                className="ed-masthead-wordmark"
                 style={{
                   fontFamily: "var(--ed-display-family)",
                   fontSize: "19px",
@@ -166,8 +167,8 @@ export default function EditorialHeaderBase({
               {!onDemoPage && (
                 <Link
                   href={navHref("/demo")}
-                  className="ed-cta-quiet"
-                  style={{ padding: "8px 17px", fontSize: "13px" }}
+                  className="ed-cta-quiet ed-masthead-pill"
+                  style={{ fontSize: "13px" }}
                   onClick={() => trackEvent("landing_cta_clicked", { source: "header", reason: "demo" })}
                 >
                   {labels.trySample}

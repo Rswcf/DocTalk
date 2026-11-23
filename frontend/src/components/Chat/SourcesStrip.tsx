@@ -1,7 +1,7 @@
 "use client";
 
 import { citationPageRange, citationPreview, citationSourceKey } from '../../lib/citationText';
-import { shortSnippet, spansMultipleDocuments, visibleSources } from '../../lib/sourceList';
+import { shortSnippet, showsDocumentNames, visibleSources } from '../../lib/sourceList';
 import SourceListToggle from './SourceListToggle';
 import React from "react";
 import { FileText } from "lucide-react";
@@ -69,7 +69,7 @@ export default function SourcesStrip({
     // later claim re-cites an earlier source.
     return out.sort((a, b) => a.refIndex - b.refIndex);
   }, [citations]);
-  const multiDocument = React.useMemo(() => spansMultipleDocuments(unique), [unique]);
+  const multiDocument = React.useMemo(() => showsDocumentNames(unique), [unique]);
   const isActive = (c: Citation) =>
     Boolean(activeCitation) && activeCitation!.chunkId === c.chunkId && activeCitation!.refIndex === c.refIndex;
 
@@ -123,7 +123,11 @@ export default function SourcesStrip({
               onClick={() => onCitationClick?.(c)}
               aria-current={isActive(c) ? "location" : undefined}
               title={jumpLabel}
-              aria-label={`${filename} — ${jumpLabel}`}
+              // No aria-label: the visible text ("12", the excerpt or file
+              // name, "Page 5") is the accessible name, so each chip is
+              // distinct and a voice user can say what they see (WCAG 2.5.3;
+              // review 2026-11-23 F3). The jump target is its description.
+              aria-describedby={`${listId}-jump-${c.refIndex}`}
               className="dt-source-chip group inline-flex max-w-xs items-center gap-2 rounded-md px-2.5 py-1.5 text-xs motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
             >
               <span className="dt-source-index inline-flex h-5 min-w-5 items-center justify-center rounded px-1 text-xs font-bold leading-none tabular-nums">
@@ -135,6 +139,7 @@ export default function SourcesStrip({
                 className="shrink-0 text-zinc-400 group-hover:text-[var(--reader-evidence)] dark:text-zinc-500"
               />
               <span dir="auto" className={`truncate ${multiDocument ? 'font-medium' : 'text-[var(--reader-muted)]'}`}>{displayFilename}</span>
+              <span id={`${listId}-jump-${c.refIndex}`} className="sr-only">{jumpLabel}</span>
               <span className="shrink-0 text-xs tabular-nums text-[var(--reader-muted)]">
                 {t('citation.page', { page: citationPageRange(c) })}
               </span>

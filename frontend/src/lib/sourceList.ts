@@ -23,19 +23,13 @@ export function visibleSources<T>(
   return items.filter((item, index) => index < limit || keep(item));
 }
 
-/** True when the sources come from more than one document. A chip's file name
- *  only tells sources apart in that case; in a single-document reader every
- *  chip showed the same name. */
-export function spansMultipleDocuments(
-  items: { documentId?: string | null; documentFilename?: string | null }[],
-): boolean {
-  const docs = new Set<string>();
-  for (const item of items) {
-    const id = item.documentId || item.documentFilename;
-    if (id) docs.add(id);
-    if (docs.size > 1) return true;
-  }
-  return false;
+/** True when chips should name their file. The chat payload carries
+ *  `document_filename` only for collection retrieval (chat_service: a
+ *  single-document chunk has none), so a collection answer names its file
+ *  even when it cites one document, and a single-document reader, where every
+ *  chip would repeat the same name, shows the excerpt (review 2026-11-23 F7). */
+export function showsDocumentNames(items: { documentFilename?: string | null }[]): boolean {
+  return items.some((item) => Boolean(item.documentFilename));
 }
 
 /** Strips control characters and cuts to `max` code points with an ellipsis. */

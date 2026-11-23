@@ -1087,7 +1087,7 @@ html.dt-night-doc {
   border-radius: var(--ed-r-1);
   background: var(--ed-paper);
   color: var(--ed-ink-2);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
@@ -1287,6 +1287,22 @@ html.dt-night-doc {
   transition: color 150ms ease;
 }
 .dt-editorial .ed-masthead-link:hover { color: var(--ed-signal); }
+/* The masthead's quiet pill: one line in every locale, tighter on phones,
+   where it shares the bar with the logo and the menu button (review
+   2026-11-23 F5: pt/de/fr/es wrapped to two lines and touched the logo). */
+.dt-editorial .ed-masthead-pill {
+  padding: 8px 17px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .dt-editorial .ed-masthead-pill { padding: 7px 12px; }
+}
+/* Below 360px the bar cannot hold logo, wordmark, pill and menu: the
+   wordmark goes, the logo stays (the link keeps its aria-label). */
+@media (max-width: 359px) {
+  .dt-editorial .ed-masthead-wordmark { display: none; }
+}
 .dt-editorial .ed-masthead-link:focus-visible {
   outline: 2px solid var(--ed-ink);
   outline-offset: 3px;

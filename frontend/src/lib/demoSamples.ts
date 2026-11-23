@@ -41,12 +41,14 @@ export function demoQuestionKey(slug: DemoSample['slug']): string {
   return DEMO_SAMPLES.find((s) => s.slug === slug)!.questionKey;
 }
 
-/** Longest `?question=` the /demo/<route> redirect forwards to the reader. */
+/** Longest `?question=` (in code points) the /demo/<route> redirect forwards to the reader. */
 export const DEMO_QUESTION_MAX = 300;
 
 /** `/demo/<route>?question=…`: the redirect resolves the document id, then
  *  opens the reader with the question, which the reader asks on arrival. */
 export function demoSampleHref(sample: DemoSample, question: string): string {
-  const q = question.trim().slice(0, DEMO_QUESTION_MAX);
+  // Code points, not UTF-16 units: a cut surrogate pair makes
+  // encodeURIComponent throw (review 2026-11-23 F4).
+  const q = Array.from(question.trim()).slice(0, DEMO_QUESTION_MAX).join('');
   return q ? `/demo/${sample.route}?question=${encodeURIComponent(q)}` : `/demo/${sample.route}`;
 }
