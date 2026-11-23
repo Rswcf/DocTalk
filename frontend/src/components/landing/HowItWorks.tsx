@@ -50,9 +50,8 @@ export default function HowItWorks() {
     <div>
       <section id="how-it-works" className="ed-section">
         <div className="ed-shell">
-          {/* Section header */}
+          {/* Section header. No eyebrow: it repeated the title word for word. */}
           <div className="mb-12">
-            <p className="ed-label mb-3">{tOr('landing.howItWorks.eyebrow', 'How it works')}</p>
             <h2 className="ed-h2">{t('landing.howItWorks.title')}</h2>
           </div>
 

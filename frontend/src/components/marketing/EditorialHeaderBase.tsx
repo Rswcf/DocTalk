@@ -17,8 +17,6 @@ export interface Crumb {
 }
 
 export interface EditorialHeaderBaseProps {
-  /** When true, render the two-line mono dateline block (landing variant). */
-  showDateline?: boolean;
   /** Breadcrumb row rendered below the masthead (inner-page variant). */
   breadcrumb?: Crumb[];
   /** Server-resolved strings for localized pages; falls back to `useLocale()`. */
@@ -27,14 +25,13 @@ export interface EditorialHeaderBaseProps {
 
 /**
  * Shared editorial masthead used by both:
- * - landing-page `EditorialHeader` (passes `showDateline`)
+ * - landing-page `EditorialHeader`
  * - inner-page `EditorialMarketingHeader` (passes `breadcrumb`)
  *
  * Carries the sticky bar (logo + wordmark + nav links + sign-in CTA),
  * the mobile hamburger button, and the mobile nav panel.
  */
 export default function EditorialHeaderBase({
-  showDateline = false,
   breadcrumb,
   chrome,
 }: EditorialHeaderBaseProps) {
@@ -71,7 +68,7 @@ export default function EditorialHeaderBase({
       >
         <div className="ed-shell w-full">
           <div className="flex items-center justify-between h-16">
-            {/* Left — logo + wordmark (+ optional dateline) */}
+            {/* Left — logo + wordmark */}
             <Link
               href={navHref("/")}
               className="flex items-center gap-3 shrink-0"
@@ -90,40 +87,6 @@ export default function EditorialHeaderBase({
               >
                 DocTalk
               </span>
-              {showDateline && (
-                <>
-                  {/* Thin vertical hairline separator */}
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      display: "inline-block",
-                      width: "1px",
-                      height: "28px",
-                      background: "var(--ed-rule)",
-                      marginLeft: "4px",
-                      marginRight: "8px",
-                    }}
-                  />
-                  {/* Editorial dateline block — two mono lines */}
-                  <span
-                    className="hidden sm:flex"
-                    style={{ flexDirection: "column", gap: "2px" }}
-                  >
-                    <span
-                      className="ed-caption"
-                      style={{ letterSpacing: "0.10em" }}
-                    >
-                      STUDIO N&ordm;&thinsp;01
-                    </span>
-                    <span
-                      className="ed-caption"
-                      style={{ letterSpacing: "0.08em", textTransform: "uppercase" }}
-                    >
-                      {t('landing.masthead.tagline')}
-                    </span>
-                  </span>
-                </>
-              )}
             </Link>
 
             {/* Right — nav links + CTA */}

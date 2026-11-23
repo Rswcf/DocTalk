@@ -10,7 +10,7 @@ import { createMarketingLocalePage } from '../../../lib/marketingLocalePage';
 // the breadcrumb ("Home" crumb), retry/loading copy, and — since MarketingShell
 // renders the header/footer without a server `chrome` prop here — everything
 // EditorialHeaderBase/EditorialFooter fall back to via client `useLocale()`
-// (nav, auth, language switcher, aria labels, masthead tagline, legal links).
+// (nav, auth, language switcher, aria labels, legal links).
 // Mirrors `LANDING_PREFIXES` in app/[locale]/page.tsx for the same reason.
 const DEMO_PREFIXES = [
   'demo.',
