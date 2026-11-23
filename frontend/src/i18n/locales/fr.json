@@ -392,6 +392,10 @@
   "landing.entry.sample.earnings": "Résultats financiers",
   "landing.entry.sample.paper": "Article de recherche",
   "landing.entry.sample.court": "Acte judiciaire",
+  "landing.vignette.original": "Original",
+  "landing.vignette.translated": "Traduit",
+  "landing.vignette.drop": "Déposez un fichier ou collez un lien",
+  "landing.vignette.page": "Page {page}",
   "landing.howItWorks.step1.title": "Téléversez votre PDF",
   "landing.howItWorks.step1.desc": "Glissez-déposez n'importe quel document PDF — rapports, articles, contrats, manuels",
   "landing.howItWorks.step2.title": "Posez des questions",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "Fichiers jusqu'à {max} Mo avec l'offre gratuite.",
   "guestUpload.notKept": "Votre navigateur n'a pas pu conserver le fichier. Choisissez-le à nouveau après vous être connecté.",
   "demo.freeNoSignup": "5 questions gratuites par document · sans inscription",
+  "demo.lastQuestion": "Dernière question gratuite sur ce document",
   "guestUpload.resumeMissing": "Le fichier choisi avant la connexion n'est pas disponible dans ce navigateur. Choisissez-le à nouveau."
 }

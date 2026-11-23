@@ -383,6 +383,10 @@
   "landing.entry.sample.earnings": "Risultati trimestrali",
   "landing.entry.sample.paper": "Articolo di ricerca",
   "landing.entry.sample.court": "Atto giudiziario",
+  "landing.vignette.original": "Originale",
+  "landing.vignette.translated": "Tradotto",
+  "landing.vignette.drop": "Trascina un file o incolla un link",
+  "landing.vignette.page": "Pagina {page}",
   "landing.howItWorks.step1.title": "Carica il tuo PDF",
   "landing.howItWorks.step1.desc": "Trascina e rilascia qualsiasi documento PDF — report, articoli, contratti, manuali",
   "landing.howItWorks.step2.title": "Fai domande",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "File fino a {max} MB con il piano gratuito.",
   "guestUpload.notKept": "Il browser non è riuscito a conservare il file. Sceglilo di nuovo dopo l'accesso.",
   "demo.freeNoSignup": "5 domande gratuite per documento · senza registrazione",
+  "demo.lastQuestion": "Ultima domanda gratuita su questo documento",
   "guestUpload.resumeMissing": "Il file scelto prima dell'accesso non è disponibile in questo browser. Sceglilo di nuovo."
 }

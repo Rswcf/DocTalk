@@ -380,6 +380,10 @@
   "landing.entry.sample.earnings": "تقرير الأرباح",
   "landing.entry.sample.paper": "ورقة بحثية",
   "landing.entry.sample.court": "مستند قضائي",
+  "landing.vignette.original": "الأصل",
+  "landing.vignette.translated": "المترجَم",
+  "landing.vignette.drop": "أفلت ملفًا أو الصق رابطًا",
+  "landing.vignette.page": "الصفحة {page}",
   "landing.howItWorks.step1.title": "ارفع ملف PDF",
   "landing.howItWorks.step1.desc": "اسحب وأفلت أي مستند PDF — تقارير، أبحاث، عقود، أدلة",
   "landing.howItWorks.step2.title": "اطرح أسئلة",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "الملفات حتى {max} ميغابايت في الخطة المجانية.",
   "guestUpload.notKept": "لم يتمكن متصفحك من الاحتفاظ بالملف. اختره مرة أخرى بعد تسجيل الدخول.",
   "demo.freeNoSignup": "5 أسئلة مجانية لكل مستند · دون تسجيل",
+  "demo.lastQuestion": "هذا آخر سؤال مجاني في هذا المستند",
   "guestUpload.resumeMissing": "الملف الذي اخترته قبل تسجيل الدخول غير متاح في هذا المتصفح. اختره مرة أخرى."
 }

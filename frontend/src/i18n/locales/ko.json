@@ -383,6 +383,10 @@
   "landing.entry.sample.earnings": "실적 발표",
   "landing.entry.sample.paper": "연구 논문",
   "landing.entry.sample.court": "법원 문서",
+  "landing.vignette.original": "원문",
+  "landing.vignette.translated": "번역본",
+  "landing.vignette.drop": "파일을 끌어 놓거나 링크 붙여넣기",
+  "landing.vignette.page": "{page}페이지",
   "landing.howItWorks.step1.title": "PDF 업로드",
   "landing.howItWorks.step1.desc": "보고서, 논문, 계약서, 매뉴얼 등 모든 PDF를 드래그 앤 드롭",
   "landing.howItWorks.step2.title": "질문하기",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "무료 플랜에서는 최대 {max}MB 파일까지 지원합니다.",
   "guestUpload.notKept": "브라우저가 파일을 보관하지 못했습니다. 로그인한 뒤 다시 선택하세요.",
   "demo.freeNoSignup": "문서당 무료 질문 5개 · 가입 필요 없음",
+  "demo.lastQuestion": "이 문서의 마지막 무료 질문입니다",
   "guestUpload.resumeMissing": "로그인 전에 선택한 파일을 이 브라우저에서 사용할 수 없습니다. 다시 선택하세요."
 }

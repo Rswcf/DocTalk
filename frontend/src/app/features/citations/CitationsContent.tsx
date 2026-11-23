@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
+import { AnswerVignette, PassageVignette } from '../../../components/marketing/ProductVignettes';
 import EdSection from '../../../components/marketing/EdSection';
 import EdProse from '../../../components/marketing/EdProse';
 import EdStepRow from '../../../components/marketing/EdStepRow';
@@ -146,6 +147,17 @@ export default async function CitationsContent({ locale }: { locale: string }) {
         title={t('featuresCitations.heroTitle')}
         lede={t('featuresCitations.heroSubtitle')}
         primaryCta={{ label: t('featuresCitations.heroCta'), href: href('/demo') }}
+        variant="product"
+        product={
+          <div className="ed-vignette-hero ed-vignette-pair">
+            <AnswerVignette
+              question={t('landing.frame.question')}
+              answer={t('landing.frame.answer')}
+              source={t('landing.frame.source')}
+            />
+            <PassageVignette pageLabel={t('landing.vignette.page', { page: 1 })} />
+          </div>
+        }
       />
 
       <EdSection title={t('featuresCitations.howTitle')}>

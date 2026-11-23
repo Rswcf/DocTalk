@@ -253,6 +253,10 @@
   "landing.entry.sample.earnings": "Informe de resultados",
   "landing.entry.sample.paper": "Artículo de investigación",
   "landing.entry.sample.court": "Escrito judicial",
+  "landing.vignette.original": "Original",
+  "landing.vignette.translated": "Traducido",
+  "landing.vignette.drop": "Suelta un archivo o pega un enlace",
+  "landing.vignette.page": "Página {page}",
   "landing.howItWorks.step1.title": "Sube tu PDF",
   "landing.howItWorks.step1.desc": "Arrastra y suelta cualquier documento PDF — informes, artículos, contratos, manuales",
   "landing.howItWorks.step2.title": "Haz preguntas",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "Archivos de hasta {max} MB en el plan gratuito.",
   "guestUpload.notKept": "Tu navegador no pudo guardar el archivo. Vuelve a elegirlo después de iniciar sesión.",
   "demo.freeNoSignup": "5 preguntas gratis por documento · sin registro",
+  "demo.lastQuestion": "Última pregunta gratis en este documento",
   "guestUpload.resumeMissing": "El archivo que elegiste antes de iniciar sesión no está disponible en este navegador. Vuelve a elegirlo."
 }

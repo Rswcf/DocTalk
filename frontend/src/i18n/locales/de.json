@@ -392,6 +392,10 @@
   "landing.entry.sample.earnings": "Quartalsbericht",
   "landing.entry.sample.paper": "Forschungsartikel",
   "landing.entry.sample.court": "Gerichtsdokument",
+  "landing.vignette.original": "Original",
+  "landing.vignette.translated": "Übersetzt",
+  "landing.vignette.drop": "Datei ablegen oder Link einfügen",
+  "landing.vignette.page": "Seite {page}",
   "landing.howItWorks.step1.title": "Dokument hochladen",
   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, Textdateien oder eine Web-URL einfügen. Ziehen, ablegen, fertig.",
   "landing.howItWorks.step2.title": "Fragen stellen",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "Im kostenlosen Plan sind Dateien bis {max} MB möglich.",
   "guestUpload.notKept": "Dein Browser konnte die Datei nicht behalten. Wähle sie nach der Anmeldung erneut aus.",
   "demo.freeNoSignup": "5 kostenlose Fragen pro Dokument · ohne Anmeldung",
+  "demo.lastQuestion": "Letzte kostenlose Frage zu diesem Dokument",
   "guestUpload.resumeMissing": "Die Datei, die du vor der Anmeldung ausgewählt hast, ist in diesem Browser nicht verfügbar. Wähle sie erneut aus."
 }

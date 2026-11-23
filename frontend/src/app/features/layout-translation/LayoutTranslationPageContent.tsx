@@ -5,6 +5,7 @@ import { localizedHrefIfAvailable } from '../../../i18n/routing';
 import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
+import { TranslationVignette } from '../../../components/marketing/ProductVignettes';
 import EdSection from '../../../components/marketing/EdSection';
 import EdCardGrid from '../../../components/marketing/EdCardGrid';
 import EdProse from '../../../components/marketing/EdProse';
@@ -45,6 +46,15 @@ export default function LayoutTranslationPageContent({
           'featuresLayoutTranslation.heroSubtitle',
           'Turn text-heavy PDFs into translated PDFs while keeping page structure, equations, citations, and visual context.',
         )}
+        variant="product"
+        product={
+          <div className="ed-vignette-hero" style={{ maxWidth: '640px' }}>
+            <TranslationVignette
+              originalLabel={tOr('landing.vignette.original', 'Original')}
+              translatedLabel={tOr('landing.vignette.translated', 'Translated')}
+            />
+          </div>
+        }
       />
 
       <EdSection>

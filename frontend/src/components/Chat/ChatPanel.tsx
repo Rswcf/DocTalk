@@ -646,7 +646,11 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
           ) : (
             <div className="flex items-center justify-between px-4 py-2 text-sm text-[var(--workbench-muted)]" aria-live="polite">
               <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
-                {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
+                {/* The last free question is named as such before it is
+                    spent, not only counted (plan 2026-11-22 A2). */}
+                {demoRemaining === 1
+                  ? tOr('demo.lastQuestion', 'Last free question on this document')
+                  : t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
               </span>
               <button type="button" onClick={() => openAuthModal({ location: 'demo_questions_remaining' })} className="text-sm text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
                 {t('demo.signInForUnlimited')}

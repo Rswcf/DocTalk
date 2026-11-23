@@ -380,6 +380,10 @@
   "landing.entry.sample.earnings": "तिमाही नतीजे",
   "landing.entry.sample.paper": "शोध पत्र",
   "landing.entry.sample.court": "अदालती दस्तावेज़",
+  "landing.vignette.original": "मूल",
+  "landing.vignette.translated": "अनुवादित",
+  "landing.vignette.drop": "फ़ाइल छोड़ें या लिंक चिपकाएँ",
+  "landing.vignette.page": "पेज {page}",
   "landing.howItWorks.step1.title": "अपना PDF अपलोड करें",
   "landing.howItWorks.step1.desc": "कोई भी PDF दस्तावेज़ खींचकर छोड़ें — रिपोर्ट, शोधपत्र, अनुबंध, मैनुअल",
   "landing.howItWorks.step2.title": "प्रश्न पूछें",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "मुफ़्त प्लान में {max} MB तक की फ़ाइलें।",
   "guestUpload.notKept": "आपका ब्राउज़र फ़ाइल नहीं रख सका। साइन इन के बाद इसे फिर से चुनें।",
   "demo.freeNoSignup": "हर दस्तावेज़ पर 5 मुफ़्त सवाल · साइन-अप की ज़रूरत नहीं",
+  "demo.lastQuestion": "इस दस्तावेज़ पर आख़िरी मुफ़्त सवाल",
   "guestUpload.resumeMissing": "साइन इन से पहले चुनी गई फ़ाइल इस ब्राउज़र में उपलब्ध नहीं है। इसे फिर से चुनें।"
 }

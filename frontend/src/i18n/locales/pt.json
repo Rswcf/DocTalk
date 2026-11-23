@@ -1688,6 +1688,10 @@
   "landing.entry.sample.earnings": "Relatório de resultados",
   "landing.entry.sample.paper": "Artigo científico",
   "landing.entry.sample.court": "Peça judicial",
+  "landing.vignette.original": "Original",
+  "landing.vignette.translated": "Traduzido",
+  "landing.vignette.drop": "Solte um arquivo ou cole um link",
+  "landing.vignette.page": "Página {page}",
   "landing.security.deletion.desc": "Remova seus dados de todos os sistemas ativos quando quiser.",
   "landing.security.deletion.title": "Exclua a qualquer momento",
   "landing.security.encrypted.desc": "TLS em trânsito, AES-256 em repouso. Proteção de padrão industrial.",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "Arquivos de até {max} MB no plano gratuito.",
   "guestUpload.notKept": "Seu navegador não conseguiu guardar o arquivo. Escolha-o novamente depois de entrar.",
   "demo.freeNoSignup": "5 perguntas grátis por documento · sem cadastro",
+  "demo.lastQuestion": "Última pergunta grátis neste documento",
   "guestUpload.resumeMissing": "O arquivo que você escolheu antes de entrar não está disponível neste navegador. Escolha-o novamente."
 }

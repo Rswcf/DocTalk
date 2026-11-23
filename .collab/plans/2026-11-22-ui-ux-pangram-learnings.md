@@ -1,11 +1,13 @@
 # 参考 Pangram 的 UI/UX：DocTalk 营销页与应用内优化方案（2026-11-22）
 
-状态：第一批（X1、A1、M6、M2）与第二批（M1、M3）已实现（2026-11-22，分支 `claude/gallant-thompson-3oyisp`）；其余待定。
+状态：三批全部实现（2026-11-22/23，分支 `claude/gallant-thompson-3oyisp`）：第一批 X1、A1、M6、M2；第二批 M1、M3；第三批 M4、M5、M7、A2。
 
 实施记录：
 - A1 追加：owner 决定只保留回答上方的来源条，删除下方 CitationCard 行；来源条接管"当前引用"标记（`aria-current`），折叠时保持可见。
 - M1：访客上传入口由访客流程方案实现（`GuestUploadEntry`，hero 的 "Try your own document"），本方案只加了额度徽章（复用 `demo.freeNoSignup`）和三个样例 chip（`lib/demoSamples.ts`，经 `/demo/<route>?question=` 进入阅读器）。为守住"标题 + 引文 + 回答卡同屏"的约定（review 2026-09-21 MAJOR-3），入口行在桌面单行显示；桌面窗口高度 ≤760px 时隐藏，ja/ko/hi（三行标题）在 ≤920px 时隐藏。6 种尺寸 × 11 种语言实测，回答卡不再因入口行掉出首屏。
 - M3：头部改为 "Sign in" 文字链 + 常驻 quiet 胶囊 "Try a sample"（/demo 页不显示）；手机顶栏只剩 Logo、胶囊、菜单，语言与登录移入菜单。没有做"滚动后升级为实心按钮"，以保证每屏只有一个实心 CTA。
+- M4/M5/M7：共用 `components/marketing/ProductVignettes.tsx`（纯组件，服务端功能页与客户端首页都能用；只用真实输出：hero 回答卡文案 `landing.frame.*`、样例页逐字原文 `CITED`、上传格式表 `UPLOAD_EXTENSIONS`；`aria-hidden`；字号 ≥12px；不用多彩底色，只用 `--ed-*` token）。首页功能卡：引用→高亮原文页、多语言→语言胶囊+本地化回答、版面翻译→前后版式对照；卡片用 subgrid 对齐标题。How it works：桌面左侧步骤、右侧画面，悬停/聚焦/点击切换；手机每步自带画面；步骤文字始终可见（没有用手风琴，HowTo 结构化数据要与可见文字一致）。功能页 citations / multilingual / multi-format / layout-translation 的 hero 改为 `variant="product"` 并放入对应画面。
+- A2：额度条和用尽面板早已存在；本次只加了"最后一次免费提问"提示（`demo.lastQuestion`）。没有写"登录后对话保留"，因为访客会话登录后不会被认领，这句话不成立。
 关联：`.collab/plans/2026-11-22-guest-trial-flow-pangram.md`（访客流程方向）。其中 **P0-2 待上传续跑、P1 访客上传（后端）不在本方案范围**；本方案只覆盖入口区（样例 chip、拖拽区、额度徽章）的视觉与布局。
 
 ## 1. 方法

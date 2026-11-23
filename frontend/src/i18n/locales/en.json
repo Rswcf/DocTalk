@@ -397,6 +397,10 @@
   "landing.entry.sample.earnings": "Earnings release",
   "landing.entry.sample.paper": "Research paper",
   "landing.entry.sample.court": "Court filing",
+  "landing.vignette.original": "Original",
+  "landing.vignette.translated": "Translated",
+  "landing.vignette.drop": "Drop a file or paste a link",
+  "landing.vignette.page": "Page {page}",
   "landing.howItWorks.step1.title": "Upload your document",
   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, text files, or paste a web URL. Drag, drop, done.",
   "landing.howItWorks.step2.title": "Ask questions",
@@ -4059,5 +4063,6 @@
   "guestUpload.tooLarge": "Files up to {max} MB on the free plan.",
   "guestUpload.notKept": "Your browser could not keep the file. Choose it again after you sign in.",
   "demo.freeNoSignup": "5 free questions per document · no sign-up needed",
+  "demo.lastQuestion": "Last free question on this document",
   "guestUpload.resumeMissing": "The file you picked before signing in is not available in this browser. Choose it again."
 }

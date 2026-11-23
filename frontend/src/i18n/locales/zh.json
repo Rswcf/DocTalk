@@ -397,6 +397,10 @@
   "landing.entry.sample.earnings": "财报",
   "landing.entry.sample.paper": "研究论文",
   "landing.entry.sample.court": "法院文书",
+  "landing.vignette.original": "原文",
+  "landing.vignette.translated": "译文",
+  "landing.vignette.drop": "拖入文件或粘贴链接",
+  "landing.vignette.page": "第 {page} 页",
   "landing.howItWorks.step1.title": "上传 PDF",
   "landing.howItWorks.step1.desc": "拖放任意 PDF 文档 — 报告、论文、合同、手册",
   "landing.howItWorks.step2.title": "提出问题",
@@ -4096,5 +4100,6 @@
   "guestUpload.tooLarge": "免费版支持最大 {max} MB 的文件。",
   "guestUpload.notKept": "你的浏览器无法保留该文件，请在登录后重新选择。",
   "demo.freeNoSignup": "每个文档 5 次免费提问 · 无需注册",
+  "demo.lastQuestion": "这是本文档的最后一次免费提问",
   "guestUpload.resumeMissing": "你登录前选择的文件在此浏览器中已不可用，请重新选择。"
 }

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useLocale } from '../../i18n';
+import { LanguagesVignette, PassageVignette, TranslationVignette } from '../marketing/ProductVignettes';
 
 /**
  * Landing feature set: three claims, each with one line.
@@ -19,6 +20,10 @@ import { useLocale } from '../../i18n';
  * at 7–10px, under the plan's 12px floor), the numbered "01 —" labels on
  * content that is not a sequence, and the "Features" eyebrow, which was still
  * English in four locales.
+ *
+ * Each claim now sits under a small piece of the product (2026-11-22, plan
+ * 2026-11-22-ui-ux-pangram-learnings M4): ProductVignettes, real output at
+ * 12px and up, the page the hero cites, and the hero's answer in the reader's language.
  */
 const features = [
   { titleKey: 'landing.feature.citations.title', descKey: 'landing.feature.citations.desc' },
@@ -33,14 +38,29 @@ const features = [
 ] as const;
 
 export default function FeatureGrid() {
-  const { t, tOr } = useLocale();
+  const { t, tOr, locale } = useLocale();
+  const frame = {
+    question: t('landing.frame.question'),
+    answer: t('landing.frame.answer'),
+    source: t('landing.frame.source'),
+  };
+  const visuals: Record<string, React.ReactNode> = {
+    'landing.feature.citations.title': <PassageVignette pageLabel={tOr('landing.vignette.page', 'Page {page}', { page: 1 })} />,
+    'landing.feature.languages.title': <LanguagesVignette locale={locale} {...frame} />,
+    'landing.feature.layoutTranslation.title': (
+      <TranslationVignette
+        originalLabel={tOr('landing.vignette.original', 'Original')}
+        translatedLabel={tOr('landing.vignette.translated', 'Translated')}
+      />
+    ),
+  };
 
   return (
     <section id="features" className="ed-section">
       <div className="ed-shell">
         <h2 className="ed-h2 max-w-xl">{t('landing.features.title')}</h2>
 
-        <ul className="mt-10 grid grid-cols-1 border-t border-[var(--ed-rule)] md:grid-cols-3">
+        <ul className="ed-feature-grid mt-10 grid grid-cols-1 border-t border-[var(--ed-rule)] md:grid-cols-3">
           {features.map((feature, index) => {
             const title =
               'titleFallback' in feature ? tOr(feature.titleKey, feature.titleFallback) : t(feature.titleKey);
@@ -57,6 +77,7 @@ export default function FeatureGrid() {
                   index < features.length - 1 ? 'md:pe-8' : '',
                 ].join(' ')}
               >
+                <div className="ed-feature-visual">{visuals[feature.titleKey]}</div>
                 <h3 className="ed-h3">{title}</h3>
                 <p className="ed-body mt-2">{desc}</p>
               </li>

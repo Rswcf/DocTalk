@@ -383,6 +383,10 @@
   "landing.entry.sample.earnings": "決算発表",
   "landing.entry.sample.paper": "研究論文",
   "landing.entry.sample.court": "裁判書類",
+  "landing.vignette.original": "原文",
+  "landing.vignette.translated": "翻訳",
+  "landing.vignette.drop": "ファイルをドロップ、またはリンクを貼り付け",
+  "landing.vignette.page": "{page} ページ",
   "landing.howItWorks.step1.title": "PDFをアップロード",
   "landing.howItWorks.step1.desc": "レポート、論文、契約書、マニュアルなど、あらゆるPDFをドラッグ＆ドロップ",
   "landing.howItWorks.step2.title": "質問する",
@@ -4057,5 +4061,6 @@
   "guestUpload.tooLarge": "無料プランでは {max} MB までのファイルに対応しています。",
   "guestUpload.notKept": "ブラウザがファイルを保持できませんでした。サインイン後にもう一度選択してください。",
   "demo.freeNoSignup": "1 ドキュメントにつき 5 回まで無料で質問 · 登録不要",
+  "demo.lastQuestion": "このドキュメントで最後の無料質問です",
   "guestUpload.resumeMissing": "サインイン前に選んだファイルは、このブラウザでは利用できません。もう一度選択してください。"
 }
