@@ -340,6 +340,119 @@
   color: var(--ed-ink);
 }
 
+/* Proof strip under the landing hero (ProofStrip.tsx): three linked facts and
+   a row of in-page anchors. Rules and ink only; no fill, no glass. */
+.dt-editorial .ed-proof {
+  padding-block: 8px 48px;
+}
+.dt-editorial .ed-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ed-rule);
+}
+.dt-editorial .ed-proof-grid > li + li {
+  border-inline-start: 1px solid var(--ed-rule);
+}
+.dt-editorial .ed-proof-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 28px 24px 28px 0;
+  color: var(--ed-ink);
+  text-decoration: none;
+}
+.dt-editorial .ed-proof-grid > li + li .ed-proof-cell {
+  padding-inline-start: 24px;
+}
+.dt-editorial .ed-proof-label {
+  display: block;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ed-ink-2);
+  transition: color 150ms ease;
+}
+.dt-editorial .ed-proof-arrow {
+  /* Inline, so it follows the last word of a wrapped label. */
+  display: inline-block;
+  margin-inline-start: 6px;
+  vertical-align: -2px;
+  color: var(--ed-ink-3);
+}
+.dt-editorial .ed-proof-cell:hover .ed-proof-label {
+  color: var(--ed-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.dt-editorial .ed-proof-cell:focus-visible {
+  outline: 2px solid var(--ed-ink);
+  outline-offset: 4px;
+  border-radius: var(--ed-r-1);
+}
+.dt-editorial .ed-proof-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ed-rule);
+}
+.dt-editorial .ed-proof-nav a {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ed-ink-3);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+.dt-editorial .ed-proof-nav a:hover {
+  color: var(--ed-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.dt-editorial .ed-proof-nav a:focus-visible {
+  outline: 2px solid var(--ed-ink);
+  outline-offset: 3px;
+  border-radius: var(--ed-r-1);
+}
+.dt-editorial section[id] {
+  /* In-page anchors land below the sticky header, not under it. */
+  scroll-margin-top: 80px;
+}
+@media (max-width: 640px) {
+  .dt-editorial .ed-proof-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dt-editorial .ed-proof-grid > li + li {
+    border-inline-start: 0;
+    border-top: 1px solid var(--ed-rule);
+  }
+  .dt-editorial .ed-proof-cell,
+  .dt-editorial .ed-proof-grid > li + li .ed-proof-cell {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 16px;
+    padding: 20px 0;
+  }
+  .dt-editorial .ed-proof-cell .ed-proof-label {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .dt-editorial .ed-proof-cell .ed-num {
+    flex: 0 0 auto;
+    min-width: 4.5ch;
+    font-size: 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-editorial .ed-proof-label,
+  .dt-editorial .ed-proof-nav a {
+    transition: none;
+  }
+}
+
 /* The one dominant action per view (§5.2). Pill, not the 3px "print"
    rectangle. The label colour is a token because the dark fill is the
    LIGHT terracotta with a near-black label — #ffffff on #e0957a would be
@@ -403,6 +516,11 @@
 .dt-editorial .ed-link:hover {
   color: var(--ed-signal);
   text-decoration-color: var(--ed-signal);
+}
+/* GuestUploadEntry's button while the picked file is being stored. */
+.dt-editorial button.ed-link:disabled {
+  cursor: progress;
+  opacity: 0.6;
 }
 
 .dt-editorial .ed-figure {
@@ -563,6 +681,32 @@ html.dt-night-doc {
   border-radius: var(--ed-r-3);
   box-shadow: var(--ed-shadow-card);
   padding: 22px;
+}
+
+/* Guest "try your own document" drop zone (components/marketing/
+   GuestUploadEntry.tsx): an .ed-card whose dashed hairline says "drop here".
+   Tokens only, so the light, dark and Night themes all follow. */
+.dt-editorial .ed-guest-drop {
+  border-style: dashed;
+  border-color: var(--ed-control-border);
+  transition: border-color var(--ed-dur-1) var(--ed-ease),
+    background-color var(--ed-dur-1) var(--ed-ease);
+}
+.dt-editorial .ed-guest-drop[data-dragging='true'] {
+  border-color: var(--ed-signal);
+  background: var(--ed-paper-2);
+}
+.dt-editorial .ed-guest-drop-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-2);
+  background: var(--ed-paper-2);
+  color: var(--ed-ink-2);
 }
 
 /* Breadcrumb trail link — sentence case Plex Sans at the 13px floor. */
@@ -760,6 +904,279 @@ html.dt-night-doc {
   }
 }
 
+/* ─── Product vignettes (components/marketing/ProductVignettes.tsx) ──────
+   Small pieces of the product in the feature cards, How it works and the
+   feature heroes. Content layer: opaque surface, never glass. Text never
+   under 12px; ink-3 only from 13px; amber only on citations. */
+.dt-editorial .ed-vignette {
+  padding: 16px 18px;
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-3);
+  box-shadow: var(--ed-shadow-card);
+  text-align: start;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.dt-editorial .ed-vignette-q {
+  margin: 0;
+  color: var(--ed-ink-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.dt-editorial .ed-vignette .ed-vignette-a {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.dt-editorial .ed-vignette .ed-frame-source { margin-top: 12px; }
+
+.dt-editorial .ed-vignette-pagebar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--ed-rule);
+  color: var(--ed-ink-3);
+  font-size: 13px;
+}
+.dt-editorial .ed-vignette-doc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dt-editorial .ed-vignette-pageno { flex: none; font-variant-numeric: tabular-nums; }
+.dt-editorial .ed-vignette-passage {
+  position: relative;
+  margin: 0;
+  padding-left: 30px;
+  color: var(--ed-ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.dt-editorial .ed-vignette-margin {
+  position: absolute;
+  left: 0;
+  top: 2px;
+}
+.dt-editorial .ed-vignette-margin .ed-frame-cite { margin: 0; vertical-align: 0; }
+.dt-editorial .ed-vignette-lead { color: var(--ed-ink-3); }
+.dt-editorial .ed-vignette-mark {
+  padding: 1px 2px;
+  border-radius: 3px;
+  background: var(--ed-evidence-soft);
+  color: var(--ed-ink);
+  box-shadow: inset 0 -2px 0 var(--ed-evidence);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.dt-editorial .ed-vignette-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.dt-editorial .ed-vignette-pill {
+  padding: 3px 10px;
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-pill);
+  color: var(--ed-ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.dt-editorial .ed-vignette-pill.is-active {
+  border-color: var(--ed-ink-2);
+  color: var(--ed-ink);
+  font-weight: 600;
+}
+
+.dt-editorial .ed-vignette-translate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dt-editorial .ed-vignette-side {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+.dt-editorial .ed-vignette-side figcaption {
+  margin-top: 8px;
+  color: var(--ed-ink-3);
+  font-size: 13px;
+  text-align: center;
+}
+.dt-editorial .ed-vignette-arrow {
+  flex: none;
+  color: var(--ed-ink-3);
+  font-size: 16px;
+}
+.dt-editorial .ed-vignette-arrow:dir(rtl) { transform: scaleX(-1); }
+.dt-editorial .ed-vignette-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-1);
+  background: var(--ed-paper);
+}
+.dt-editorial .ed-vignette-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.dt-editorial .ed-vignette-cols > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dt-editorial .ed-vignette-line {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ed-rule);
+}
+.dt-editorial .ed-vignette-line.is-title {
+  height: 8px;
+  margin-bottom: 4px;
+  background: var(--ed-ink-3);
+}
+.dt-editorial .ed-vignette-line.is-equation {
+  width: 46%;
+  margin-inline: auto;
+  margin-top: 2px;
+  background: var(--ed-ink-3);
+  opacity: 0.6;
+}
+.dt-editorial .ed-vignette-figure {
+  display: block;
+  height: 34px;
+  margin-bottom: 2px;
+  border: 1px solid var(--ed-rule);
+  border-radius: 3px;
+  background: var(--ed-paper-2);
+}
+
+.dt-editorial .ed-vignette-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 12px;
+  border: 1px dashed var(--ed-control-border);
+  border-radius: var(--ed-r-2);
+  text-align: center;
+}
+.dt-editorial .ed-vignette-drop-label {
+  color: var(--ed-ink-2);
+  font-size: 14px;
+}
+.dt-editorial .ed-vignette-formats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.dt-editorial .ed-vignette-format {
+  padding: 2px 8px;
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-1);
+  background: var(--ed-paper);
+  color: var(--ed-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-editorial .ed-feature-visual {
+  margin-bottom: 24px;
+}
+/* Side by side, the three cards share rows (visual, heading, body), so the
+   headings line up whatever each visual's height. */
+@media (min-width: 768px) {
+  .dt-editorial .ed-feature-grid > li {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+  }
+}
+
+/* How it works (HowItWorks.tsx): steps beside one picture on lg, a picture
+   per step below that. */
+.dt-editorial .ed-how-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ed-rule);
+}
+.dt-editorial .ed-how-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--ed-rule);
+}
+.dt-editorial .ed-how-num { min-width: 2.2ch; }
+.dt-editorial .ed-how-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: default;
+}
+.dt-editorial .ed-how-trigger:focus-visible {
+  outline: 2px solid var(--ed-ink);
+  outline-offset: 4px;
+  border-radius: var(--ed-r-1);
+}
+.dt-editorial .ed-how-inline { margin-top: 20px; }
+.dt-editorial .ed-how-visual { display: none; }
+@media (min-width: 1024px) {
+  .dt-editorial .ed-how {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 56px;
+    align-items: center;
+  }
+  .dt-editorial .ed-how-inline { display: none; }
+  .dt-editorial .ed-how-visual { display: block; }
+  .dt-editorial .ed-how-trigger { cursor: pointer; }
+  .dt-editorial .ed-how-step .ed-num,
+  .dt-editorial .ed-how-step .ed-body {
+    color: var(--ed-ink-3);
+    transition: color var(--ed-dur-1) var(--ed-ease);
+  }
+  .dt-editorial .ed-how-step.is-active .ed-num { color: var(--ed-ink); }
+  .dt-editorial .ed-how-step.is-active .ed-body { color: var(--ed-ink-2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-editorial .ed-how-step .ed-num,
+  .dt-editorial .ed-how-step .ed-body { transition: none; }
+}
+
+/* Two vignettes side by side in a feature hero (citations: the answer and the
+   page it cites). */
+.dt-editorial .ed-vignette-hero {
+  max-width: 920px;
+}
+.dt-editorial .ed-vignette-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 767px) {
+  .dt-editorial .ed-vignette-pair { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ─── Night hero (plan .collab/plans/2026-09-21-landing-night.md §4) ────
    The landing's stage. Behind the claim, a real document page sits in low
    light (components/landing/CitationField.tsx draws it on a canvas that
@@ -859,6 +1276,110 @@ html.dt-night-doc {
   gap: 12px 28px;
   margin-top: 34px;
   margin-top: clamp(24px, 3.8svh, 34px);
+}
+
+/* Masthead text link (EditorialHeaderBase: Sign in, beside the quiet pill). */
+.dt-editorial .ed-masthead-link {
+  font-family: var(--dt-body);
+  font-size: 13px;
+  color: var(--ed-ink-2);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+.dt-editorial .ed-masthead-link:hover { color: var(--ed-signal); }
+/* The masthead's quiet pill: one line in every locale, tighter on phones,
+   where it shares the bar with the logo and the menu button (review
+   2026-11-23 F5: pt/de/fr/es wrapped to two lines and touched the logo). */
+.dt-editorial .ed-masthead-pill {
+  padding: 8px 17px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .dt-editorial .ed-masthead-pill { padding: 7px 12px; }
+}
+/* Below 360px the bar cannot hold logo, wordmark, pill and menu: the
+   wordmark goes, the logo stays (the link keeps its aria-label). */
+@media (max-width: 359px) {
+  .dt-editorial .ed-masthead-wordmark { display: none; }
+}
+.dt-editorial .ed-masthead-link:focus-visible {
+  outline: 2px solid var(--ed-ink);
+  outline-offset: 3px;
+  border-radius: var(--ed-r-1);
+}
+
+/* The hero's entry row (HeroSection): the free allowance, then the samples.
+   The badge and chips carry an opaque fill: the row sits where the field's
+   fade gives way to the passage, so text behind them must not show through. */
+.dt-editorial .ed-night-entry {
+  /* One line on desktop: the claim, the passage and the answer must still
+     share a laptop's first screen (review 2026-09-21, MAJOR-3), so the row
+     may run wider than the claim column rather than wrap. Centred on the
+     claim either way (left + translate is direction-neutral). */
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(980px, calc(100vw - 48px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  margin-top: 16px;
+  margin-top: clamp(12px, 2svh, 16px);
+}
+.dt-editorial .ed-night-quota {
+  margin: 0;
+  padding: 4px 12px;
+  background: var(--ed-paper);
+  border: 1px solid var(--ed-rule);
+  border-radius: var(--ed-r-pill);
+  color: var(--ed-ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dt-editorial .ed-night-samples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.dt-editorial .ed-night-samples-label {
+  color: var(--ed-ink-3);
+  font-size: 14px;
+  line-height: 1.4;
+  margin-inline-end: 4px;
+}
+/* A small quiet link with an opaque fill: lighter than .ed-cta-quiet, never a
+   filled action. */
+.dt-editorial .ed-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 14px;
+  background: var(--ed-paper);
+  color: var(--ed-ink);
+  border: 1px solid var(--ed-control-border);
+  border-radius: var(--ed-r-pill);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: background-color var(--ed-dur-1) var(--ed-ease),
+    border-color var(--ed-dur-1) var(--ed-ease);
+}
+.dt-editorial .ed-chip:hover {
+  background: var(--ed-paper-2);
+  border-color: var(--ed-ink-3);
+}
+.dt-editorial .ed-chip:focus-visible {
+  outline: 2px solid var(--ed-ink);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-editorial .ed-chip { transition: none; }
 }
 
 /* The answer. Physical `left`, not inline-start: it annotates the document,
@@ -997,6 +1518,20 @@ html.dt-night-doc {
   .dt-editorial .ed-night-actions { margin-top: 20px; }
   .dt-editorial .ed-night-card .ed-frame-a { font-size: 14px; line-height: 1.45; }
 }
+/* The entry row gives way on the shortest desktop windows (1280x720,
+   1366x680), where claim + passage + answer only just share the first screen;
+   the filled CTA still leads to the samples, and /demo and the reader state
+   the free allowance. Measured 2026-11-22: with the row, de/ja put the card
+   20-30px under the fold there. */
+@media (min-width: 768px) and (max-height: 760px) {
+  .dt-editorial .ed-night-entry { display: none; }
+}
+/* ja, ko and hi set the headline on three lines, which leaves no room for the
+   row up to 920px tall (1366x768 ko, 1440x900 ja/hi, 1536x864 ja/ko/hi put the
+   card 10-60px under the fold with it). */
+@media (min-width: 768px) and (max-height: 920px) {
+  .dt-editorial .ed-night-claim:is(:lang(ja), :lang(ko), :lang(hi)) .ed-night-entry { display: none; }
+}
 /* The same compact card wherever HeroSection measures that the full one
    would end below the first screen (the three-line ja/hi headlines at
    1440x900), at any viewport height. */
@@ -1014,6 +1549,14 @@ html.dt-night-doc {
     padding: 48px 20px 36px;
   }
   .dt-editorial .ed-night-claim { order: 1; }
+  .dt-editorial .ed-night-entry {
+    left: auto;
+    transform: none;
+    width: auto;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
   /* The headline's authored break suits two desktop lines; on a phone it
      strands a word ("cites", "zitiert") on a line of its own. Drop it and let
      text-wrap: balance set the whole headline. */

@@ -7,8 +7,7 @@ import { exportConversationAsMarkdown } from '../../lib/export';
 import type { ChatArtifact, Citation, DocumentHierarchicalBrief, Message } from '../../types';
 import { useDocTalkStore } from '../../store';
 import MessageBubble from './MessageBubble';
-import CitationCard from './CitationCard';
-import { citationPreview, uniqueCitationIndexes } from '../../lib/citationText';
+import { uniqueCitationIndexes } from '../../lib/citationText';
 import { useLocale } from '../../i18n';
 import { PaywallModal } from '../PaywallModal';
 import PlusMenu from './PlusMenu';
@@ -76,7 +75,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   isAnonShareAnswer,
   onTryQuoteFinder,
 }: ChatMessageRowProps) {
-  const activeCitation = useDocTalkStore(state => state.citationTarget?.messageId === message.id ? state.citationTarget.citation : null);
   const handleCitation = useCallback((citation: Citation) => onCitationClick(citation, message.id), [onCitationClick, message.id]);
   const displayCitations = React.useMemo(() => {
     if (message.role !== 'assistant') return undefined;
@@ -88,13 +86,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
     () => (displayCitations ? { ...message, citations: displayCitations } : message),
     [displayCitations, message]
   );
-
-  const uniqueCitations = React.useMemo(() => {
-    if (!displayCitations || displayCitations.length === 0) return undefined;
-    return displayCitations
-      .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)
-      .sort((a, b) => a.refIndex - b.refIndex);
-  }, [displayCitations]);
 
   return (
     <MessageErrorBoundary messageId={message.id}>
@@ -112,21 +103,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           isAnonShareAnswer={isAnonShareAnswer}
           onTryQuoteFinder={onTryQuoteFinder}
         />
-        {uniqueCitations && uniqueCitations.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
-            {uniqueCitations.map((citation) => (
-              <CitationCard
-                key={`${message.id}-${citation.refIndex}`}
-                refIndex={citation.refIndex}
-                textSnippet={citationPreview(citation)}
-                page={citation.page}
-                pageEnd={citation.pageEnd}
-                active={activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex}
-                onClick={() => handleCitation(citation)}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </MessageErrorBoundary>
   );
@@ -200,7 +176,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       setPaywallReason(reason ?? null);
       setShowPaywall(true);
     },
-    onRequireAuth: () => openAuthModal(),
+    onRequireAuth: () => openAuthModal({ location: 'chat_require_auth' }),
   });
 
   useEffect(() => {
@@ -356,7 +332,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
       plan: 'plus',
       period: 'monthly',
     });
-    openAuthModal({ callbackUrl: '/' });
+    openAuthModal({ callbackUrl: '/', location: 'demo_limit_panel' });
   }, []);
 
   const handleBillingRedirect = useCallback((intent: { plan: 'plus' | 'pro'; reason: string }) => {
@@ -497,7 +473,7 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
     trackEvent('upgrade_click', { source: 'demo_share_attempt' });
     // Anonymous transcripts are not preserved through signup (no session
     // adoption yet) — this is a conversion affordance, not a working share.
-    openAuthModal();
+    openAuthModal({ location: 'chat_share' });
   }, []);
 
   const canUseCustomInstructions = !!onOpenSettings;
@@ -670,9 +646,13 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
           ) : (
             <div className="flex items-center justify-between px-4 py-2 text-sm text-[var(--workbench-muted)]" aria-live="polite">
               <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
-                {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
+                {/* The last free question is named as such before it is
+                    spent, not only counted (plan 2026-11-22 A2). */}
+                {demoRemaining === 1
+                  ? tOr('demo.lastQuestion', 'Last free question on this document')
+                  : t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
               </span>
-              <button type="button" onClick={() => openAuthModal()} className="text-sm text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
+              <button type="button" onClick={() => openAuthModal({ location: 'demo_questions_remaining' })} className="text-sm text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
                 {t('demo.signInForUnlimited')}
               </button>
             </div>

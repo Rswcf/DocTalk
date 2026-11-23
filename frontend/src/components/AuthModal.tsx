@@ -5,16 +5,34 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { useLocale } from '../i18n';
 import { AuthFormContent } from './AuthFormContent';
-import { AUTH_MODAL_HASH, clearAuthCallbackOverride, getUrlWithoutAuthHash, isAuthModalHash, peekAuthCallbackOverride } from '../lib/auth-modal';
+import {
+  AUTH_MODAL_HASH,
+  clearAuthCallbackOverride,
+  getUrlWithoutAuthHash,
+  isAuthModalHash,
+  peekAuthCallbackOverride,
+  peekAuthModalFileNotKept,
+  peekAuthModalLocation,
+  peekAuthModalPendingFileName,
+} from '../lib/auth-modal';
+import { sweepExpiredPendingUpload } from '../lib/pendingUpload';
 import { trackEvent } from '../lib/analytics';
 
 export function AuthModal() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { t } = useLocale();
+  const { t, tOr } = useLocale();
   const modalRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+
+  // The modal is mounted once in the root layout, so this runs on every page
+  // load: an abandoned guest pick (lib/pendingUpload.ts) is deleted once it
+  // expires instead of staying at rest in the browser. A no-op for visitors
+  // who never used that flow.
+  useEffect(() => {
+    void sweepExpiredPendingUpload();
+  }, []);
 
   useEffect(() => {
     const syncFromHash = () => setIsOpen(isAuthModalHash(window.location.hash));
@@ -56,7 +74,11 @@ export function AuthModal() {
 
   useEffect(() => {
     if (!isOpen) return;
-    trackEvent('auth_modal_opened', { source: 'auth_modal' });
+    trackEvent('auth_modal_opened', {
+      source: 'auth_modal',
+      location: peekAuthModalLocation(),
+      pending_upload: peekAuthModalPendingFileName() !== null,
+    });
     const previouslyFocused = document.activeElement as HTMLElement;
     const modal = modalRef.current;
     if (!modal) return;
@@ -93,6 +115,11 @@ export function AuthModal() {
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Opened from "use your own document": the file is waiting in this browser
+  // (lib/pendingUpload.ts) and the dashboard uploads it after sign-in.
+  const pendingFileName = peekAuthModalPendingFileName();
+  const fileNotKept = peekAuthModalFileNotKept();
 
   const callbackUrl = (() => {
     const override = peekAuthCallbackOverride();
@@ -132,7 +159,9 @@ export function AuthModal() {
       >
         <div className="flex justify-between items-center mb-6">
           <h2 id="auth-modal-title" className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-            {t('auth.loginToContinue')}
+            {pendingFileName
+              ? tOr('auth.pendingUpload.title', 'Your document is ready')
+              : t('auth.loginToContinue')}
           </h2>
           <button
             onClick={handleClose}
@@ -143,9 +172,24 @@ export function AuthModal() {
           </button>
         </div>
 
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-          {t('auth.loginBenefits')}
-        </p>
+        {pendingFileName ? (
+          <div className="mb-6 space-y-2">
+            <p className="truncate rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-50" dir="auto" title={pendingFileName}>
+              {pendingFileName}
+            </p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {tOr('auth.pendingUpload.body', 'Sign in for free and it uploads automatically. No card needed.')}
+            </p>
+          </div>
+        ) : fileNotKept ? (
+          <p role="status" className="mb-6 text-sm text-amber-700 dark:text-amber-400">
+            {tOr('guestUpload.notKept', 'Your browser could not keep the file. Choose it again after you sign in.')}
+          </p>
+        ) : (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+            {t('auth.loginBenefits')}
+          </p>
+        )}
 
         <AuthFormContent callbackUrl={callbackUrl} surface="modal" />
       </div>

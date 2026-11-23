@@ -27,6 +27,8 @@ import {
  * The menu is rendered through a portal to `document.body` with `position:
  * fixed` so it escapes the sticky header's stacking context.
  */
+const MENU_MIN_WIDTH = 200;
+
 export default function EdLanguageSelector({ languageLabel }: { languageLabel?: string }) {
   const { locale, setLocale, tOr } = useLocale();
   const pathname = usePathname() || "/";
@@ -37,7 +39,7 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
   const activeLocale = locale;
 
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, right: 0, maxHeight: 420 });
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number; maxHeight: number }>({ top: 0, right: 0, maxHeight: 420 });
   // The menu is portalled to <body>, outside the page's .dt-editorial root, so
   // it cannot inherit the landing's Night class (.dt-night: dark tokens in both
   // OS themes). Mirror it from the trigger's ancestry when the menu opens.
@@ -51,11 +53,16 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
     setNight(Boolean(triggerRef.current.closest(".dt-night")));
     const r = triggerRef.current.getBoundingClientRect();
     const top = r.bottom + 10;
-    setPos({
-      top,
-      right: Math.max(12, window.innerWidth - r.right),
-      maxHeight: Math.max(180, Math.min(440, window.innerHeight - top - 16)),
-    });
+    const maxHeight = Math.max(180, Math.min(440, window.innerHeight - top - 16));
+    // End-aligned under the trigger (the masthead's trigger sits at the right
+    // edge). A trigger near the left edge, as in the phone menu, has no room
+    // for the menu to its left: start-align it there, so it never opens
+    // off screen (review 2026-11-23 F1).
+    if (r.right - MENU_MIN_WIDTH < 12) {
+      setPos({ top, left: Math.max(12, Math.min(r.left, window.innerWidth - MENU_MIN_WIDTH - 12)), maxHeight });
+    } else {
+      setPos({ top, right: Math.max(12, window.innerWidth - r.right), maxHeight });
+    }
   }, []);
 
   useEffect(() => {
@@ -135,9 +142,11 @@ export default function EdLanguageSelector({ languageLabel }: { languageLabel?: 
       style={{
         position: "fixed",
         top: pos.top,
+        left: pos.left,
         right: pos.right,
         zIndex: 10000,
-        minWidth: "200px",
+        minWidth: `${MENU_MIN_WIDTH}px`,
+        maxWidth: "calc(100vw - 24px)",
         maxHeight: pos.maxHeight,
         overflowY: "auto",
       }}

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
+import { AnswerVignette, FormatsVignette } from '../../../components/marketing/ProductVignettes';
 import EdSection from '../../../components/marketing/EdSection';
 import EdProse from '../../../components/marketing/EdProse';
 import EdStepRow from '../../../components/marketing/EdStepRow';
@@ -152,6 +153,17 @@ export default async function MultiFormatContent({ locale }: { locale: string })
         title={t('featuresMultiFormat.heroTitle')}
         lede={t('featuresMultiFormat.heroSubtitle')}
         primaryCta={{ label: t('featuresMultiFormat.heroCta'), href: href('/demo') }}
+        variant="product"
+        product={
+          <div className="ed-vignette-hero ed-vignette-pair">
+            <FormatsVignette dropLabel={t('landing.vignette.drop')} />
+            <AnswerVignette
+              question={t('landing.frame.question')}
+              answer={t('landing.frame.answer')}
+              source={t('landing.frame.source')}
+            />
+          </div>
+        }
       />
 
       <EdSection title={t('featuresMultiFormat.formatsTitle')}>

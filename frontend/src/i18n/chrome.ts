@@ -15,6 +15,7 @@ export interface ChromeStrings {
   navPricing: string;
   navTrust: string;
   signIn: string;
+  trySample: string;
   language: string;
   footer: {
     product: string;
@@ -56,6 +57,7 @@ export async function getChromeStrings(locale: string): Promise<ChromeStrings> {
     navPricing: t('footer.pricing'),
     navTrust: tOr('footer.links.trust', 'Security'),
     signIn: t('auth.signIn'),
+    trySample: tOr('header.trySample', 'Try a sample'),
     language: tOr('header.language', 'Language'),
     footer: {
       product: t('footer.product'),

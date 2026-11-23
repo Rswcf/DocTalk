@@ -11,7 +11,7 @@ import { isUrlLocale } from '../../i18n/routing';
 // Namespaces the landing tree (header + sections + footer + HeroArtifact) reads.
 // Seeding only these keeps the hydration payload ~17KB instead of the full 400KB.
 const LANDING_PREFIXES = [
-  'landing.', 'hero.', 'chat.', 'footer.', 'privacy.', 'terms.', 'public.', 'auth.', 'header.', 'common.',
+  'landing.', 'hero.', 'guestUpload.', 'demo.freeNoSignup', 'demo.sample.', 'chat.', 'footer.', 'privacy.', 'terms.', 'public.', 'auth.', 'header.', 'common.',
 ] as const;
 
 export async function generateMetadata({

@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { getDemoDocuments } from '../../../lib/api';
 import { enterDemo } from '../../../lib/demoTrial';
 import { useLocale } from '../../../i18n';
+import { DEMO_QUESTION_MAX } from '../../../lib/demoSamples';
 
 /** Legacy demo route — redirects to /d/{documentId} for the matching demo slug. */
 const SLUG_MAP: Record<string, string> = {
@@ -24,7 +25,12 @@ const SLUG_MAP: Record<string, string> = {
 export default function DemoRedirectPageClient() {
   const { sample } = useParams<{ sample: string }>();
   const router = useRouter();
-  const checkEarnings = useSearchParams().get('task') === 'check-earnings';
+  const searchParams = useSearchParams();
+  const checkEarnings = searchParams.get('task') === 'check-earnings';
+  // The landing's sample chips pass the sample's suggested question in the
+  // visitor's language (lib/demoSamples.ts). The reader accepts ?question=
+  // from any link already; this only carries it across the id lookup.
+  const askedQuestion = Array.from((searchParams.get('question') || '').trim()).slice(0, DEMO_QUESTION_MAX).join('');
   const [error, setError] = useState(false);
   const { t } = useLocale();
 
@@ -36,14 +42,16 @@ export default function DemoRedirectPageClient() {
         const match = docs.find((d) => d.slug === targetSlug);
         if (match) {
           const question = 'On page 1, what Q4 2025 revenue does the bullet starting “Consolidated Alphabet revenues increased” report? What 2026 CapEx range does the sentence starting “To meet customer demand” give? Cite each source sentence separately.';
-          const query = targetSlug === 'alphabet-earnings' && checkEarnings ? '?question=' + encodeURIComponent(question) : '';
+          const query = targetSlug === 'alphabet-earnings' && checkEarnings
+            ? '?question=' + encodeURIComponent(question)
+            : askedQuestion ? '?question=' + encodeURIComponent(askedQuestion) : '';
           router.replace(`/d/${match.document_id}${query}`);
         } else {
           setError(true);
         }
       })
       .catch(() => setError(true));
-  }, [sample, router, checkEarnings]);
+  }, [sample, router, checkEarnings, askedQuestion]);
 
   if (error) {
     return (

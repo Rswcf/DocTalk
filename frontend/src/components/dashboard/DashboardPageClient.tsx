@@ -20,6 +20,8 @@ import { errorCopy, fileTooLargeCopy, parseWorkerErrorMsg, type ErrorCopy } from
 import { getBillingErrorMessage, startPlanAwareBillingAction } from '../../lib/billing';
 import { trackEvent } from '../../lib/analytics';
 import { sanitizeFilename } from '../../lib/utils';
+import { RESUME_UPLOAD_PARAM, takePendingUpload } from '../../lib/pendingUpload';
+import { UPLOAD_ACCEPT, isSupportedUploadFile } from '../../lib/uploadFormats';
 import { PrivacyBadge } from '../PrivacyBadge';
 import Header from '../Header';
 import { useUserProfile } from '../../lib/useUserProfile';
@@ -81,7 +83,7 @@ export default function DashboardPageClient() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const upgradeNudgeTrackedRef = useRef(false);
   const isLoggedIn = status === 'authenticated';
-  const { profile } = useUserProfile();
+  const { profile, loading: profileLoading } = useUserProfile();
   const library = useDocumentLibrary(isLoggedIn, session?.user?.id || session?.user?.email || '');
   const { documents: serverDocs, setDocuments: setServerDocs, refresh: refreshDocuments } = library;
 
@@ -282,20 +284,10 @@ export default function DashboardPageClient() {
     pollTimersRef.current.set(docId, timer);
   }, [router, setDocumentStatus, setServerDocs, t, tOr]);
 
-  const onFiles = useCallback(async (file: File) => {
+  const onFiles = useCallback(async (file: File, source: string = 'dashboard_upload') => {
     if (!file) return;
     setUploadErrorCopy(null);
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain',
-      'text/markdown',
-    ];
-    const allowedExtensions = ['.pdf', '.docx', '.pptx', '.xlsx', '.txt', '.md'];
-    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
-    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+    if (!isSupportedUploadFile(file)) {
       setProgressText(t('upload.unsupportedFormat'));
       setUploadErrorCopy(null);
       return;
@@ -314,7 +306,7 @@ export default function DashboardPageClient() {
     try {
       const res = await uploadDocument(file);
       const docId = res.document_id;
-      trackEvent('document_upload_created', { source: 'dashboard_upload', plan: userPlan });
+      trackEvent('document_upload_created', { source, plan: userPlan });
       setDocument(docId);
       if (!isLoggedIn) {
         const docs: StoredDoc[] = JSON.parse(localStorage.getItem('doctalk_docs') || '[]');
@@ -336,6 +328,36 @@ export default function DashboardPageClient() {
       setUploading(false);
     }
   }, [refreshDocuments, isLoggedIn, maxUploadBytes, maxUploadMb, setDocument, setDocumentStatus, startDocumentStatusPoll, t, tOr, userPlan]);
+
+  // A file picked on the landing page or /demo before sign-in
+  // (components/marketing/GuestUploadEntry.tsx) waits in IndexedDB. Upload it
+  // only on the return from THAT sign-in: its callback carries the file's
+  // nonce (`?resumeUpload=<nonce>`), and takePendingUpload hands the file
+  // over only when the nonce matches, so on a shared browser a bookmark,
+  // history entry or crafted callback cannot pull a previous visitor's file
+  // into this account. The take reads and deletes in one transaction, so a
+  // second tab or a StrictMode re-run finds nothing. Waits for the profile so
+  // the upload runs with the real plan (caps and analytics).
+  const pendingUploadCheckedRef = useRef(false);
+  useEffect(() => {
+    if (!isLoggedIn || profileLoading || pendingUploadCheckedRef.current) return;
+    pendingUploadCheckedRef.current = true;
+    const nonce = new URLSearchParams(window.location.search).get(RESUME_UPLOAD_PARAM);
+    if (nonce === null) return;
+    router.replace('/', { scroll: false });
+    void takePendingUpload(nonce).then((file) => {
+      if (file) {
+        void onFiles(file, 'pending_upload_resume');
+      } else {
+        // Expired, opened in another browser (an email link on a phone), or
+        // not this visitor's file: say so instead of silently doing nothing.
+        setProgressText(tOr(
+          'guestUpload.resumeMissing',
+          'The file you picked before signing in is not available in this browser. Choose it again.',
+        ));
+      }
+    });
+  }, [isLoggedIn, profileLoading, onFiles, router, tOr]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -504,7 +526,7 @@ export default function DashboardPageClient() {
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
           >
-            <input ref={inputRef} type="file" accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/markdown,.pdf,.docx,.pptx,.xlsx,.txt,.md" className="hidden" onChange={onInputChange} aria-label="Upload document" />
+            <input ref={inputRef} type="file" accept={UPLOAD_ACCEPT} className="hidden" onChange={onInputChange} aria-label="Upload document" />
             <p className="text-[var(--workbench-ink)] text-lg">{t('upload.dragDrop')}</p>
             <p className="text-[var(--workbench-muted)] text-xs mt-1">{t('upload.supportedFormats')}</p>
             <p className="text-[var(--workbench-muted)] text-sm mt-1">{t('upload.or')}</p>

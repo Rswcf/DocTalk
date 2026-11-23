@@ -218,7 +218,7 @@ export default function QuoteFinderPanel({ isOpen, documentId, userPlan, onClose
         });
       } else if (err instanceof ApiError && err.status === 401) {
         onClose();
-        openAuthModal();
+        openAuthModal({ location: 'quote_finder_panel' });
       } else {
         const copy = errorCopy(err, t, tOr);
         setErrorMsg(copy.body || copy.title);

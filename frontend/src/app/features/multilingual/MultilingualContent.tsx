@@ -6,6 +6,7 @@ import { localizedHrefIfAvailable } from '../../../i18n/routing';
 import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
 import MarketingShell from '../../../components/marketing/MarketingShell';
 import EdPageHero from '../../../components/marketing/EdPageHero';
+import { LanguagesVignette } from '../../../components/marketing/ProductVignettes';
 import EdSection from '../../../components/marketing/EdSection';
 import EdProse from '../../../components/marketing/EdProse';
 import EdCardGrid from '../../../components/marketing/EdCardGrid';
@@ -106,6 +107,17 @@ export default async function MultilingualContent({ locale }: { locale: string }
         title={t('featuresMultilingual.hero.title')}
         lede={t('featuresMultilingual.hero.subtitle')}
         primaryCta={{ label: t('featuresMultilingual.hero.cta'), href: href('/demo') }}
+        variant="product"
+        product={
+          <div className="ed-vignette-hero" style={{ maxWidth: '560px' }}>
+            <LanguagesVignette
+              locale={locale}
+              question={t('landing.frame.question')}
+              answer={t('landing.frame.answer')}
+              source={t('landing.frame.source')}
+            />
+          </div>
+        }
       />
 
       <EdSection title={t('featuresMultilingual.supported.title')}>

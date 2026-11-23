@@ -1,0 +1,3578 @@
+=== commit f23bcc8 feat(ui): batch 1 of the Pangram UI/UX plan (X1, A1, M6, M2)
+
+diff --git a/frontend/src/app/demo/DemoPageClient.tsx b/frontend/src/app/demo/DemoPageClient.tsx
+index 82bf3c9..d7dc1c4 100644
+--- a/frontend/src/app/demo/DemoPageClient.tsx
++++ b/frontend/src/app/demo/DemoPageClient.tsx
+@@ -145,7 +145,7 @@ export default function DemoPageClient() {
+             const cardContent = (
+               <>
+                 <div className="flex items-center justify-between">
+-                  <span className="ed-caption uppercase">
++                  <span className="ed-caption">
+                     {tOr(`demo.sample.${slug}.badge`, config.badge)}
+                   </span>
+                   <span className="ed-caption">
+@@ -199,7 +199,7 @@ export default function DemoPageClient() {
+                     padding: '12px 14px',
+                   }}
+                 >
+-                  <p className="ed-caption uppercase">
++                  <p className="ed-caption">
+                     {tOr('demo.suggestedQuestion', 'Suggested question')}
+                   </p>
+                   <p
+diff --git a/frontend/src/app/editorial.css b/frontend/src/app/editorial.css
+index bc41956..e99a37d 100644
+--- a/frontend/src/app/editorial.css
++++ b/frontend/src/app/editorial.css
+@@ -340,6 +340,119 @@
+   color: var(--ed-ink);
+ }
+ 
++/* Proof strip under the landing hero (ProofStrip.tsx): three linked facts and
++   a row of in-page anchors. Rules and ink only; no fill, no glass. */
++.dt-editorial .ed-proof {
++  padding-block: 8px 48px;
++}
++.dt-editorial .ed-proof-grid {
++  display: grid;
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  margin: 0;
++  padding: 0;
++  list-style: none;
++  border-top: 1px solid var(--ed-rule);
++}
++.dt-editorial .ed-proof-grid > li + li {
++  border-inline-start: 1px solid var(--ed-rule);
++}
++.dt-editorial .ed-proof-cell {
++  display: flex;
++  flex-direction: column;
++  gap: 12px;
++  height: 100%;
++  padding: 28px 24px 28px 0;
++  color: var(--ed-ink);
++  text-decoration: none;
++}
++.dt-editorial .ed-proof-grid > li + li .ed-proof-cell {
++  padding-inline-start: 24px;
++}
++.dt-editorial .ed-proof-label {
++  display: block;
++  font-size: 15px;
++  line-height: 1.45;
++  color: var(--ed-ink-2);
++  transition: color 150ms ease;
++}
++.dt-editorial .ed-proof-arrow {
++  /* Inline, so it follows the last word of a wrapped label. */
++  display: inline-block;
++  margin-inline-start: 6px;
++  vertical-align: -2px;
++  color: var(--ed-ink-3);
++}
++.dt-editorial .ed-proof-cell:hover .ed-proof-label {
++  color: var(--ed-ink);
++  text-decoration: underline;
++  text-underline-offset: 3px;
++}
++.dt-editorial .ed-proof-cell:focus-visible {
++  outline: 2px solid var(--ed-ink);
++  outline-offset: 4px;
++  border-radius: var(--ed-r-1);
++}
++.dt-editorial .ed-proof-nav {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 8px 24px;
++  margin-top: 8px;
++  padding-top: 20px;
++  border-top: 1px solid var(--ed-rule);
++}
++.dt-editorial .ed-proof-nav a {
++  font-size: 14px;
++  line-height: 1.4;
++  color: var(--ed-ink-3);
++  text-decoration: none;
++  transition: color 150ms ease;
++}
++.dt-editorial .ed-proof-nav a:hover {
++  color: var(--ed-ink);
++  text-decoration: underline;
++  text-underline-offset: 3px;
++}
++.dt-editorial .ed-proof-nav a:focus-visible {
++  outline: 2px solid var(--ed-ink);
++  outline-offset: 3px;
++  border-radius: var(--ed-r-1);
++}
++.dt-editorial section[id] {
++  /* In-page anchors land below the sticky header, not under it. */
++  scroll-margin-top: 80px;
++}
++@media (max-width: 640px) {
++  .dt-editorial .ed-proof-grid {
++    grid-template-columns: minmax(0, 1fr);
++  }
++  .dt-editorial .ed-proof-grid > li + li {
++    border-inline-start: 0;
++    border-top: 1px solid var(--ed-rule);
++  }
++  .dt-editorial .ed-proof-cell,
++  .dt-editorial .ed-proof-grid > li + li .ed-proof-cell {
++    flex-direction: row;
++    align-items: baseline;
++    gap: 16px;
++    padding: 20px 0;
++  }
++  .dt-editorial .ed-proof-cell .ed-proof-label {
++    flex: 1 1 auto;
++    min-width: 0;
++  }
++  .dt-editorial .ed-proof-cell .ed-num {
++    flex: 0 0 auto;
++    min-width: 4.5ch;
++    font-size: 32px;
++  }
++}
++@media (prefers-reduced-motion: reduce) {
++  .dt-editorial .ed-proof-label,
++  .dt-editorial .ed-proof-nav a {
++    transition: none;
++  }
++}
++
+ /* The one dominant action per view (§5.2). Pill, not the 3px "print"
+    rectangle. The label colour is a token because the dark fill is the
+    LIGHT terracotta with a near-black label — #ffffff on #e0957a would be
+diff --git a/frontend/src/app/globals.css b/frontend/src/app/globals.css
+index 9f2f8a9..162b781 100644
+--- a/frontend/src/app/globals.css
++++ b/frontend/src/app/globals.css
+@@ -499,7 +499,6 @@ mark[data-dt-evidence="exact"] {
+ 
+ .dt-sources-label {
+   color: #1D4ED8;
+-  letter-spacing: 0.08em;
+ }
+ 
+ .dark .dt-sources-label {
+diff --git a/frontend/src/components/Chat/ChatPanel.tsx b/frontend/src/components/Chat/ChatPanel.tsx
+index c9c6532..22f794e 100644
+--- a/frontend/src/components/Chat/ChatPanel.tsx
++++ b/frontend/src/components/Chat/ChatPanel.tsx
+@@ -8,6 +8,8 @@ import type { ChatArtifact, Citation, DocumentHierarchicalBrief, Message } from
+ import { useDocTalkStore } from '../../store';
+ import MessageBubble from './MessageBubble';
+ import CitationCard from './CitationCard';
++import SourceListToggle from './SourceListToggle';
++import { visibleSources } from '../../lib/sourceList';
+ import { citationPreview, uniqueCitationIndexes } from '../../lib/citationText';
+ import { useLocale } from '../../i18n';
+ import { PaywallModal } from '../PaywallModal';
+@@ -96,6 +98,17 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
+       .sort((a, b) => a.refIndex - b.refIndex);
+   }, [displayCitations]);
+ 
++  const [sourcesExpanded, setSourcesExpanded] = useState(false);
++  const isActiveCitation = useCallback(
++    (citation: Citation) => activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex,
++    [activeCitation],
++  );
++  const shownCitations = React.useMemo(
++    () => (uniqueCitations ? visibleSources(uniqueCitations, sourcesExpanded, isActiveCitation) : undefined),
++    [uniqueCitations, sourcesExpanded, isActiveCitation],
++  );
++  const sourceListId = `citation-cards-${message.id}`;
++
+   return (
+     <MessageErrorBoundary messageId={message.id}>
+       <div data-message-id={message.id} tabIndex={-1}>
+@@ -112,19 +125,25 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
+           isAnonShareAnswer={isAnonShareAnswer}
+           onTryQuoteFinder={onTryQuoteFinder}
+         />
+-        {uniqueCitations && uniqueCitations.length > 0 && (
+-          <div className="mt-2 flex flex-wrap gap-1.5 pl-0">
+-            {uniqueCitations.map((citation) => (
++        {uniqueCitations && shownCitations && uniqueCitations.length > 0 && (
++          <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-0" id={sourceListId}>
++            {shownCitations.map((citation) => (
+               <CitationCard
+                 key={`${message.id}-${citation.refIndex}`}
+                 refIndex={citation.refIndex}
+                 textSnippet={citationPreview(citation)}
+                 page={citation.page}
+                 pageEnd={citation.pageEnd}
+-                active={activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex}
++                active={isActiveCitation(citation)}
+                 onClick={() => handleCitation(citation)}
+               />
+             ))}
++            <SourceListToggle
++              total={uniqueCitations.length}
++              expanded={sourcesExpanded}
++              onToggle={() => setSourcesExpanded((value) => !value)}
++              controls={sourceListId}
++            />
+           </div>
+         )}
+       </div>
+diff --git a/frontend/src/components/Chat/CitationCard.tsx b/frontend/src/components/Chat/CitationCard.tsx
+index 8e135b3..72ee4a6 100644
+--- a/frontend/src/components/Chat/CitationCard.tsx
++++ b/frontend/src/components/Chat/CitationCard.tsx
+@@ -3,6 +3,7 @@
+ import { citationPageRange } from '../../lib/citationText';
+ import React from 'react';
+ import { useLocale } from '../../i18n';
++import { shortSnippet } from '../../lib/sourceList';
+ 
+ interface CitationCardProps {
+   refIndex: number;
+@@ -13,22 +14,12 @@ interface CitationCardProps {
+   active?: boolean;
+ }
+ 
+-/**
+- * Sanitize text to prevent any potential XSS through text content.
+- * React already escapes text nodes, but this adds an extra layer of safety
+- * by removing control characters and normalizing the text.
+- */
+-function sanitizeText(text: string | null | undefined): string {
+-  if (!text || typeof text !== 'string') return '';
+-  // Remove control characters except common whitespace
+-  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+-}
+-
+ export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onClick, active = false }: CitationCardProps) {
+-  const { t } = useLocale();
+-  // Sanitize and truncate the snippet
+-  const sanitized = sanitizeText(textSnippet);
+-  const snippet = sanitized.length > 60 ? sanitized.slice(0, 60) + '…' : sanitized;
++  const { t, tOr } = useLocale();
++  // Control characters stripped, cut to 60 code points. A cross-page citation
++  // has no previewable excerpt (citationPreview returns ''): name it instead of
++  // rendering an empty card that only says "Page 4–5".
++  const snippet = shortSnippet(textSnippet) || tOr('citation.passageFallback', 'Cited passage');
+ 
+   // Validate page number
+   const validPage = citationPageRange({ page, pageEnd });
+@@ -41,12 +32,9 @@ export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onC
+       className="dt-citation-card inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-start text-xs focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+       aria-label={t('citation.cardLabel', { index: refIndex, page: validPage })}
+     >
+-      <span className="dt-source-index inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold leading-none">{refIndex}</span>
++      <span className="dt-source-index inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-xs font-bold leading-none tabular-nums">{refIndex}</span>
+       <span dir="auto" className="max-w-[220px] truncate text-[var(--reader-muted)]">{snippet}</span>
+-      <span
+-        className="shrink-0 text-[10px] text-[var(--reader-muted)]"
+-        style={{ fontFamily: 'var(--dt-mono)' }}
+-      >{t('citation.page', { page: validPage })}</span>
++      <span className="shrink-0 text-xs tabular-nums text-[var(--reader-muted)]">{t('citation.page', { page: validPage })}</span>
+     </button>
+   );
+ }
+diff --git a/frontend/src/components/Chat/SourceListToggle.tsx b/frontend/src/components/Chat/SourceListToggle.tsx
+new file mode 100644
+index 0000000..9f60190
+--- /dev/null
++++ b/frontend/src/components/Chat/SourceListToggle.tsx
+@@ -0,0 +1,33 @@
++"use client";
++
++import React from 'react';
++import { useLocale } from '../../i18n';
++import { SOURCE_PREVIEW_LIMIT } from '../../lib/sourceList';
++
++interface SourceListToggleProps {
++  total: number;
++  expanded: boolean;
++  onToggle: () => void;
++  /** id of the list this button expands, for aria-controls. */
++  controls: string;
++}
++
++/** "Show all N sources" / "Show fewer" under a collapsed source list.
++ *  Renders nothing when the list fits without collapsing. */
++export default function SourceListToggle({ total, expanded, onToggle, controls }: SourceListToggleProps) {
++  const { tOr } = useLocale();
++  if (total <= SOURCE_PREVIEW_LIMIT) return null;
++  return (
++    <button
++      type="button"
++      onClick={onToggle}
++      aria-expanded={expanded}
++      aria-controls={controls}
++      className="inline-flex min-h-[32px] items-center rounded-md px-2 text-xs font-medium text-[#1D4ED8] transition-colors hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] dark:text-[#60A5FA] dark:hover:bg-zinc-800"
++    >
++      {expanded
++        ? tOr('chat.sources.showFewer', 'Show fewer')
++        : tOr('chat.sources.showAll', 'Show all {count} sources', { count: total })}
++    </button>
++  );
++}
+diff --git a/frontend/src/components/Chat/SourcesStrip.tsx b/frontend/src/components/Chat/SourcesStrip.tsx
+index 3a43ed8..6ef91dd 100644
+--- a/frontend/src/components/Chat/SourcesStrip.tsx
++++ b/frontend/src/components/Chat/SourcesStrip.tsx
+@@ -1,6 +1,8 @@
+ "use client";
+ 
+-import { citationPageRange, citationSourceKey } from '../../lib/citationText';
++import { citationPageRange, citationPreview, citationSourceKey } from '../../lib/citationText';
++import { shortSnippet, spansMultipleDocuments, visibleSources } from '../../lib/sourceList';
++import SourceListToggle from './SourceListToggle';
+ import React from "react";
+ import { FileText } from "lucide-react";
+ import type { Citation } from "../../types";
+@@ -28,7 +30,10 @@ interface SourcesStripProps {
+  * Perplexity "sources-before-tokens" pattern, which would need a new
+  * chunks_retrieved SSE event and is explicitly out of scope here.
+  *
+- * Deduplicates identical source locations while retaining distinct page targets.
++ * Deduplicates identical source locations while retaining distinct page targets,
++ * orders chips by their [n] number, and shows the first few until expanded.
++ * Chips name the file only when the answer cites more than one document; in a
++ * single-document reader they show the cited excerpt instead.
+  *
+  * Click forwards to the same onCitationClick the inline pills use, so
+  * behaviour is identical — PdfViewer scrolls + highlight flashes.
+@@ -40,6 +45,8 @@ export default function SourcesStrip({
+ }: SourcesStripProps) {
+   const { t, tOr } = useLocale();
+   const currentDocumentName = useDocTalkStore((s) => s.documentName);
++  const [expanded, setExpanded] = React.useState(false);
++  const listId = React.useId();
+ 
+   // Preserve distinct page targets within the same cross-page chunk.
+   const unique = React.useMemo(() => {
+@@ -51,8 +58,11 @@ export default function SourcesStrip({
+       seen.add(key);
+       out.push(c);
+     }
+-    return out;
++    // Stable sort: chips arrive in stream order, which is not [n] order once a
++    // later claim re-cites an earlier source.
++    return out.sort((a, b) => a.refIndex - b.refIndex);
+   }, [citations]);
++  const multiDocument = React.useMemo(() => spansMultipleDocuments(unique), [unique]);
+ 
+   // Streaming with no citations yet: render a skeleton placeholder so the
+   // user sees "sources are coming" rather than a blank space that later
+@@ -65,13 +75,7 @@ export default function SourcesStrip({
+         aria-label={tOr("chat.sources.retrievingAriaLabel", "Retrieving sources")}
+         role="status"
+       >
+-        <div
+-          className="dt-sources-label text-[11px] uppercase"
+-          style={{
+-            fontFamily: 'var(--dt-mono)',
+-            letterSpacing: '0.10em',
+-          }}
+-        >
++        <div className="dt-sources-label text-xs font-medium">
+           {tOr("chat.sources.retrieving", "Retrieving sources…")}
+         </div>
+         <div className="flex flex-wrap gap-2" aria-hidden="true">
+@@ -93,14 +97,15 @@ export default function SourcesStrip({
+       className="dt-sources-strip mb-3 flex flex-col gap-2"
+       aria-label={tOr("chat.sources.ariaLabel", "Answer sources")}
+     >
+-      <div className="dt-sources-label text-[11px] font-mono uppercase">
++      <div className="dt-sources-label text-xs font-medium">
+         {label}
+       </div>
+-      <div className="flex flex-wrap gap-2">
+-        {unique.map((c) => {
++      <div className="flex flex-wrap items-center gap-2" id={listId}>
++        {visibleSources(unique, expanded).map((c) => {
+           const filename = c.documentFilename || currentDocumentName || "Document";
+-          const displayFilename =
+-            filename.length > 22 ? filename.slice(0, 20) + "…" : filename;
++          const displayFilename = multiDocument
++            ? shortSnippet(filename, 20)
++            : shortSnippet(citationPreview(c), 48) || tOr("citation.passageFallback", "Cited passage");
+           const jumpLabel = t("citation.jumpTo", { page: citationPageRange(c) });
+           return (
+             <button
+@@ -111,7 +116,7 @@ export default function SourcesStrip({
+               aria-label={`${filename} — ${jumpLabel}`}
+               className="dt-source-chip group inline-flex max-w-xs items-center gap-2 rounded-md px-2.5 py-1.5 text-xs motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+             >
+-              <span className="dt-source-index inline-flex h-4 min-w-4 items-center justify-center rounded px-1 text-[10px] font-bold leading-none">
++              <span className="dt-source-index inline-flex h-5 min-w-5 items-center justify-center rounded px-1 text-xs font-bold leading-none tabular-nums">
+                 {c.refIndex}
+               </span>
+               <FileText
+@@ -119,16 +124,19 @@ export default function SourcesStrip({
+                 size={12}
+                 className="shrink-0 text-zinc-400 group-hover:text-[var(--reader-evidence)] dark:text-zinc-500"
+               />
+-              <span className="truncate font-medium">{displayFilename}</span>
+-              <span
+-                className="shrink-0 text-[10px] text-[var(--reader-muted)]"
+-                style={{ fontFamily: 'var(--dt-mono)' }}
+-              >
++              <span dir="auto" className={`truncate ${multiDocument ? 'font-medium' : 'text-[var(--reader-muted)]'}`}>{displayFilename}</span>
++              <span className="shrink-0 text-xs tabular-nums text-[var(--reader-muted)]">
+                 {t('citation.page', { page: citationPageRange(c) })}
+               </span>
+             </button>
+           );
+         })}
++        <SourceListToggle
++          total={unique.length}
++          expanded={expanded}
++          onToggle={() => setExpanded((value) => !value)}
++          controls={listId}
++        />
+       </div>
+     </section>
+   );
+diff --git a/frontend/src/components/CookieConsentBanner.tsx b/frontend/src/components/CookieConsentBanner.tsx
+index 3070e23..86a6fea 100644
+--- a/frontend/src/components/CookieConsentBanner.tsx
++++ b/frontend/src/components/CookieConsentBanner.tsx
+@@ -157,18 +157,27 @@ export function CookieConsentBanner() {
+     );
+   }
+ 
++  // App surface: one compact row. In the reader the old two-row card sat at the
++  // top right, over the PDF toolbar (the "Sign in for Quote Finder" entry), and
++  // on phones over the first lines of the answer (2026-11-22 screenshots).
++  //   - Workspace routes, sm and up: bottom right, over the document pane's
++  //     margin rather than its toolbar; the chat composer is on the other side.
++  //   - Workspace routes on phones: still below the header (the composer and
++  //     the Chat/Document tab bar own the bottom edge), but one row high.
++  //   - Other app routes keep the bottom placement.
++  // Decline and Accept stay the same size and weight.
+   return (
+     <div
+-      className={`fixed z-40 rounded-2xl border border-[var(--workbench-border)] bg-[var(--workbench-panel-solid)] px-4 py-3 text-[var(--workbench-ink)] shadow-2xl shadow-slate-900/10 backdrop-blur-2xl dark:shadow-black/35
++      className={`fixed z-40 rounded-2xl border border-[var(--workbench-border)] bg-[var(--workbench-panel-solid)] px-3 py-2 text-[var(--workbench-ink)] shadow-2xl shadow-slate-900/10 backdrop-blur-2xl dark:shadow-black/35
+                  animate-[slideUp_0.3s_ease-out] motion-reduce:animate-none
+                  ${isWorkspaceRoute
+-                   ? `${isCollectionWorkspace ? 'top-[calc(env(safe-area-inset-top,0px)+9.5rem)] sm:top-[calc(env(safe-area-inset-top,0px)+4.75rem)]' : 'top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'} left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(26rem,calc(100vw-2rem))]`
+-                   : 'bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(28rem,calc(100vw-2rem))]'}`}
++                   ? `${isCollectionWorkspace ? 'top-[calc(env(safe-area-inset-top,0px)+9.5rem)]' : 'top-[calc(env(safe-area-inset-top,0px)+4.75rem)]'} left-3 right-3 sm:top-auto sm:bottom-4 sm:left-auto sm:right-4 sm:w-[min(30rem,calc(100vw-2rem))]`
++                   : 'bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-[min(30rem,calc(100vw-2rem))]'}`}
+       role="region"
+       aria-label={t('consent.message')}
+     >
+-      <div className="flex flex-col gap-3">
+-        <p className="text-sm leading-6 text-[var(--workbench-muted)]">
++      <div className="flex items-center gap-3">
++        <p className="min-w-0 flex-1 text-[13px] leading-[1.4] text-[var(--workbench-muted)]">
+           {t('consent.message')}{' '}
+           <Link
+             href="/privacy"
+@@ -177,16 +186,16 @@ export function CookieConsentBanner() {
+             {t('consent.learnMore')}
+           </Link>
+         </p>
+-        <div className="flex justify-end gap-2">
++        <div className="flex shrink-0 gap-2">
+           <button
+             onClick={handleDecline}
+-            className="rounded-full border border-[var(--workbench-border)] px-4 py-1.5 text-sm text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-[var(--workbench-ink)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:hover:bg-white/10 dark:focus-visible:ring-offset-zinc-950"
++            className="min-h-[44px] sm:min-h-[36px] rounded-full border border-[var(--workbench-border)] px-3 text-[13px] text-[var(--workbench-muted)] transition-colors hover:bg-zinc-100 hover:text-[var(--workbench-ink)] focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:hover:bg-white/10 dark:focus-visible:ring-offset-zinc-950"
+           >
+             {t('consent.decline')}
+           </button>
+           <button
+             onClick={handleAccept}
+-            className="dt-stitch-primary rounded-full px-4 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
++            className="dt-stitch-primary min-h-[44px] sm:min-h-[36px] rounded-full px-3 text-[13px] transition-colors focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+           >
+             {t('consent.accept')}
+           </button>
+diff --git a/frontend/src/components/landing/FAQ.tsx b/frontend/src/components/landing/FAQ.tsx
+index 0246da9..a2bf36e 100644
+--- a/frontend/src/components/landing/FAQ.tsx
++++ b/frontend/src/components/landing/FAQ.tsx
+@@ -14,7 +14,7 @@ export default function FAQ() {
+   };
+ 
+   return (
+-    <section className="ed-section">
++    <section id="faq" className="ed-section">
+       <div className="ed-shell">
+         <div>
+           <div className="max-w-[760px]">
+diff --git a/frontend/src/components/landing/LandingPageContent.tsx b/frontend/src/components/landing/LandingPageContent.tsx
+index 52dc1ac..3e0c862 100644
+--- a/frontend/src/components/landing/LandingPageContent.tsx
++++ b/frontend/src/components/landing/LandingPageContent.tsx
+@@ -5,6 +5,7 @@ import { NIGHT_ROOT_CLASS, useNightDocument } from '../marketing/night';
+ import EditorialHeader from './EditorialHeader';
+ import EditorialFooter from './EditorialFooter';
+ import HeroSection from './HeroSection';
++import ProofStrip from './ProofStrip';
+ import ProductDemo from './ProductDemo';
+ import FeatureGrid from './FeatureGrid';
+ import HowItWorks from './HowItWorks';
+@@ -43,6 +44,7 @@ export default function LandingPageContent() {
+       <EditorialHeader />
+       <main>
+         <HeroSection />
++        <ProofStrip />
+         <ProductDemo />
+         <FeatureGrid />
+         <HowItWorks />
+diff --git a/frontend/src/components/landing/ProofStrip.tsx b/frontend/src/components/landing/ProofStrip.tsx
+new file mode 100644
+index 0000000..6cee30c
+--- /dev/null
++++ b/frontend/src/components/landing/ProofStrip.tsx
+@@ -0,0 +1,83 @@
++"use client";
++
++import React from 'react';
++import Link from 'next/link';
++import { usePathname } from 'next/navigation';
++import { ArrowUpRight } from 'lucide-react';
++import { useLocale } from '../../i18n';
++import { localizedHrefIfAvailable, splitLocaleFromPath } from '../../i18n/routing';
++
++/**
++ * Three checkable facts under the hero, each linking to the page that shows
++ * it, then a row of in-page anchors (plan 2026-11-22-ui-ux-pangram-learnings
++ * §M2; Pangram puts the same pair under its hero).
++ *
++ * Only claims the product can show: the language count (the 11 locales), the
++ * format count (PDF, DOCX, PPTX, XLSX, TXT, Markdown, URL; the compare pages
++ * say 7) and the citation jump. No accuracy percentage: there is no published
++ * evaluation to link to. Change a count here together with those pages.
++ *
++ * No filled CTA: the hero above owns the view's one `.ed-cta`.
++ */
++const facts = [
++  {
++    key: 'languages',
++    path: '/features/multilingual',
++    value: '11',
++    label: 'languages for the interface and the answers',
++  },
++  {
++    key: 'formats',
++    path: '/features/multi-format',
++    value: '7',
++    label: 'file formats, from PDF and slides to web pages',
++  },
++  {
++    key: 'jump',
++    path: '/features/citations',
++    value: '1 click',
++    label: 'from any answer to the passage it cites',
++  },
++] as const;
++
++// Each anchor reuses the heading or eyebrow key of the section it opens, so
++// its text always matches what the reader lands on.
++const anchors = [
++  { href: '#how-it-works', labelKey: 'landing.howItWorks.title' },
++  { href: '#security', labelKey: 'landing.security.eyebrow' },
++  { href: '#faq', labelKey: 'landing.faq.eyebrow' },
++] as const;
++
++export default function ProofStrip() {
++  const { t, tOr } = useLocale();
++  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || '/');
++  const href = (path: string) => localizedHrefIfAvailable(urlLocale, path);
++
++  return (
++    <section className="ed-proof" aria-label={tOr('landing.proof.ariaLabel', 'DocTalk at a glance')}>
++      <div className="ed-shell">
++        <ul className="ed-proof-grid">
++          {facts.map((fact) => (
++            <li key={fact.key}>
++              <Link href={href(fact.path)} className="ed-proof-cell">
++                <span className="ed-num">{tOr(`landing.proof.${fact.key}.value`, fact.value)}</span>
++                <span className="ed-proof-label">
++                  {tOr(`landing.proof.${fact.key}.label`, fact.label)}
++                  <ArrowUpRight aria-hidden="true" size={14} className="ed-proof-arrow rtl:-scale-x-100" />
++                </span>
++              </Link>
++            </li>
++          ))}
++        </ul>
++        <nav className="ed-proof-nav" aria-label={tOr('landing.proof.nav.ariaLabel', 'On this page')}>
++          {anchors.map((anchor) => (
++            <a key={anchor.href} href={anchor.href}>
++              {t(anchor.labelKey)}
++            </a>
++          ))}
++          <Link href={href('/pricing')}>{t('footer.pricing')}</Link>
++        </nav>
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/landing/SecuritySection.tsx b/frontend/src/components/landing/SecuritySection.tsx
+index 843997d..2afb6d9 100644
+--- a/frontend/src/components/landing/SecuritySection.tsx
++++ b/frontend/src/components/landing/SecuritySection.tsx
+@@ -14,7 +14,7 @@ export default function SecuritySection() {
+   const { t } = useLocale();
+ 
+   return (
+-    <section className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)', borderBottom: '1px solid var(--ed-rule)', background: 'var(--ed-paper-2)' }}>
++    <section id="security" className="ed-section" style={{ borderTop: '1px solid var(--ed-rule)', borderBottom: '1px solid var(--ed-rule)', background: 'var(--ed-paper-2)' }}>
+       <div className="ed-shell">
+         <div>
+           <div className="mb-10">
+@@ -26,7 +26,6 @@ export default function SecuritySection() {
+ 
+         <div className="grid grid-cols-1 md:grid-cols-2">
+           {cards.map(({ titleKey, descKey }, index) => {
+-            const num = String(index + 1).padStart(2, '0');
+             const isRight = index % 2 === 1;
+             const isLastRow = index >= cards.length - 2;
+             return (
+@@ -42,10 +41,6 @@ export default function SecuritySection() {
+                     borderColor: 'var(--ed-rule)',
+                   }}
+                 >
+-                  <p className="ed-label mb-4">
+-                    <span className="ed-label-num">{num}</span>
+-                    {' '}— {t('landing.security.itemEyebrow')}
+-                  </p>
+                   <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
+                   <p className="ed-body">{t(descKey)}</p>
+                 </div>
+diff --git a/frontend/src/components/marketing/EditorialHeaderBase.tsx b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+index b069011..40cff11 100644
+--- a/frontend/src/components/marketing/EditorialHeaderBase.tsx
++++ b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+@@ -208,10 +208,7 @@ export default function EditorialHeaderBase({
+               className="block"
+               style={{
+                 padding: "12px 24px",
+-                fontFamily: "var(--dt-mono)",
+-                fontSize: "12px",
+-                textTransform: "uppercase",
+-                letterSpacing: "0.10em",
++                fontSize: "16px",
+                 color: "var(--ed-ink-2)",
+                 textDecoration: "none",
+                 borderTop: idx === 0 ? "none" : "1px solid var(--ed-rule)",
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 055f7f1..71d98e4 100644
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -368,6 +368,14 @@
+   "upload.tooLarge": "الحد لكل ملف: Free ‏50 ميجابايت، Plus ‏100 ميجابايت، Pro ‏200 ميجابايت",
+   "upload.uploading": "جاري الرفع…",
+   "landing.howItWorks.title": "كيف يعمل",
++  "landing.proof.ariaLabel": "DocTalk في لمحة",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "لغة للواجهة والإجابات",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "صيغ ملفات، من PDF والشرائح إلى صفحات الويب",
++  "landing.proof.jump.value": "نقرة واحدة",
++  "landing.proof.jump.label": "من أي إجابة إلى المقطع الذي تستشهد به",
++  "landing.proof.nav.ariaLabel": "في هذه الصفحة",
+   "landing.howItWorks.step1.title": "ارفع ملف PDF",
+   "landing.howItWorks.step1.desc": "اسحب وأفلت أي مستند PDF — تقارير، أبحاث، عقود، أدلة",
+   "landing.howItWorks.step2.title": "اطرح أسئلة",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "مصادر الإجابة",
+   "chat.sources.retrieving": "جارٍ استرجاع المصادر…",
+   "chat.sources.retrievingAriaLabel": "جارٍ استرجاع المصادر",
++  "chat.sources.showAll": "عرض جميع المصادر ({count})",
++  "chat.sources.showFewer": "عرض أقل",
+   "footer.links.trust": "الثقة والأمان",
+   "footer.github.label": "مفتوح المصدر على GitHub",
+   "footer.github.ariaLabel": "مستودع DocTalk على GitHub (يُفتح في علامة تبويب جديدة)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "قانوني",
+   "domainModes.academic": "أكاديمي",
+   "citation.cardLabel": "الاقتباس {index}، الصفحة {page}",
++  "citation.passageFallback": "المقطع المقتبس",
+   "billing.annualUnavailable": "الاشتراكات السنوية الجديدة وتغييرات الخطط السنوية متوقفة مؤقتًا أثناء إصلاح منح الرصيد شهريًا. تظل الاشتراكات الشهرية متاحة.",
+   "evidence.reference": "المرجع {index} · الصفحة {page}",
+   "evidence.exact": "المقطع المطابق",
+diff --git a/frontend/src/i18n/locales/de.json b/frontend/src/i18n/locales/de.json
+index 1b60c27..503dad7 100644
+--- a/frontend/src/i18n/locales/de.json
++++ b/frontend/src/i18n/locales/de.json
+@@ -380,6 +380,14 @@
+   "landing.feature.privacy.title": "Ihre Dokumente bleiben Ihnen",
+   "landing.feature.privacy.desc": "DocTalk nutzt Ihre Dokumente nicht zum Modelltraining. Unsere Datenschutzerklärung erläutert die KI-Verarbeitung und die Bedingungen der Anbieter.",
+   "landing.howItWorks.title": "So funktioniert es",
++  "landing.proof.ariaLabel": "DocTalk auf einen Blick",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "Sprachen für Oberfläche und Antworten",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "Dateiformate, von PDF und Folien bis zu Webseiten",
++  "landing.proof.jump.value": "1 Klick",
++  "landing.proof.jump.label": "von jeder Antwort zur zitierten Textstelle",
++  "landing.proof.nav.ariaLabel": "Auf dieser Seite",
+   "landing.howItWorks.step1.title": "Dokument hochladen",
+   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, Textdateien oder eine Web-URL einfügen. Ziehen, ablegen, fertig.",
+   "landing.howItWorks.step2.title": "Fragen stellen",
+@@ -698,7 +706,7 @@
+   "doc.resizePanels": "Panels anpassen",
+   "billing.perMonth": "/Monat",
+   "landing.demoUnavailable": "Produkt-Demo nicht verfügbar",
+-  "pricing.eyebrow": "PREISE",
++  "pricing.eyebrow": "Preise",
+   "pricing.headline": "Preise, die sich an echter Dokumentenarbeit orientieren, nicht an vagen KI-Limits.",
+   "pricing.metaTitle": "Preise, die sich an echter Dokumentenarbeit orientieren, nicht an vagen KI-Limits.",
+   "pricing.description": "DocTalk ist für Personen konzipiert, die fundierte Antworten aus PDFs, DOCX-Dateien, Präsentationen, Tabellenkalkulationen und URLs benötigen. Jeder Tarif umfasst Quellenangaben und OCR-Unterstützung. Höhere Tarife erweitern hauptsächlich die Nutzungslimits, schalten den uneingeschränkten Pro-Modus frei und fügen Export- oder benutzerdefinierte Prompt-Workflows für intensivere Recherchen und den operativen Einsatz hinzu.",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "Antwortquellen",
+   "chat.sources.retrieving": "Quellen werden abgerufen…",
+   "chat.sources.retrievingAriaLabel": "Quellen werden abgerufen",
++  "chat.sources.showAll": "Alle {count} Quellen anzeigen",
++  "chat.sources.showFewer": "Weniger anzeigen",
+   "footer.links.trust": "Vertrauen & Sicherheit",
+   "footer.github.label": "Open Source auf GitHub",
+   "footer.github.ariaLabel": "DocTalk GitHub-Repository (öffnet in neuem Tab)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "Recht",
+   "domainModes.academic": "Forschung",
+   "citation.cardLabel": "Zitat {index}, Seite {page}",
++  "citation.passageFallback": "Zitierte Passage",
+   "billing.annualUnavailable": "Neue Jahresabos und Änderungen von Jahrestarifen sind vorübergehend pausiert, bis die monatliche Credit-Vergabe korrigiert ist. Monatsabos bleiben verfügbar.",
+   "evidence.reference": "Beleg {index} · Seite {page}",
+   "evidence.exact": "Exakte Textstelle",
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index e8d50a3..eabf710 100644
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -385,6 +385,14 @@
+   "landing.feature.privacy.title": "Your documents stay yours",
+   "landing.feature.privacy.desc": "DocTalk does not use your documents to train models. AI processing and provider terms are described in our privacy policy.",
+   "landing.howItWorks.title": "How it works",
++  "landing.proof.ariaLabel": "DocTalk at a glance",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "languages for the interface and the answers",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "file formats, from PDF and slides to web pages",
++  "landing.proof.jump.value": "1 click",
++  "landing.proof.jump.label": "from any answer to the passage it cites",
++  "landing.proof.nav.ariaLabel": "On this page",
+   "landing.howItWorks.step1.title": "Upload your document",
+   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, text files, or paste a web URL. Drag, drop, done.",
+   "landing.howItWorks.step2.title": "Ask questions",
+@@ -703,7 +711,7 @@
+   "doc.resizePanels": "Resize panels",
+   "billing.perMonth": "/mo",
+   "landing.demoUnavailable": "Product demo unavailable",
+-  "pricing.eyebrow": "PRICING",
++  "pricing.eyebrow": "Pricing",
+   "pricing.headline": "Pricing built around real document work, not vague AI limits.",
+   "pricing.metaTitle": "Pricing built around real document work, not vague AI limits.",
+   "pricing.description": "DocTalk is designed for people who need grounded answers from PDFs, DOCX files, slides, spreadsheets, and URLs. Every plan includes source citations and OCR support. Higher tiers mainly expand usage limits, unlock unrestricted Pro mode, and add export or custom prompt workflows for heavier research and operations use.",
+@@ -2314,6 +2322,8 @@
+   "chat.sources.ariaLabel": "Answer sources",
+   "chat.sources.retrieving": "Retrieving sources…",
+   "chat.sources.retrievingAriaLabel": "Retrieving sources",
++  "chat.sources.showAll": "Show all {count} sources",
++  "chat.sources.showFewer": "Show fewer",
+   "footer.links.trust": "Trust & Security",
+   "footer.github.label": "Open source on GitHub",
+   "footer.github.ariaLabel": "DocTalk GitHub repository (opens in new tab)",
+@@ -3968,6 +3978,7 @@
+   "domainModes.legal": "Legal",
+   "domainModes.academic": "Academic",
+   "citation.cardLabel": "Citation {index}, page {page}",
++  "citation.passageFallback": "Cited passage",
+   "billing.annualUnavailable": "New annual subscriptions and annual plan changes are temporarily unavailable while monthly credit delivery is being fixed. Monthly subscriptions remain available.",
+   "evidence.reference": "Citation {index} · Page {page}",
+   "evidence.exact": "Exact passage",
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index 0398b21..7516ca3 100644
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -241,6 +241,14 @@
+   "landing.showcase.title": "Véalo en acción",
+   "landing.subtitle": "Tu compañero de lectura con IA",
+   "landing.howItWorks.title": "Como funciona",
++  "landing.proof.ariaLabel": "DocTalk de un vistazo",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "idiomas para la interfaz y las respuestas",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "formatos de archivo, de PDF y diapositivas a páginas web",
++  "landing.proof.jump.value": "1 clic",
++  "landing.proof.jump.label": "de cualquier respuesta al pasaje que cita",
++  "landing.proof.nav.ariaLabel": "En esta página",
+   "landing.howItWorks.step1.title": "Sube tu PDF",
+   "landing.howItWorks.step1.desc": "Arrastra y suelta cualquier documento PDF — informes, artículos, contratos, manuales",
+   "landing.howItWorks.step2.title": "Haz preguntas",
+@@ -698,7 +706,7 @@
+   "doc.resizePanels": "Redimensionar paneles",
+   "billing.perMonth": "/mes",
+   "landing.demoUnavailable": "Demostración del producto no disponible",
+-  "pricing.eyebrow": "PRECIOS",
++  "pricing.eyebrow": "Precios",
+   "pricing.headline": "Precios basados en el trabajo real con documentos, no en límites vagos de IA.",
+   "pricing.metaTitle": "Precios basados en el trabajo real con documentos, no en límites vagos de IA.",
+   "pricing.description": "DocTalk está diseñado para personas que necesitan respuestas fundamentadas de PDFs, archivos DOCX, diapositivas, hojas de cálculo y URLs. Todos los planes incluyen citas de fuentes y soporte OCR. Los niveles superiores amplían principalmente los límites de uso, desbloquean el modo Pro sin restricciones y añaden flujos de trabajo de exportación o prompts personalizados para un uso más intensivo en investigación y operaciones.",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "Fuentes de la respuesta",
+   "chat.sources.retrieving": "Recuperando fuentes…",
+   "chat.sources.retrievingAriaLabel": "Recuperando fuentes",
++  "chat.sources.showAll": "Mostrar las {count} fuentes",
++  "chat.sources.showFewer": "Mostrar menos",
+   "footer.links.trust": "Confianza y Seguridad",
+   "footer.github.label": "Código abierto en GitHub",
+   "footer.github.ariaLabel": "Repositorio DocTalk en GitHub (abre en nueva pestaña)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "Jurídico",
+   "domainModes.academic": "Académico",
+   "citation.cardLabel": "Cita {index}, página {page}",
++  "citation.passageFallback": "Pasaje citado",
+   "billing.annualUnavailable": "Las nuevas suscripciones anuales y los cambios de plan anual están suspendidos mientras se corrige la entrega mensual de créditos. Las suscripciones mensuales siguen disponibles.",
+   "evidence.reference": "Cita {index} · Página {page}",
+   "evidence.exact": "Pasaje exacto",
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index 968bc3a..06b969f 100644
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -380,6 +380,14 @@
+   "landing.feature.privacy.title": "Confidentialité d'abord",
+   "landing.feature.privacy.desc": "DocTalk n’utilise pas vos documents pour entraîner des modèles. Notre politique de confidentialité décrit le traitement par IA et les conditions des fournisseurs.",
+   "landing.howItWorks.title": "Comment ça marche",
++  "landing.proof.ariaLabel": "DocTalk en bref",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "langues pour l'interface et les réponses",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "formats de fichier, du PDF et des diapositives aux pages web",
++  "landing.proof.jump.value": "1 clic",
++  "landing.proof.jump.label": "de chaque réponse au passage cité",
++  "landing.proof.nav.ariaLabel": "Sur cette page",
+   "landing.howItWorks.step1.title": "Téléversez votre PDF",
+   "landing.howItWorks.step1.desc": "Glissez-déposez n'importe quel document PDF — rapports, articles, contrats, manuels",
+   "landing.howItWorks.step2.title": "Posez des questions",
+@@ -698,7 +706,7 @@
+   "doc.resizePanels": "Redimensionner les panneaux",
+   "billing.perMonth": "/mois",
+   "landing.demoUnavailable": "Démo du produit indisponible",
+-  "pricing.eyebrow": "TARIFS",
++  "pricing.eyebrow": "Tarifs",
+   "pricing.headline": "Des tarifs construits autour du vrai travail documentaire, pas de limites IA vagues.",
+   "pricing.metaTitle": "Des tarifs construits autour du vrai travail documentaire, pas de limites IA vagues.",
+   "pricing.description": "DocTalk est conçu pour les personnes qui ont besoin de réponses fiables à partir de PDF, fichiers DOCX, diapositives, feuilles de calcul et URL. Chaque forfait inclut des citations de sources et la prise en charge de l'OCR. Les niveaux supérieurs étendent principalement les limites d'utilisation, débloquent le mode Pro illimité et ajoutent des flux de travail d'exportation ou de prompts personnalisés pour une utilisation intensive en recherche et en opérations.",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "Sources de la réponse",
+   "chat.sources.retrieving": "Récupération des sources…",
+   "chat.sources.retrievingAriaLabel": "Récupération des sources",
++  "chat.sources.showAll": "Afficher les {count} sources",
++  "chat.sources.showFewer": "Afficher moins",
+   "footer.links.trust": "Confiance & Sécurité",
+   "footer.github.label": "Open source sur GitHub",
+   "footer.github.ariaLabel": "Dépôt GitHub DocTalk (ouvre dans un nouvel onglet)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "Juridique",
+   "domainModes.academic": "Académique",
+   "citation.cardLabel": "Citation {index}, page {page}",
++  "citation.passageFallback": "Passage cité",
+   "billing.annualUnavailable": "Les nouveaux abonnements annuels et les changements de formule annuelle sont suspendus pendant la correction de l’attribution mensuelle des crédits. Les abonnements mensuels restent disponibles.",
+   "evidence.reference": "Référence {index} · Page {page}",
+   "evidence.exact": "Passage exact",
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 767a7af..2e011ef 100644
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -368,6 +368,14 @@
+   "upload.tooLarge": "प्रति फ़ाइल सीमा: Free 50 MB, Plus 100 MB, Pro 200 MB",
+   "upload.uploading": "अपलोड हो रहा है…",
+   "landing.howItWorks.title": "यह कैसे काम करता है",
++  "landing.proof.ariaLabel": "DocTalk एक नज़र में",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "भाषाएँ, इंटरफ़ेस और जवाबों के लिए",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "फ़ाइल फ़ॉर्मैट, PDF और स्लाइड से वेब पेज तक",
++  "landing.proof.jump.value": "1 क्लिक",
++  "landing.proof.jump.label": "किसी भी जवाब से उसके उद्धृत अंश तक",
++  "landing.proof.nav.ariaLabel": "इस पेज पर",
+   "landing.howItWorks.step1.title": "अपना PDF अपलोड करें",
+   "landing.howItWorks.step1.desc": "कोई भी PDF दस्तावेज़ खींचकर छोड़ें — रिपोर्ट, शोधपत्र, अनुबंध, मैनुअल",
+   "landing.howItWorks.step2.title": "प्रश्न पूछें",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "उत्तर के स्रोत",
+   "chat.sources.retrieving": "स्रोत प्राप्त किए जा रहे हैं…",
+   "chat.sources.retrievingAriaLabel": "स्रोत प्राप्त किए जा रहे हैं",
++  "chat.sources.showAll": "सभी {count} स्रोत दिखाएँ",
++  "chat.sources.showFewer": "कम दिखाएँ",
+   "footer.links.trust": "विश्वास और सुरक्षा",
+   "footer.github.label": "GitHub पर ओपन सोर्स",
+   "footer.github.ariaLabel": "DocTalk GitHub रिपॉजिटरी (नए टैब में खुलता है)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "कानूनी",
+   "domainModes.academic": "शैक्षणिक",
+   "citation.cardLabel": "उद्धरण {index}, पृष्ठ {page}",
++  "citation.passageFallback": "उद्धृत अंश",
+   "billing.annualUnavailable": "मासिक क्रेडिट वितरण में सुधार होने तक नई वार्षिक सदस्यताएँ और वार्षिक प्लान में बदलाव अस्थायी रूप से बंद हैं। मासिक सदस्यताएँ उपलब्ध हैं।",
+   "evidence.reference": "उद्धरण {index} · पृष्ठ {page}",
+   "evidence.exact": "सटीक अंश",
+diff --git a/frontend/src/i18n/locales/it.json b/frontend/src/i18n/locales/it.json
+index 447f0de..d003f3c 100644
+--- a/frontend/src/i18n/locales/it.json
++++ b/frontend/src/i18n/locales/it.json
+@@ -371,6 +371,14 @@
+   "landing.feature.privacy.title": "Privacy first",
+   "landing.feature.privacy.desc": "DocTalk non usa i tuoi documenti per addestrare modelli. La nostra informativa sulla privacy descrive l’elaborazione tramite IA e i termini dei fornitori.",
+   "landing.howItWorks.title": "Come funziona",
++  "landing.proof.ariaLabel": "DocTalk in breve",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "lingue per interfaccia e risposte",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "formati di file, da PDF e slide alle pagine web",
++  "landing.proof.jump.value": "1 clic",
++  "landing.proof.jump.label": "da ogni risposta al passaggio citato",
++  "landing.proof.nav.ariaLabel": "In questa pagina",
+   "landing.howItWorks.step1.title": "Carica il tuo PDF",
+   "landing.howItWorks.step1.desc": "Trascina e rilascia qualsiasi documento PDF — report, articoli, contratti, manuali",
+   "landing.howItWorks.step2.title": "Fai domande",
+@@ -698,7 +706,7 @@
+   "doc.resizePanels": "Ridimensiona pannelli",
+   "billing.perMonth": "/mese",
+   "landing.demoUnavailable": "Demo del prodotto non disponibile",
+-  "pricing.eyebrow": "PREZZI",
++  "pricing.eyebrow": "Prezzi",
+   "pricing.headline": "Prezzi costruiti attorno al lavoro reale sui documenti, non a vaghi limiti AI.",
+   "pricing.metaTitle": "Prezzi costruiti attorno al lavoro reale sui documenti, non a vaghi limiti AI.",
+   "pricing.description": "DocTalk è progettato per chi ha bisogno di risposte fondate da PDF, file DOCX, presentazioni, fogli di calcolo e URL. Ogni piano include citazioni delle fonti e supporto OCR. I livelli superiori espandono principalmente i limiti di utilizzo, sbloccano la modalità Pro senza restrizioni e aggiungono esportazione o flussi di lavoro con prompt personalizzati per un uso più intenso nella ricerca e nelle operazioni.",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "Fonti della risposta",
+   "chat.sources.retrieving": "Recupero fonti…",
+   "chat.sources.retrievingAriaLabel": "Recupero fonti",
++  "chat.sources.showAll": "Mostra tutte le {count} fonti",
++  "chat.sources.showFewer": "Mostra meno",
+   "footer.links.trust": "Fiducia e Sicurezza",
+   "footer.github.label": "Open source su GitHub",
+   "footer.github.ariaLabel": "Repository DocTalk su GitHub (apre in nuova scheda)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "Legale",
+   "domainModes.academic": "Accademico",
+   "citation.cardLabel": "Citazione {index}, pagina {page}",
++  "citation.passageFallback": "Passaggio citato",
+   "billing.annualUnavailable": "I nuovi abbonamenti annuali e le modifiche ai piani annuali sono sospesi mentre correggiamo l’assegnazione mensile dei crediti. Gli abbonamenti mensili restano disponibili.",
+   "evidence.reference": "Citazione {index} · Pagina {page}",
+   "evidence.exact": "Passaggio esatto",
+diff --git a/frontend/src/i18n/locales/ja.json b/frontend/src/i18n/locales/ja.json
+index 71c3527..8203277 100644
+--- a/frontend/src/i18n/locales/ja.json
++++ b/frontend/src/i18n/locales/ja.json
+@@ -371,6 +371,14 @@
+   "landing.feature.privacy.title": "プライバシー最優先",
+   "landing.feature.privacy.desc": "DocTalk は文書をモデルの学習に使用しません。AI 処理とプロバイダーの条件はプライバシーポリシーをご覧ください。",
+   "landing.howItWorks.title": "仕組み",
++  "landing.proof.ariaLabel": "DocTalk の概要",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "画面と回答で使える言語",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "対応ファイル形式（PDF、スライド、ウェブページなど）",
++  "landing.proof.jump.value": "ワンクリック",
++  "landing.proof.jump.label": "回答から引用元の箇所へ",
++  "landing.proof.nav.ariaLabel": "このページの内容",
+   "landing.howItWorks.step1.title": "PDFをアップロード",
+   "landing.howItWorks.step1.desc": "レポート、論文、契約書、マニュアルなど、あらゆるPDFをドラッグ＆ドロップ",
+   "landing.howItWorks.step2.title": "質問する",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "回答のソース",
+   "chat.sources.retrieving": "ソースを取得中…",
+   "chat.sources.retrievingAriaLabel": "ソースを取得中",
++  "chat.sources.showAll": "{count} 件の出典をすべて表示",
++  "chat.sources.showFewer": "折りたたむ",
+   "footer.links.trust": "信頼とセキュリティ",
+   "footer.github.label": "GitHub でオープンソース",
+   "footer.github.ariaLabel": "DocTalk GitHub リポジトリ (新しいタブで開きます)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "法律",
+   "domainModes.academic": "学術",
+   "citation.cardLabel": "引用 {index}、{page} ページ",
++  "citation.passageFallback": "引用箇所",
+   "billing.annualUnavailable": "毎月のクレジット付与を修正しているため、年払いの新規契約とプラン変更は一時停止中です。月払いはご利用いただけます。",
+   "evidence.reference": "引用 {index} · {page}ページ",
+   "evidence.exact": "一致する原文",
+diff --git a/frontend/src/i18n/locales/ko.json b/frontend/src/i18n/locales/ko.json
+index 494d73c..8a68a77 100644
+--- a/frontend/src/i18n/locales/ko.json
++++ b/frontend/src/i18n/locales/ko.json
+@@ -371,6 +371,14 @@
+   "landing.feature.privacy.title": "프라이버시 최우선",
+   "landing.feature.privacy.desc": "DocTalk은 문서를 모델 학습에 사용하지 않습니다. AI 처리 및 제공업체 조건은 개인정보 처리방침을 참고하세요.",
+   "landing.howItWorks.title": "작동 방식",
++  "landing.proof.ariaLabel": "DocTalk 한눈에 보기",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "인터페이스와 답변 지원 언어",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "지원 파일 형식(PDF, 슬라이드, 웹 페이지 등)",
++  "landing.proof.jump.value": "클릭 한 번",
++  "landing.proof.jump.label": "답변에서 인용된 구절로 이동",
++  "landing.proof.nav.ariaLabel": "이 페이지의 내용",
+   "landing.howItWorks.step1.title": "PDF 업로드",
+   "landing.howItWorks.step1.desc": "보고서, 논문, 계약서, 매뉴얼 등 모든 PDF를 드래그 앤 드롭",
+   "landing.howItWorks.step2.title": "질문하기",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "답변 출처",
+   "chat.sources.retrieving": "출처를 가져오는 중…",
+   "chat.sources.retrievingAriaLabel": "출처를 가져오는 중",
++  "chat.sources.showAll": "출처 {count}개 모두 보기",
++  "chat.sources.showFewer": "접기",
+   "footer.links.trust": "신뢰와 보안",
+   "footer.github.label": "GitHub 오픈소스",
+   "footer.github.ariaLabel": "DocTalk GitHub 저장소 (새 탭에서 열림)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "법률",
+   "domainModes.academic": "학술",
+   "citation.cardLabel": "인용 {index}, {page}페이지",
++  "citation.passageFallback": "인용된 구절",
+   "billing.annualUnavailable": "월별 크레딧 지급 기능을 수정하는 동안 신규 연간 구독과 연간 요금제 변경을 일시 중단합니다. 월간 구독은 이용할 수 있습니다.",
+   "evidence.reference": "인용 {index} · {page}페이지",
+   "evidence.exact": "일치하는 원문",
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index 63f2028..ef3a76f 100644
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -1676,6 +1676,14 @@
+   "landing.howItWorks.step3.desc": "Cada resposta cita páginas específicas. Clique em uma citação para ir direto à fonte.",
+   "landing.howItWorks.step3.title": "Obtenha respostas verificadas",
+   "landing.howItWorks.title": "Como funciona",
++  "landing.proof.ariaLabel": "DocTalk em resumo",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "idiomas para a interface e as respostas",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "formatos de arquivo, de PDF e slides a páginas web",
++  "landing.proof.jump.value": "1 clique",
++  "landing.proof.jump.label": "de qualquer resposta ao trecho citado",
++  "landing.proof.nav.ariaLabel": "Nesta página",
+   "landing.security.deletion.desc": "Remova seus dados de todos os sistemas ativos quando quiser.",
+   "landing.security.deletion.title": "Exclua a qualquer momento",
+   "landing.security.encrypted.desc": "TLS em trânsito, AES-256 em repouso. Proteção de padrão industrial.",
+@@ -1748,7 +1756,7 @@
+   "pricing.description": "O DocTalk foi projetado para pessoas que precisam de respostas embasadas a partir de PDFs, arquivos DOCX, slides, planilhas e URLs. Todos os planos incluem citações de fontes e suporte a OCR. Os planos superiores ampliam os limites de uso, liberam o modo Pro sem restrições e adicionam fluxos de exportação ou prompts personalizados para pesquisas e operações mais intensas.",
+   "pricing.metaDescription": "O DocTalk foi projetado para pessoas que precisam de respostas embasadas a partir de PDFs, arquivos DOCX, slides, planilhas e URLs. Todos os planos incluem citações de fontes e suporte a OCR. Os planos superiores ampliam os limites de uso, liberam o modo Pro sem restrições e adicionam fluxos de exportação ou prompts personalizados para pesquisas e operações mais intensas.",
+   "pricing.heroLine": "Todos os planos respondem com uma citação que você pode abrir. Os planos pagos aumentam os limites.",
+-  "pricing.eyebrow": "PREÇOS",
++  "pricing.eyebrow": "Preços",
+   "pricing.free.cadence": "/mês",
+   "pricing.free.cta": "Comece grátis",
+   "pricing.free.feature1": "500 créditos iniciais e, a partir do segundo mês, 300 por mês",
+@@ -2307,6 +2315,8 @@
+   "chat.sources.ariaLabel": "Fontes da resposta",
+   "chat.sources.retrieving": "Recuperando fontes…",
+   "chat.sources.retrievingAriaLabel": "Recuperando fontes",
++  "chat.sources.showAll": "Mostrar todas as {count} fontes",
++  "chat.sources.showFewer": "Mostrar menos",
+   "footer.links.trust": "Confiança e Segurança",
+   "footer.github.label": "Código aberto no GitHub",
+   "footer.github.ariaLabel": "Repositório DocTalk no GitHub (abre em nova aba)",
+@@ -3966,6 +3976,7 @@
+   "domainModes.legal": "Jurídico",
+   "domainModes.academic": "Acadêmico",
+   "citation.cardLabel": "Citação {index}, página {page}",
++  "citation.passageFallback": "Trecho citado",
+   "billing.annualUnavailable": "Novas assinaturas anuais e alterações de planos anuais estão suspensas enquanto corrigimos a entrega mensal de créditos. As assinaturas mensais continuam disponíveis.",
+   "evidence.reference": "Citação {index} · Página {page}",
+   "evidence.exact": "Trecho exato",
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index 626d8f8..77514fb 100644
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -385,6 +385,14 @@
+   "landing.feature.privacy.title": "隐私优先",
+   "landing.feature.privacy.desc": "DocTalk 不使用您的文档训练模型。AI 处理方式与提供商条款详见隐私政策。",
+   "landing.howItWorks.title": "使用流程",
++  "landing.proof.ariaLabel": "DocTalk 一览",
++  "landing.proof.languages.value": "11",
++  "landing.proof.languages.label": "界面和回答支持的语言",
++  "landing.proof.formats.value": "7",
++  "landing.proof.formats.label": "支持的文件格式：PDF、幻灯片、网页等",
++  "landing.proof.jump.value": "一键",
++  "landing.proof.jump.label": "从回答直达它引用的原文",
++  "landing.proof.nav.ariaLabel": "本页内容",
+   "landing.howItWorks.step1.title": "上传 PDF",
+   "landing.howItWorks.step1.desc": "拖放任意 PDF 文档 — 报告、论文、合同、手册",
+   "landing.howItWorks.step2.title": "提出问题",
+@@ -2351,6 +2359,8 @@
+   "chat.sources.ariaLabel": "答案来源",
+   "chat.sources.retrieving": "正在检索来源…",
+   "chat.sources.retrievingAriaLabel": "正在检索来源",
++  "chat.sources.showAll": "显示全部 {count} 个来源",
++  "chat.sources.showFewer": "收起",
+   "footer.links.trust": "安全与信任",
+   "footer.github.label": "GitHub 开源",
+   "footer.github.ariaLabel": "DocTalk GitHub 仓库（新标签页打开）",
+@@ -4005,6 +4015,7 @@
+   "domainModes.legal": "法律",
+   "domainModes.academic": "学术",
+   "citation.cardLabel": "引用 {index}，第 {page} 页",
++  "citation.passageFallback": "引用段落",
+   "billing.annualUnavailable": "年付积分的按月发放机制正在修复，暂不开放新的年付订阅和年付套餐变更。仍可选择月付订阅。",
+   "evidence.reference": "引用 {index} · 第 {page} 页",
+   "evidence.exact": "精确原文",
+diff --git a/frontend/src/lib/sourceList.ts b/frontend/src/lib/sourceList.ts
+new file mode 100644
+index 0000000..9e50fae
+--- /dev/null
++++ b/frontend/src/lib/sourceList.ts
+@@ -0,0 +1,46 @@
++// Display helpers for the per-answer source lists (SourcesStrip above the
++// answer, CitationCard row below it). Display only: which sources exist, their
++// identity (citationSourceKey) and their jump targets are decided elsewhere.
++
++/** Sources shown before "Show all". An answer can cite 15+ passages; a full
++ *  list pushed the answer itself off screen (production reader, 2026-11-22). */
++export const SOURCE_PREVIEW_LIMIT = 5;
++
++/** Longest snippet a source chip shows before truncating. */
++export const SOURCE_SNIPPET_MAX = 60;
++
++/** Items to render: the first `limit`, plus any later item `keep` selects (the
++ *  active citation must stay visible after an inline [n] click), or all of
++ *  them once expanded. */
++export function visibleSources<T>(
++  items: T[],
++  expanded: boolean,
++  keep: (item: T) => boolean = () => false,
++  limit: number = SOURCE_PREVIEW_LIMIT,
++): T[] {
++  if (expanded || items.length <= limit) return items;
++  return items.filter((item, index) => index < limit || keep(item));
++}
++
++/** True when the sources come from more than one document. A chip's file name
++ *  only tells sources apart in that case; in a single-document reader every
++ *  chip showed the same name. */
++export function spansMultipleDocuments(
++  items: { documentId?: string | null; documentFilename?: string | null }[],
++): boolean {
++  const docs = new Set<string>();
++  for (const item of items) {
++    const id = item.documentId || item.documentFilename;
++    if (id) docs.add(id);
++    if (docs.size > 1) return true;
++  }
++  return false;
++}
++
++/** Strips control characters and cuts to `max` code points with an ellipsis. */
++export function shortSnippet(text: string | null | undefined, max: number = SOURCE_SNIPPET_MAX): string {
++  if (!text || typeof text !== 'string') return '';
++  const clean = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').replace(/\s+/g, ' ').trim();
++  const points = Array.from(clean);
++  return points.length > max ? points.slice(0, max).join('') + '…' : clean;
++}
+diff --git a/frontend/tests/citation-display.test.cjs b/frontend/tests/citation-display.test.cjs
+index c87d60c..86ae2a0 100644
+--- a/frontend/tests/citation-display.test.cjs
++++ b/frontend/tests/citation-display.test.cjs
+@@ -22,7 +22,8 @@ const api = load('lib/api.ts');
+ const { chatStream } = load('lib/sse.ts', { './api': api });
+ const { default: CitationCard } = load('components/Chat/CitationCard.tsx', {
+   '../../lib/citationText': load('lib/citationText.ts'),
+-  '../../i18n': { useLocale: () => ({ t: (key, values) => `${key} ${JSON.stringify(values)}` }) },
++  '../../i18n': { useLocale: () => ({ t: (key, values) => `${key} ${JSON.stringify(values)}`, tOr: (_key, fallback) => fallback }) },
++  '../../lib/sourceList': load('lib/sourceList.ts'),
+ });
+ const focus = 'This document does not state the company founding year.';
+ const payload = { ref_index: 1, chunk_id: 'chunk', page: 3, page_end: 3, text_snippet: focus, focus_snippet: focus, bboxes: [], offset: 6 };
+@@ -46,3 +47,9 @@ test('initial stream, refined stream and restored API preserve projected excerpt
+     }
+   } finally { global.fetch = original; }
+ });
++
++test('a cross-page citation card names the passage instead of rendering an empty excerpt', () => {
++  const html = renderToStaticMarkup(React.createElement(CitationCard, { refIndex: 9, textSnippet: '', page: 4, pageEnd: 5 }));
++  assert.ok(html.includes('Cited passage'));
++  assert.ok(!/text-\[1[01]px\]/.test(html), 'app UI renders nothing below 12px');
++});
+diff --git a/frontend/tests/source-list.test.cjs b/frontend/tests/source-list.test.cjs
+new file mode 100644
+index 0000000..ab55e06
+--- /dev/null
++++ b/frontend/tests/source-list.test.cjs
+@@ -0,0 +1,72 @@
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const test = require('node:test');
++require('./_load-ts.cjs');
++const {
++  SOURCE_PREVIEW_LIMIT, visibleSources, spansMultipleDocuments, shortSnippet,
++} = require('../src/lib/sourceList.ts');
++
++const src = (p) => fs.readFileSync(path.join(__dirname, '../src', p), 'utf8');
++
++test('a long source list shows the first few until expanded', () => {
++  const items = Array.from({ length: 15 }, (_, i) => i + 1);
++  assert.deepEqual(visibleSources(items, false), items.slice(0, SOURCE_PREVIEW_LIMIT));
++  assert.deepEqual(visibleSources(items, true), items);
++  assert.deepEqual(visibleSources(items.slice(0, SOURCE_PREVIEW_LIMIT), false), items.slice(0, SOURCE_PREVIEW_LIMIT));
++});
++
++test('the active citation stays visible in a collapsed list', () => {
++  const items = Array.from({ length: 15 }, (_, i) => i + 1);
++  assert.deepEqual(visibleSources(items, false, (n) => n === 12), [1, 2, 3, 4, 5, 12]);
++});
++
++test('file names only label chips when the answer cites several documents', () => {
++  assert.equal(spansMultipleDocuments([{}, {}, {}]), false);
++  assert.equal(spansMultipleDocuments([{ documentId: 'a' }, { documentId: 'a' }, {}]), false);
++  assert.equal(spansMultipleDocuments([{ documentId: 'a' }, { documentId: 'b' }]), true);
++  assert.equal(spansMultipleDocuments([{ documentFilename: 'x.pdf' }, { documentFilename: 'y.pdf' }]), true);
++});
++
++test('snippets are cut by code point and stripped of control characters', () => {
++  assert.equal(shortSnippet('a\u0007b  c', 60), 'ab c');
++  assert.equal(shortSnippet('😀'.repeat(5), 3), '😀😀😀…');
++  assert.equal(shortSnippet(''), '');
++  assert.equal(shortSnippet(null), '');
++});
++
++test('source lists render nothing below 12px and no mono uppercase labels', () => {
++  for (const file of ['components/Chat/SourcesStrip.tsx', 'components/Chat/CitationCard.tsx', 'components/Chat/SourceListToggle.tsx']) {
++    const code = src(file);
++    assert.ok(!/text-\[(?:[0-9]|1[01])px\]/.test(code), `${file} has text below 12px`);
++    assert.ok(!/\buppercase\b|--dt-mono|font-mono/.test(code), `${file} uses a mono or uppercase label`);
++  }
++});
++
++test('the landing proof strip links each fact and adds no filled CTA', () => {
++  const code = src('components/landing/ProofStrip.tsx');
++  assert.ok(!/className="ed-cta\b/.test(code), 'the hero owns the view\'s one .ed-cta');
++  for (const pathName of ['/features/multilingual', '/features/multi-format', '/features/citations']) {
++    assert.ok(code.includes(`'${pathName}'`), `missing link to ${pathName}`);
++    assert.ok(fs.existsSync(path.join(__dirname, '../src/app', pathName, 'page.tsx')), `${pathName} has no page`);
++  }
++  for (const id of ['how-it-works', 'security', 'faq']) {
++    assert.ok(code.includes(`'#${id}'`));
++    const owner = fs.readdirSync(path.join(__dirname, '../src/components/landing'))
++      .some((f) => src(`components/landing/${f}`).includes(`id="${id}"`));
++    assert.ok(owner, `no landing section has id="${id}"`);
++  }
++  const locales = fs.readdirSync(path.join(__dirname, '../src/i18n/locales'));
++  assert.equal(locales.length, 11);
++  for (const file of locales) {
++    const messages = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/i18n/locales', file), 'utf8'));
++    for (const key of [
++      'landing.proof.ariaLabel', 'landing.proof.nav.ariaLabel',
++      'landing.proof.languages.value', 'landing.proof.languages.label',
++      'landing.proof.formats.value', 'landing.proof.formats.label',
++      'landing.proof.jump.value', 'landing.proof.jump.label',
++      'chat.sources.showAll', 'chat.sources.showFewer', 'citation.passageFallback',
++    ]) assert.ok(messages[key], `${file} is missing ${key}`);
++    assert.ok(messages['chat.sources.showAll'].includes('{count}'), `${file} showAll lost {count}`);
++  }
++});
+=== commit 901333e refactor(chat): one source list per answer; drop the CitationCard row
+
+diff --git a/frontend/src/app/globals.css b/frontend/src/app/globals.css
+index 162b781..eccf81c 100644
+--- a/frontend/src/app/globals.css
++++ b/frontend/src/app/globals.css
+@@ -213,7 +213,7 @@ mark[data-dt-evidence="exact"] {
+ }
+ [data-evidence-hidden="true"] mark[data-dt-evidence] { background-color: transparent; box-shadow: none; }
+ @media (prefers-reduced-motion: reduce) { mark[data-dt-evidence] { transition: none; } }
+-.dt-citation-card[aria-current="location"] { border-color: var(--reader-evidence); background: var(--reader-evidence-soft); }
++.dt-source-chip[aria-current="location"] { border-color: var(--reader-evidence); background: var(--reader-evidence-soft); }
+ 
+ /* Shiki dual-theme: switch CSS variables based on .dark class */
+ .shiki-container .shiki,
+@@ -539,32 +539,6 @@ mark[data-dt-evidence="exact"] {
+   color: #141416;
+ }
+ 
+-/* Group C: citation card → solid bg, hairline border */
+-.dt-citation-card {
+-  border: 1px solid #e4e4e7;
+-  background: #ffffff;
+-  color: var(--workbench-ink);
+-  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.05);
+-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+-}
+-
+-.dt-citation-card:hover {
+-  border-color: rgba(29, 78, 216, 0.3);
+-  box-shadow: 0 8px 24px -10px rgba(24, 24, 27, 0.12);
+-  transform: translateY(-1px);
+-}
+-
+-.dark .dt-citation-card {
+-  border-color: #27272a;
+-  background: #18181b;
+-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+-}
+-
+-.dark .dt-citation-card:hover {
+-  border-color: rgba(96, 165, 250, 0.46);
+-  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.5);
+-}
+-
+ /* KEEP: dt-composer-shell — functional fade gradient, not a decorative wash */
+ .dt-composer-shell {
+   border-top: 1px solid var(--workbench-border);
+diff --git a/frontend/src/components/Chat/ChatPanel.tsx b/frontend/src/components/Chat/ChatPanel.tsx
+index fdc1648..7275208 100644
+--- a/frontend/src/components/Chat/ChatPanel.tsx
++++ b/frontend/src/components/Chat/ChatPanel.tsx
+@@ -7,10 +7,7 @@ import { exportConversationAsMarkdown } from '../../lib/export';
+ import type { ChatArtifact, Citation, DocumentHierarchicalBrief, Message } from '../../types';
+ import { useDocTalkStore } from '../../store';
+ import MessageBubble from './MessageBubble';
+-import CitationCard from './CitationCard';
+-import SourceListToggle from './SourceListToggle';
+-import { visibleSources } from '../../lib/sourceList';
+-import { citationPreview, uniqueCitationIndexes } from '../../lib/citationText';
++import { uniqueCitationIndexes } from '../../lib/citationText';
+ import { useLocale } from '../../i18n';
+ import { PaywallModal } from '../PaywallModal';
+ import PlusMenu from './PlusMenu';
+@@ -78,7 +75,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
+   isAnonShareAnswer,
+   onTryQuoteFinder,
+ }: ChatMessageRowProps) {
+-  const activeCitation = useDocTalkStore(state => state.citationTarget?.messageId === message.id ? state.citationTarget.citation : null);
+   const handleCitation = useCallback((citation: Citation) => onCitationClick(citation, message.id), [onCitationClick, message.id]);
+   const displayCitations = React.useMemo(() => {
+     if (message.role !== 'assistant') return undefined;
+@@ -91,24 +87,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
+     [displayCitations, message]
+   );
+ 
+-  const uniqueCitations = React.useMemo(() => {
+-    if (!displayCitations || displayCitations.length === 0) return undefined;
+-    return displayCitations
+-      .filter((citation, index, all) => all.findIndex((item) => item.refIndex === citation.refIndex) === index)
+-      .sort((a, b) => a.refIndex - b.refIndex);
+-  }, [displayCitations]);
+-
+-  const [sourcesExpanded, setSourcesExpanded] = useState(false);
+-  const isActiveCitation = useCallback(
+-    (citation: Citation) => activeCitation?.chunkId === citation.chunkId && activeCitation?.refIndex === citation.refIndex,
+-    [activeCitation],
+-  );
+-  const shownCitations = React.useMemo(
+-    () => (uniqueCitations ? visibleSources(uniqueCitations, sourcesExpanded, isActiveCitation) : undefined),
+-    [uniqueCitations, sourcesExpanded, isActiveCitation],
+-  );
+-  const sourceListId = `citation-cards-${message.id}`;
+-
+   return (
+     <MessageErrorBoundary messageId={message.id}>
+       <div data-message-id={message.id} tabIndex={-1}>
+@@ -125,27 +103,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
+           isAnonShareAnswer={isAnonShareAnswer}
+           onTryQuoteFinder={onTryQuoteFinder}
+         />
+-        {uniqueCitations && shownCitations && uniqueCitations.length > 0 && (
+-          <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-0" id={sourceListId}>
+-            {shownCitations.map((citation) => (
+-              <CitationCard
+-                key={`${message.id}-${citation.refIndex}`}
+-                refIndex={citation.refIndex}
+-                textSnippet={citationPreview(citation)}
+-                page={citation.page}
+-                pageEnd={citation.pageEnd}
+-                active={isActiveCitation(citation)}
+-                onClick={() => handleCitation(citation)}
+-              />
+-            ))}
+-            <SourceListToggle
+-              total={uniqueCitations.length}
+-              expanded={sourcesExpanded}
+-              onToggle={() => setSourcesExpanded((value) => !value)}
+-              controls={sourceListId}
+-            />
+-          </div>
+-        )}
+       </div>
+     </MessageErrorBoundary>
+   );
+diff --git a/frontend/src/components/Chat/CitationCard.tsx b/frontend/src/components/Chat/CitationCard.tsx
+deleted file mode 100644
+index 72ee4a6..0000000
+--- a/frontend/src/components/Chat/CitationCard.tsx
++++ /dev/null
+@@ -1,40 +0,0 @@
+-"use client";
+-
+-import { citationPageRange } from '../../lib/citationText';
+-import React from 'react';
+-import { useLocale } from '../../i18n';
+-import { shortSnippet } from '../../lib/sourceList';
+-
+-interface CitationCardProps {
+-  refIndex: number;
+-  textSnippet: string;
+-  page: number;
+-  pageEnd?: number;
+-  onClick?: () => void;
+-  active?: boolean;
+-}
+-
+-export default function CitationCard({ refIndex, textSnippet, page, pageEnd, onClick, active = false }: CitationCardProps) {
+-  const { t, tOr } = useLocale();
+-  // Control characters stripped, cut to 60 code points. A cross-page citation
+-  // has no previewable excerpt (citationPreview returns ''): name it instead of
+-  // rendering an empty card that only says "Page 4–5".
+-  const snippet = shortSnippet(textSnippet) || tOr('citation.passageFallback', 'Cited passage');
+-
+-  // Validate page number
+-  const validPage = citationPageRange({ page, pageEnd });
+-
+-  return (
+-    <button
+-      type="button"
+-      onClick={onClick}
+-      aria-current={active ? 'location' : undefined}
+-      className="dt-citation-card inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-start text-xs focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+-      aria-label={t('citation.cardLabel', { index: refIndex, page: validPage })}
+-    >
+-      <span className="dt-source-index inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-xs font-bold leading-none tabular-nums">{refIndex}</span>
+-      <span dir="auto" className="max-w-[220px] truncate text-[var(--reader-muted)]">{snippet}</span>
+-      <span className="shrink-0 text-xs tabular-nums text-[var(--reader-muted)]">{t('citation.page', { page: validPage })}</span>
+-    </button>
+-  );
+-}
+diff --git a/frontend/src/components/Chat/MessageBubble.tsx b/frontend/src/components/Chat/MessageBubble.tsx
+index 58ce967..b7150b7 100644
+--- a/frontend/src/components/Chat/MessageBubble.tsx
++++ b/frontend/src/components/Chat/MessageBubble.tsx
+@@ -299,6 +299,7 @@ function MessageBubble({
+                   doesn't flicker into existence mid-answer. */}
+               {isAssistant && (
+                 <SourcesStrip
++                  messageId={message.id}
+                   citations={displayCitations}
+                   onCitationClick={onCitationClick}
+                   isStreaming={isStreaming}
+diff --git a/frontend/src/components/Chat/SourcesStrip.tsx b/frontend/src/components/Chat/SourcesStrip.tsx
+index 6ef91dd..1afb4db 100644
+--- a/frontend/src/components/Chat/SourcesStrip.tsx
++++ b/frontend/src/components/Chat/SourcesStrip.tsx
+@@ -11,6 +11,9 @@ import { useDocTalkStore } from "../../store";
+ 
+ interface SourcesStripProps {
+   citations: Citation[];
++  /** The message these sources belong to: marks the chip of the citation the
++   *  reader is showing (citationTarget) and keeps it visible when collapsed. */
++  messageId?: string;
+   onCitationClick?: (c: Citation) => void;
+   /** True while the assistant reply is still streaming. If no citations
+    *  have arrived yet but streaming is active, render a placeholder skeleton
+@@ -40,11 +43,15 @@ interface SourcesStripProps {
+  */
+ export default function SourcesStrip({
+   citations,
++  messageId,
+   onCitationClick,
+   isStreaming = false,
+ }: SourcesStripProps) {
+   const { t, tOr } = useLocale();
+   const currentDocumentName = useDocTalkStore((s) => s.documentName);
++  const activeCitation = useDocTalkStore((s) =>
++    messageId && s.citationTarget?.messageId === messageId ? s.citationTarget.citation : null,
++  );
+   const [expanded, setExpanded] = React.useState(false);
+   const listId = React.useId();
+ 
+@@ -63,6 +70,8 @@ export default function SourcesStrip({
+     return out.sort((a, b) => a.refIndex - b.refIndex);
+   }, [citations]);
+   const multiDocument = React.useMemo(() => spansMultipleDocuments(unique), [unique]);
++  const isActive = (c: Citation) =>
++    Boolean(activeCitation) && activeCitation!.chunkId === c.chunkId && activeCitation!.refIndex === c.refIndex;
+ 
+   // Streaming with no citations yet: render a skeleton placeholder so the
+   // user sees "sources are coming" rather than a blank space that later
+@@ -101,17 +110,18 @@ export default function SourcesStrip({
+         {label}
+       </div>
+       <div className="flex flex-wrap items-center gap-2" id={listId}>
+-        {visibleSources(unique, expanded).map((c) => {
++        {visibleSources(unique, expanded, isActive).map((c) => {
+           const filename = c.documentFilename || currentDocumentName || "Document";
+           const displayFilename = multiDocument
+             ? shortSnippet(filename, 20)
+-            : shortSnippet(citationPreview(c), 48) || tOr("citation.passageFallback", "Cited passage");
++            : shortSnippet(citationPreview(c)) || tOr("citation.passageFallback", "Cited passage");
+           const jumpLabel = t("citation.jumpTo", { page: citationPageRange(c) });
+           return (
+             <button
+               key={citationSourceKey(c)}
+               type="button"
+               onClick={() => onCitationClick?.(c)}
++              aria-current={isActive(c) ? "location" : undefined}
+               title={jumpLabel}
+               aria-label={`${filename} — ${jumpLabel}`}
+               className="dt-source-chip group inline-flex max-w-xs items-center gap-2 rounded-md px-2.5 py-1.5 text-xs motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--reader-evidence)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+diff --git a/frontend/src/components/Chat/index.ts b/frontend/src/components/Chat/index.ts
+index f3005d0..df04d3a 100644
+--- a/frontend/src/components/Chat/index.ts
++++ b/frontend/src/components/Chat/index.ts
+@@ -1,4 +1,3 @@
+ export { default as ChatPanel } from './ChatPanel';
+ export { default as MessageBubble } from './MessageBubble';
+-export { default as CitationCard } from './CitationCard';
+ 
+diff --git a/frontend/src/lib/sourceList.ts b/frontend/src/lib/sourceList.ts
+index 9e50fae..a0aaea9 100644
+--- a/frontend/src/lib/sourceList.ts
++++ b/frontend/src/lib/sourceList.ts
+@@ -1,5 +1,6 @@
+-// Display helpers for the per-answer source lists (SourcesStrip above the
+-// answer, CitationCard row below it). Display only: which sources exist, their
++// Display helpers for the per-answer source list (SourcesStrip, above the
++// answer; the CitationCard row below it was removed on 2026-11-22 as a
++// duplicate). Display only: which sources exist, their
+ // identity (citationSourceKey) and their jump targets are decided elsewhere.
+ 
+ /** Sources shown before "Show all". An answer can cite 15+ passages; a full
+diff --git a/frontend/tests/citation-display.test.cjs b/frontend/tests/citation-display.test.cjs
+index 86ae2a0..0ee00ab 100644
+--- a/frontend/tests/citation-display.test.cjs
++++ b/frontend/tests/citation-display.test.cjs
+@@ -20,11 +20,17 @@ function load(relative, mocks = {}) {
+ }
+ const api = load('lib/api.ts');
+ const { chatStream } = load('lib/sse.ts', { './api': api });
+-const { default: CitationCard } = load('components/Chat/CitationCard.tsx', {
++const i18n = { useLocale: () => ({ t: (key, values) => `${key} ${JSON.stringify(values)}`, tOr: (_key, fallback, values = {}) => fallback.replace(/\{(\w+)\}/g, (m, k) => (k in values ? String(values[k]) : m)) }) };
++const sourceList = load('lib/sourceList.ts');
++let storeState = { documentName: 'Report.pdf', citationTarget: null };
++const { default: SourcesStrip } = load('components/Chat/SourcesStrip.tsx', {
+   '../../lib/citationText': load('lib/citationText.ts'),
+-  '../../i18n': { useLocale: () => ({ t: (key, values) => `${key} ${JSON.stringify(values)}`, tOr: (_key, fallback) => fallback }) },
+-  '../../lib/sourceList': load('lib/sourceList.ts'),
++  '../../lib/sourceList': sourceList,
++  '../../i18n': i18n,
++  '../../store': { useDocTalkStore: (select) => select(storeState) },
++  './SourceListToggle': load('components/Chat/SourceListToggle.tsx', { '../../i18n': i18n, '../../lib/sourceList': sourceList }),
+ });
++const strip = (citations, props = {}) => renderToStaticMarkup(React.createElement(SourcesStrip, { citations, ...props }));
+ const focus = 'This document does not state the company founding year.';
+ const payload = { ref_index: 1, chunk_id: 'chunk', page: 3, page_end: 3, text_snippet: focus, focus_snippet: focus, bboxes: [], offset: 6 };
+ test('initial stream, refined stream and restored API preserve projected excerpt and page in the actual card', async () => {
+@@ -41,15 +47,31 @@ test('initial stream, refined stream and restored API preserve projected excerpt
+     for (const citation of observed) {
+       assert.equal(citation.page, 3); assert.equal(citation.pageEnd, 3);
+       assert.equal(citation.textSnippet, focus);
+-      const html = renderToStaticMarkup(React.createElement(CitationCard, citation));
++      const html = strip([citation]);
+       assert.ok(html.includes(focus)); assert.ok(!html.includes('Revenue'));
+       assert.ok(html.includes('3'));
+     }
+   } finally { global.fetch = original; }
+ });
+ 
+-test('a cross-page citation card names the passage instead of rendering an empty excerpt', () => {
+-  const html = renderToStaticMarkup(React.createElement(CitationCard, { refIndex: 9, textSnippet: '', page: 4, pageEnd: 5 }));
++test('a cross-page source chip names the passage instead of rendering an empty excerpt', () => {
++  const html = strip([{ refIndex: 9, chunkId: 'x', textSnippet: 'Spans two pages', page: 4, pageEnd: 5, bboxes: [] }]);
+   assert.ok(html.includes('Cited passage'));
+   assert.ok(!/text-\[1[01]px\]/.test(html), 'app UI renders nothing below 12px');
+ });
++
++test('the source strip marks the citation the reader shows and keeps it visible when collapsed', () => {
++  const citations = Array.from({ length: 15 }, (_, i) => ({ refIndex: i + 1, chunkId: `c${i}`, textSnippet: `Passage ${i + 1}.`, page: 2, pageEnd: 2, bboxes: [] }));
++  storeState = { documentName: 'Report.pdf', citationTarget: { messageId: 'm1', citation: citations[11] } };
++  try {
++    const html = strip(citations, { messageId: 'm1' });
++    assert.equal((html.match(/dt-source-chip/g) || []).length, 6);
++    assert.match(html, /aria-current="location"[^>]*>[\s\S]*?Passage 12\./);
++    assert.ok(html.includes('Show all 15 sources'));
++    const other = strip(citations, { messageId: 'm2' });
++    assert.equal((other.match(/dt-source-chip/g) || []).length, 5);
++    assert.ok(!other.includes('aria-current'));
++  } finally {
++    storeState = { documentName: 'Report.pdf', citationTarget: null };
++  }
++});
+diff --git a/frontend/tests/source-list.test.cjs b/frontend/tests/source-list.test.cjs
+index ab55e06..6f33121 100644
+--- a/frontend/tests/source-list.test.cjs
++++ b/frontend/tests/source-list.test.cjs
+@@ -36,7 +36,7 @@ test('snippets are cut by code point and stripped of control characters', () =>
+ });
+ 
+ test('source lists render nothing below 12px and no mono uppercase labels', () => {
+-  for (const file of ['components/Chat/SourcesStrip.tsx', 'components/Chat/CitationCard.tsx', 'components/Chat/SourceListToggle.tsx']) {
++  for (const file of ['components/Chat/SourcesStrip.tsx', 'components/Chat/SourceListToggle.tsx']) {
+     const code = src(file);
+     assert.ok(!/text-\[(?:[0-9]|1[01])px\]/.test(code), `${file} has text below 12px`);
+     assert.ok(!/\buppercase\b|--dt-mono|font-mono/.test(code), `${file} uses a mono or uppercase label`);
+@@ -70,3 +70,9 @@ test('the landing proof strip links each fact and adds no filled CTA', () => {
+     assert.ok(messages['chat.sources.showAll'].includes('{count}'), `${file} showAll lost {count}`);
+   }
+ });
++
++test('answers keep one source list: the CitationCard row below the answer is gone', () => {
++  assert.ok(!fs.existsSync(path.join(__dirname, '../src/components/Chat/CitationCard.tsx')));
++  assert.ok(!/CitationCard\b/.test(src('components/Chat/ChatPanel.tsx')));
++  assert.ok(/<SourcesStrip[\s\S]*?messageId=\{message\.id\}/.test(src('components/Chat/MessageBubble.tsx')));
++});
+=== commit ebbf6d0 feat(landing): hero entry row and masthead sample action (M1, M3)
+
+diff --git a/frontend/src/app/[locale]/page.tsx b/frontend/src/app/[locale]/page.tsx
+index e3dfc8b..cd968a3 100644
+--- a/frontend/src/app/[locale]/page.tsx
++++ b/frontend/src/app/[locale]/page.tsx
+@@ -11,7 +11,7 @@ import { isUrlLocale } from '../../i18n/routing';
+ // Namespaces the landing tree (header + sections + footer + HeroArtifact) reads.
+ // Seeding only these keeps the hydration payload ~17KB instead of the full 400KB.
+ const LANDING_PREFIXES = [
+-  'landing.', 'hero.', 'guestUpload.', 'chat.', 'footer.', 'privacy.', 'terms.', 'public.', 'auth.', 'header.', 'common.',
++  'landing.', 'hero.', 'guestUpload.', 'demo.freeNoSignup', 'demo.sample.', 'chat.', 'footer.', 'privacy.', 'terms.', 'public.', 'auth.', 'header.', 'common.',
+ ] as const;
+ 
+ export async function generateMetadata({
+diff --git a/frontend/src/app/demo/DemoPageClient.tsx b/frontend/src/app/demo/DemoPageClient.tsx
+index b397402..a101b3b 100644
+--- a/frontend/src/app/demo/DemoPageClient.tsx
++++ b/frontend/src/app/demo/DemoPageClient.tsx
+@@ -9,6 +9,7 @@ import { useLocale } from '../../i18n';
+ import { localizedHrefIfAvailable } from '../../i18n/routing';
+ import { getDemoDocuments, type DemoDocument } from '../../lib/api';
+ import { usePageTitle } from '../../lib/usePageTitle';
++import { demoQuestionKey } from '../../lib/demoSamples';
+ import MarketingShell from '../../components/marketing/MarketingShell';
+ import EdPageHero from '../../components/marketing/EdPageHero';
+ import EdSection from '../../components/marketing/EdSection';
+@@ -26,7 +27,7 @@ const SAMPLE_CONFIG: Record<string, {
+     icon: FileText,
+     titleKey: 'demo.sample.earnings.title',
+     descKey: 'demo.sample.earnings.desc',
+-    questionKey: 'demo.sample.earnings.question',
++    questionKey: demoQuestionKey('alphabet-earnings'),
+     badge: 'Finance',
+     pages: 'Q4 report',
+   },
+@@ -34,7 +35,7 @@ const SAMPLE_CONFIG: Record<string, {
+     icon: BookOpen,
+     titleKey: 'demo.sample.paper.title',
+     descKey: 'demo.sample.paper.desc',
+-    questionKey: 'demo.sample.paper.question',
++    questionKey: demoQuestionKey('attention-paper'),
+     badge: 'Research',
+     pages: 'AI paper',
+   },
+@@ -42,7 +43,7 @@ const SAMPLE_CONFIG: Record<string, {
+     icon: FileSignature,
+     titleKey: 'demo.sample.court.title',
+     descKey: 'demo.sample.court.desc',
+-    questionKey: 'demo.sample.court.question',
++    questionKey: demoQuestionKey('court-filing'),
+     badge: 'Legal',
+     pages: 'Court filing',
+   },
+diff --git a/frontend/src/app/demo/[sample]/DemoRedirectPageClient.tsx b/frontend/src/app/demo/[sample]/DemoRedirectPageClient.tsx
+index 66d2df2..721b5a8 100644
+--- a/frontend/src/app/demo/[sample]/DemoRedirectPageClient.tsx
++++ b/frontend/src/app/demo/[sample]/DemoRedirectPageClient.tsx
+@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
+ import { getDemoDocuments } from '../../../lib/api';
+ import { enterDemo } from '../../../lib/demoTrial';
+ import { useLocale } from '../../../i18n';
++import { DEMO_QUESTION_MAX } from '../../../lib/demoSamples';
+ 
+ /** Legacy demo route — redirects to /d/{documentId} for the matching demo slug. */
+ const SLUG_MAP: Record<string, string> = {
+@@ -24,7 +25,12 @@ const SLUG_MAP: Record<string, string> = {
+ export default function DemoRedirectPageClient() {
+   const { sample } = useParams<{ sample: string }>();
+   const router = useRouter();
+-  const checkEarnings = useSearchParams().get('task') === 'check-earnings';
++  const searchParams = useSearchParams();
++  const checkEarnings = searchParams.get('task') === 'check-earnings';
++  // The landing's sample chips pass the sample's suggested question in the
++  // visitor's language (lib/demoSamples.ts). The reader accepts ?question=
++  // from any link already; this only carries it across the id lookup.
++  const askedQuestion = (searchParams.get('question') || '').trim().slice(0, DEMO_QUESTION_MAX);
+   const [error, setError] = useState(false);
+   const { t } = useLocale();
+ 
+@@ -36,14 +42,16 @@ export default function DemoRedirectPageClient() {
+         const match = docs.find((d) => d.slug === targetSlug);
+         if (match) {
+           const question = 'On page 1, what Q4 2025 revenue does the bullet starting “Consolidated Alphabet revenues increased” report? What 2026 CapEx range does the sentence starting “To meet customer demand” give? Cite each source sentence separately.';
+-          const query = targetSlug === 'alphabet-earnings' && checkEarnings ? '?question=' + encodeURIComponent(question) : '';
++          const query = targetSlug === 'alphabet-earnings' && checkEarnings
++            ? '?question=' + encodeURIComponent(question)
++            : askedQuestion ? '?question=' + encodeURIComponent(askedQuestion) : '';
+           router.replace(`/d/${match.document_id}${query}`);
+         } else {
+           setError(true);
+         }
+       })
+       .catch(() => setError(true));
+-  }, [sample, router, checkEarnings]);
++  }, [sample, router, checkEarnings, askedQuestion]);
+ 
+   if (error) {
+     return (
+diff --git a/frontend/src/app/editorial.css b/frontend/src/app/editorial.css
+index caec28f..eccc2ab 100644
+--- a/frontend/src/app/editorial.css
++++ b/frontend/src/app/editorial.css
+@@ -1005,6 +1005,94 @@ html.dt-night-doc {
+   margin-top: clamp(24px, 3.8svh, 34px);
+ }
+ 
++/* Masthead text link (EditorialHeaderBase: Sign in, beside the quiet pill). */
++.dt-editorial .ed-masthead-link {
++  font-family: var(--dt-body);
++  font-size: 13px;
++  color: var(--ed-ink-2);
++  text-decoration: none;
++  transition: color 150ms ease;
++}
++.dt-editorial .ed-masthead-link:hover { color: var(--ed-signal); }
++.dt-editorial .ed-masthead-link:focus-visible {
++  outline: 2px solid var(--ed-ink);
++  outline-offset: 3px;
++  border-radius: var(--ed-r-1);
++}
++
++/* The hero's entry row (HeroSection): the free allowance, then the samples.
++   The badge and chips carry an opaque fill: the row sits where the field's
++   fade gives way to the passage, so text behind them must not show through. */
++.dt-editorial .ed-night-entry {
++  /* One line on desktop: the claim, the passage and the answer must still
++     share a laptop's first screen (review 2026-09-21, MAJOR-3), so the row
++     may run wider than the claim column rather than wrap. Centred on the
++     claim either way (left + translate is direction-neutral). */
++  position: relative;
++  left: 50%;
++  transform: translateX(-50%);
++  width: min(980px, calc(100vw - 48px));
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  justify-content: center;
++  gap: 8px 16px;
++  margin-top: 16px;
++  margin-top: clamp(12px, 2svh, 16px);
++}
++.dt-editorial .ed-night-quota {
++  margin: 0;
++  padding: 4px 12px;
++  background: var(--ed-paper);
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-pill);
++  color: var(--ed-ink-2);
++  font-size: 13px;
++  line-height: 1.5;
++}
++.dt-editorial .ed-night-samples {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++}
++.dt-editorial .ed-night-samples-label {
++  color: var(--ed-ink-3);
++  font-size: 14px;
++  line-height: 1.4;
++  margin-inline-end: 4px;
++}
++/* A small quiet link with an opaque fill: lighter than .ed-cta-quiet, never a
++   filled action. */
++.dt-editorial .ed-chip {
++  display: inline-flex;
++  align-items: center;
++  min-height: 36px;
++  padding: 6px 14px;
++  background: var(--ed-paper);
++  color: var(--ed-ink);
++  border: 1px solid var(--ed-control-border);
++  border-radius: var(--ed-r-pill);
++  font-size: 14px;
++  font-weight: 500;
++  line-height: 1.4;
++  text-decoration: none;
++  transition: background-color var(--ed-dur-1) var(--ed-ease),
++    border-color var(--ed-dur-1) var(--ed-ease);
++}
++.dt-editorial .ed-chip:hover {
++  background: var(--ed-paper-2);
++  border-color: var(--ed-ink-3);
++}
++.dt-editorial .ed-chip:focus-visible {
++  outline: 2px solid var(--ed-ink);
++  outline-offset: 2px;
++}
++@media (prefers-reduced-motion: reduce) {
++  .dt-editorial .ed-chip { transition: none; }
++}
++
+ /* The answer. Physical `left`, not inline-start: it annotates the document,
+    which is left-to-right in every locale. It aligns with the document's text
+    column; HeroSection moves it directly under the passage once the field
+@@ -1141,6 +1229,20 @@ html.dt-night-doc {
+   .dt-editorial .ed-night-actions { margin-top: 20px; }
+   .dt-editorial .ed-night-card .ed-frame-a { font-size: 14px; line-height: 1.45; }
+ }
++/* The entry row gives way on the shortest desktop windows (1280x720,
++   1366x680), where claim + passage + answer only just share the first screen;
++   the filled CTA still leads to the samples, and /demo and the reader state
++   the free allowance. Measured 2026-11-22: with the row, de/ja put the card
++   20-30px under the fold there. */
++@media (min-width: 768px) and (max-height: 760px) {
++  .dt-editorial .ed-night-entry { display: none; }
++}
++/* ja, ko and hi set the headline on three lines, which leaves no room for the
++   row up to 920px tall (1366x768 ko, 1440x900 ja/hi, 1536x864 ja/ko/hi put the
++   card 10-60px under the fold with it). */
++@media (min-width: 768px) and (max-height: 920px) {
++  .dt-editorial .ed-night-claim:is(:lang(ja), :lang(ko), :lang(hi)) .ed-night-entry { display: none; }
++}
+ /* The same compact card wherever HeroSection measures that the full one
+    would end below the first screen (the three-line ja/hi headlines at
+    1440x900), at any viewport height. */
+@@ -1158,6 +1260,14 @@ html.dt-night-doc {
+     padding: 48px 20px 36px;
+   }
+   .dt-editorial .ed-night-claim { order: 1; }
++  .dt-editorial .ed-night-entry {
++    left: auto;
++    transform: none;
++    width: auto;
++    flex-direction: column;
++    gap: 10px;
++    margin-top: 20px;
++  }
+   /* The headline's authored break suits two desktop lines; on a phone it
+      strands a word ("cites", "zitiert") on a line of its own. Drop it and let
+      text-wrap: balance set the whole headline. */
+diff --git a/frontend/src/components/landing/HeroSection.tsx b/frontend/src/components/landing/HeroSection.tsx
+index c6a04cb..22f0c57 100644
+--- a/frontend/src/components/landing/HeroSection.tsx
++++ b/frontend/src/components/landing/HeroSection.tsx
+@@ -5,6 +5,7 @@ import Link from 'next/link';
+ import { useLocale } from '../../i18n';
+ import { trackEvent } from '../../lib/analytics';
+ import GuestUploadEntry from '../marketing/GuestUploadEntry';
++import { DEMO_SAMPLES, demoSampleHref } from '../../lib/demoSamples';
+ import CitationField, { type CitationFieldLayout, type CitationFieldSettings } from './CitationField';
+ 
+ /**
+@@ -210,7 +211,10 @@ export default function HeroSection() {
+           <CitationField settings={settings} onLayout={onLayout} onCited={onCited} />
+         </div>
+ 
+-        <div ref={claimRef} className="ed-night-claim">
++        {/* lang: the claim is in the page's language from the server render,
++            so the :lang() rules for it (editorial.css) apply without a shift
++            at hydration; the root <html lang> is only set client-side. */}
++        <div ref={claimRef} className="ed-night-claim" lang={locale}>
+           <h1 id="landing-hero-title" className="ed-display">
+             {headlineLines.map((line: string, i: number) => (
+               <React.Fragment key={i}>
+@@ -237,6 +241,32 @@ export default function HeroSection() {
+                 masthead's Sign In stays the plain sign-up path. */}
+             <GuestUploadEntry variant="link" location="hero" />
+           </div>
++
++          {/* The entry row (plan 2026-11-22-ui-ux-pangram-learnings, M1): the
++              free allowance before anyone has to ask, and one click from here
++              to a sample answering its suggested question. Chips are links
++              with an opaque fill, never a second filled CTA; the row also
++              lifts the actions above the field's fade into the passage. */}
++          <div className="ed-night-entry">
++            <p className="ed-night-quota">
++              {tOr('demo.freeNoSignup', '5 free questions per document · no sign-up needed')}
++            </p>
++            <div className="ed-night-samples" role="group" aria-labelledby="landing-samples-label">
++              <span id="landing-samples-label" className="ed-night-samples-label">
++                {tOr('landing.entry.tryLabel', 'Try a sample:')}
++              </span>
++              {DEMO_SAMPLES.map((sample) => (
++                <Link
++                  key={sample.slug}
++                  href={demoSampleHref(sample, t(sample.questionKey))}
++                  onClick={() => trackEvent('landing_cta_clicked', { source: 'hero', reason: `sample_${sample.route}` })}
++                  className="ed-chip"
++                >
++                  {tOr(sample.chipKey, sample.chipFallback)}
++                </Link>
++              ))}
++            </div>
++          </div>
+         </div>
+ 
+         <figure
+diff --git a/frontend/src/components/marketing/EditorialHeaderBase.tsx b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+index 40cff11..4ca8c3e 100644
+--- a/frontend/src/components/marketing/EditorialHeaderBase.tsx
++++ b/frontend/src/components/marketing/EditorialHeaderBase.tsx
+@@ -9,6 +9,7 @@ import EdLanguageSelector from "./EdLanguageSelector";
+ import { useLocale } from "../../i18n";
+ import { localizedHrefIfAvailable, splitLocaleFromPath } from "../../i18n/routing";
+ import type { ChromeStrings } from "../../i18n/chrome";
++import { trackEvent } from "../../lib/analytics";
+ 
+ export interface Crumb {
+   label: string;
+@@ -41,7 +42,8 @@ export default function EditorialHeaderBase({
+   const [mobileOpen, setMobileOpen] = useState(false);
+   // Derive the URL locale from the path so nav links stay in-language on
+   // localized pages (`/de/...`). Targets not yet localized fall back to English.
+-  const { locale: urlLocale } = splitLocaleFromPath(usePathname() || "/");
++  const pathname = usePathname() || "/";
++  const { locale: urlLocale } = splitLocaleFromPath(pathname);
+   const navHref = (path: string) => localizedHrefIfAvailable(urlLocale, path);
+   // Prefer server-resolved chrome strings (correct language in initial HTML on
+   // localized pages); otherwise the client-locale text.
+@@ -50,7 +52,12 @@ export default function EditorialHeaderBase({
+     pricing: chrome?.navPricing ?? t("footer.pricing"),
+     trust: chrome?.navTrust ?? tOr("footer.links.trust", "Security"),
+     signIn: chrome?.signIn ?? t("auth.signIn"),
++    trySample: chrome?.trySample ?? tOr("header.trySample", "Try a sample"),
+   };
++  // The masthead's one action (plan 2026-11-22-ui-ux-pangram-learnings, M3):
++  // a quiet pill to the samples, on every marketing page but /demo itself.
++  // Always quiet, never filled, so each page keeps its own single .ed-cta.
++  const onDemoPage = pathname === "/demo" || /^\/[a-z]{2}\/demo$/.test(pathname);
+   const NAV_LINKS = [
+     { href: navHref("/features"), label: labels.features },
+     { href: navHref("/pricing"), label: labels.pricing },
+@@ -120,7 +127,7 @@ export default function EditorialHeaderBase({
+ 
+             {/* Right — nav links + CTA */}
+             <nav
+-              className="flex items-center gap-6"
++              className="flex items-center gap-3 md:gap-6"
+               aria-label={t('header.aria.nav')}
+             >
+               {NAV_LINKS.map((item) => (
+@@ -147,17 +154,33 @@ export default function EditorialHeaderBase({
+                   {item.label}
+                 </Link>
+               ))}
+-              {/* Language selector — always visible so locale is switchable on
+-                  every editorial page (restores the switcher the redesign dropped). */}
+-              <EdLanguageSelector languageLabel={chrome?.language} />
+-              {/* Mobile hamburger — sits left of the Sign-In CTA, md:hidden */}
++              {/* Language selector: in the bar from md up; on phones it moves
++                  into the menu so the bar holds only the logo, the masthead's
++                  action and the menu button. */}
++              <span className="hidden md:inline-flex">
++                <EdLanguageSelector languageLabel={chrome?.language} />
++              </span>
++              <Link href="/auth" className="ed-masthead-link hidden md:inline-block">
++                {labels.signIn}
++              </Link>
++              {!onDemoPage && (
++                <Link
++                  href={navHref("/demo")}
++                  className="ed-cta-quiet"
++                  style={{ padding: "8px 17px", fontSize: "13px" }}
++                  onClick={() => trackEvent("landing_cta_clicked", { source: "header", reason: "demo" })}
++                >
++                  {labels.trySample}
++                </Link>
++              )}
++              {/* Mobile menu button, last in the bar on phones */}
+               <button
+                 type="button"
+                 onClick={() => setMobileOpen((open) => !open)}
+                 className="md:hidden inline-flex items-center justify-center"
+                 style={{
+-                  width: "36px",
+-                  height: "36px",
++                  width: "44px",
++                  height: "44px",
+                   background: "transparent",
+                   border: "none",
+                   padding: 0,
+@@ -173,16 +196,6 @@ export default function EditorialHeaderBase({
+                   <Menu aria-hidden="true" size={20} color="var(--ed-ink-2)" />
+                 )}
+               </button>
+-              {/* Quiet, not filled: the masthead is on every marketing page, and a
+-                  filled terracotta Sign In here competed with each page's own
+-                  primary action — two filled pills above the fold (plan §5.2). */}
+-              <Link
+-                href="/auth"
+-                className="ed-cta-quiet"
+-                style={{ padding: "8px 17px", fontSize: "13px" }}
+-              >
+-                {labels.signIn}
+-              </Link>
+             </nav>
+           </div>
+         </div>
+@@ -217,6 +230,23 @@ export default function EditorialHeaderBase({
+               {item.label}
+             </Link>
+           ))}
++          <Link
++            href="/auth"
++            onClick={() => setMobileOpen(false)}
++            className="block"
++            style={{
++              padding: "12px 24px",
++              fontSize: "16px",
++              color: "var(--ed-ink)",
++              textDecoration: "none",
++              borderTop: "1px solid var(--ed-rule)",
++            }}
++          >
++            {labels.signIn}
++          </Link>
++          <div style={{ padding: "8px 16px 12px", borderTop: "1px solid var(--ed-rule)" }}>
++            <EdLanguageSelector languageLabel={chrome?.language} />
++          </div>
+         </nav>
+       )}
+ 
+diff --git a/frontend/src/i18n/chrome.ts b/frontend/src/i18n/chrome.ts
+index 65fa6d2..6707440 100644
+--- a/frontend/src/i18n/chrome.ts
++++ b/frontend/src/i18n/chrome.ts
+@@ -15,6 +15,7 @@ export interface ChromeStrings {
+   navPricing: string;
+   navTrust: string;
+   signIn: string;
++  trySample: string;
+   language: string;
+   footer: {
+     product: string;
+@@ -56,6 +57,7 @@ export async function getChromeStrings(locale: string): Promise<ChromeStrings> {
+     navPricing: t('footer.pricing'),
+     navTrust: tOr('footer.links.trust', 'Security'),
+     signIn: t('auth.signIn'),
++    trySample: tOr('header.trySample', 'Try a sample'),
+     language: tOr('header.language', 'Language'),
+     footer: {
+       product: t('footer.product'),
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index b376c9a..96d8ad2 100644
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -376,6 +376,10 @@
+   "landing.proof.jump.value": "نقرة واحدة",
+   "landing.proof.jump.label": "من أي إجابة إلى المقطع الذي تستشهد به",
+   "landing.proof.nav.ariaLabel": "في هذه الصفحة",
++  "landing.entry.tryLabel": "جرّب مثالاً:",
++  "landing.entry.sample.earnings": "تقرير الأرباح",
++  "landing.entry.sample.paper": "ورقة بحثية",
++  "landing.entry.sample.court": "مستند قضائي",
+   "landing.howItWorks.step1.title": "ارفع ملف PDF",
+   "landing.howItWorks.step1.desc": "اسحب وأفلت أي مستند PDF — تقارير، أبحاث، عقود، أدلة",
+   "landing.howItWorks.step2.title": "اطرح أسئلة",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "Breadcrumb",
+   "header.aria.openMenu": "Open menu",
+   "header.aria.closeMenu": "Close menu",
++  "header.trySample": "جرّب مثالاً",
+   "layoutTranslation.toolbarShort": "ترجمة",
+   "layoutTranslation.drawerEyebrow": "ترجمة PDF",
+   "layoutTranslation.drawerTitle": "إنشاء PDF مترجم",
+diff --git a/frontend/src/i18n/locales/de.json b/frontend/src/i18n/locales/de.json
+index 67182b6..cd41f75 100644
+--- a/frontend/src/i18n/locales/de.json
++++ b/frontend/src/i18n/locales/de.json
+@@ -388,6 +388,10 @@
+   "landing.proof.jump.value": "1 Klick",
+   "landing.proof.jump.label": "von jeder Antwort zur zitierten Textstelle",
+   "landing.proof.nav.ariaLabel": "Auf dieser Seite",
++  "landing.entry.tryLabel": "Beispiel testen:",
++  "landing.entry.sample.earnings": "Quartalsbericht",
++  "landing.entry.sample.paper": "Forschungsartikel",
++  "landing.entry.sample.court": "Gerichtsdokument",
+   "landing.howItWorks.step1.title": "Dokument hochladen",
+   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, Textdateien oder eine Web-URL einfügen. Ziehen, ablegen, fertig.",
+   "landing.howItWorks.step2.title": "Fragen stellen",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "Brotkrumennavigation",
+   "header.aria.openMenu": "Menü öffnen",
+   "header.aria.closeMenu": "Menü schließen",
++  "header.trySample": "Beispiel testen",
+   "layoutTranslation.toolbarShort": "Übersetzen",
+   "layoutTranslation.drawerEyebrow": "PDF-Übersetzung",
+   "layoutTranslation.drawerTitle": "Übersetztes PDF erstellen",
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index 2bb9914..dfbdc3e 100644
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -393,6 +393,10 @@
+   "landing.proof.jump.value": "1 click",
+   "landing.proof.jump.label": "from any answer to the passage it cites",
+   "landing.proof.nav.ariaLabel": "On this page",
++  "landing.entry.tryLabel": "Try a sample:",
++  "landing.entry.sample.earnings": "Earnings release",
++  "landing.entry.sample.paper": "Research paper",
++  "landing.entry.sample.court": "Court filing",
+   "landing.howItWorks.step1.title": "Upload your document",
+   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, text files, or paste a web URL. Drag, drop, done.",
+   "landing.howItWorks.step2.title": "Ask questions",
+@@ -3846,6 +3850,7 @@
+   "header.aria.breadcrumb": "Breadcrumb",
+   "header.aria.openMenu": "Open menu",
+   "header.aria.closeMenu": "Close menu",
++  "header.trySample": "Try a sample",
+   "layoutTranslation.toolbarShort": "Translate",
+   "layoutTranslation.drawerEyebrow": "PDF translation",
+   "layoutTranslation.drawerTitle": "Create a translated PDF",
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index 3d26a0d..307e30d 100644
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -249,6 +249,10 @@
+   "landing.proof.jump.value": "1 clic",
+   "landing.proof.jump.label": "de cualquier respuesta al pasaje que cita",
+   "landing.proof.nav.ariaLabel": "En esta página",
++  "landing.entry.tryLabel": "Prueba un ejemplo:",
++  "landing.entry.sample.earnings": "Informe de resultados",
++  "landing.entry.sample.paper": "Artículo de investigación",
++  "landing.entry.sample.court": "Escrito judicial",
+   "landing.howItWorks.step1.title": "Sube tu PDF",
+   "landing.howItWorks.step1.desc": "Arrastra y suelta cualquier documento PDF — informes, artículos, contratos, manuales",
+   "landing.howItWorks.step2.title": "Haz preguntas",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "Ruta de navegación",
+   "header.aria.openMenu": "Abrir menú",
+   "header.aria.closeMenu": "Cerrar menú",
++  "header.trySample": "Prueba un ejemplo",
+   "layoutTranslation.toolbarShort": "Traducir",
+   "layoutTranslation.drawerEyebrow": "Traducción PDF",
+   "layoutTranslation.drawerTitle": "Crear un PDF traducido",
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index 686fb3f..3b9c091 100644
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -388,6 +388,10 @@
+   "landing.proof.jump.value": "1 clic",
+   "landing.proof.jump.label": "de chaque réponse au passage cité",
+   "landing.proof.nav.ariaLabel": "Sur cette page",
++  "landing.entry.tryLabel": "Essayez un exemple :",
++  "landing.entry.sample.earnings": "Résultats financiers",
++  "landing.entry.sample.paper": "Article de recherche",
++  "landing.entry.sample.court": "Acte judiciaire",
+   "landing.howItWorks.step1.title": "Téléversez votre PDF",
+   "landing.howItWorks.step1.desc": "Glissez-déposez n'importe quel document PDF — rapports, articles, contrats, manuels",
+   "landing.howItWorks.step2.title": "Posez des questions",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "Fil d'Ariane",
+   "header.aria.openMenu": "Ouvrir le menu",
+   "header.aria.closeMenu": "Fermer le menu",
++  "header.trySample": "Essayer un exemple",
+   "layoutTranslation.toolbarShort": "Traduire",
+   "layoutTranslation.drawerEyebrow": "Traduction PDF",
+   "layoutTranslation.drawerTitle": "Créer un PDF traduit",
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index 893d2fe..de2264b 100644
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -376,6 +376,10 @@
+   "landing.proof.jump.value": "1 क्लिक",
+   "landing.proof.jump.label": "किसी भी जवाब से उसके उद्धृत अंश तक",
+   "landing.proof.nav.ariaLabel": "इस पेज पर",
++  "landing.entry.tryLabel": "नमूना आज़माएँ:",
++  "landing.entry.sample.earnings": "तिमाही नतीजे",
++  "landing.entry.sample.paper": "शोध पत्र",
++  "landing.entry.sample.court": "अदालती दस्तावेज़",
+   "landing.howItWorks.step1.title": "अपना PDF अपलोड करें",
+   "landing.howItWorks.step1.desc": "कोई भी PDF दस्तावेज़ खींचकर छोड़ें — रिपोर्ट, शोधपत्र, अनुबंध, मैनुअल",
+   "landing.howItWorks.step2.title": "प्रश्न पूछें",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "Breadcrumb",
+   "header.aria.openMenu": "Open menu",
+   "header.aria.closeMenu": "Close menu",
++  "header.trySample": "नमूना आज़माएँ",
+   "layoutTranslation.toolbarShort": "अनुवाद",
+   "layoutTranslation.drawerEyebrow": "PDF अनुवाद",
+   "layoutTranslation.drawerTitle": "Translated PDF बनाएं",
+diff --git a/frontend/src/i18n/locales/it.json b/frontend/src/i18n/locales/it.json
+index 26b986d..27d8ae0 100644
+--- a/frontend/src/i18n/locales/it.json
++++ b/frontend/src/i18n/locales/it.json
+@@ -379,6 +379,10 @@
+   "landing.proof.jump.value": "1 clic",
+   "landing.proof.jump.label": "da ogni risposta al passaggio citato",
+   "landing.proof.nav.ariaLabel": "In questa pagina",
++  "landing.entry.tryLabel": "Prova un esempio:",
++  "landing.entry.sample.earnings": "Risultati trimestrali",
++  "landing.entry.sample.paper": "Articolo di ricerca",
++  "landing.entry.sample.court": "Atto giudiziario",
+   "landing.howItWorks.step1.title": "Carica il tuo PDF",
+   "landing.howItWorks.step1.desc": "Trascina e rilascia qualsiasi documento PDF — report, articoli, contratti, manuali",
+   "landing.howItWorks.step2.title": "Fai domande",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "Breadcrumb",
+   "header.aria.openMenu": "Open menu",
+   "header.aria.closeMenu": "Close menu",
++  "header.trySample": "Prova un esempio",
+   "layoutTranslation.toolbarShort": "Traduci",
+   "layoutTranslation.drawerEyebrow": "Traduzione PDF",
+   "layoutTranslation.drawerTitle": "Crea un PDF tradotto",
+diff --git a/frontend/src/i18n/locales/ja.json b/frontend/src/i18n/locales/ja.json
+index 821e91a..511cd8d 100644
+--- a/frontend/src/i18n/locales/ja.json
++++ b/frontend/src/i18n/locales/ja.json
+@@ -379,6 +379,10 @@
+   "landing.proof.jump.value": "ワンクリック",
+   "landing.proof.jump.label": "回答から引用元の箇所へ",
+   "landing.proof.nav.ariaLabel": "このページの内容",
++  "landing.entry.tryLabel": "サンプルで試す：",
++  "landing.entry.sample.earnings": "決算発表",
++  "landing.entry.sample.paper": "研究論文",
++  "landing.entry.sample.court": "裁判書類",
+   "landing.howItWorks.step1.title": "PDFをアップロード",
+   "landing.howItWorks.step1.desc": "レポート、論文、契約書、マニュアルなど、あらゆるPDFをドラッグ＆ドロップ",
+   "landing.howItWorks.step2.title": "質問する",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "パンくずリスト",
+   "header.aria.openMenu": "メニューを開く",
+   "header.aria.closeMenu": "メニューを閉じる",
++  "header.trySample": "サンプルを試す",
+   "layoutTranslation.toolbarShort": "翻訳",
+   "layoutTranslation.drawerEyebrow": "PDF翻訳",
+   "layoutTranslation.drawerTitle": "翻訳PDFを作成",
+diff --git a/frontend/src/i18n/locales/ko.json b/frontend/src/i18n/locales/ko.json
+index 1c7a732..7107132 100644
+--- a/frontend/src/i18n/locales/ko.json
++++ b/frontend/src/i18n/locales/ko.json
+@@ -379,6 +379,10 @@
+   "landing.proof.jump.value": "클릭 한 번",
+   "landing.proof.jump.label": "답변에서 인용된 구절로 이동",
+   "landing.proof.nav.ariaLabel": "이 페이지의 내용",
++  "landing.entry.tryLabel": "샘플로 체험:",
++  "landing.entry.sample.earnings": "실적 발표",
++  "landing.entry.sample.paper": "연구 논문",
++  "landing.entry.sample.court": "법원 문서",
+   "landing.howItWorks.step1.title": "PDF 업로드",
+   "landing.howItWorks.step1.desc": "보고서, 논문, 계약서, 매뉴얼 등 모든 PDF를 드래그 앤 드롭",
+   "landing.howItWorks.step2.title": "질문하기",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "이동 경로",
+   "header.aria.openMenu": "메뉴 열기",
+   "header.aria.closeMenu": "메뉴 닫기",
++  "header.trySample": "샘플 체험",
+   "layoutTranslation.toolbarShort": "번역",
+   "layoutTranslation.drawerEyebrow": "PDF 번역",
+   "layoutTranslation.drawerTitle": "번역 PDF 만들기",
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index fb9824d..699168d 100644
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -1684,6 +1684,10 @@
+   "landing.proof.jump.value": "1 clique",
+   "landing.proof.jump.label": "de qualquer resposta ao trecho citado",
+   "landing.proof.nav.ariaLabel": "Nesta página",
++  "landing.entry.tryLabel": "Experimente um exemplo:",
++  "landing.entry.sample.earnings": "Relatório de resultados",
++  "landing.entry.sample.paper": "Artigo científico",
++  "landing.entry.sample.court": "Peça judicial",
+   "landing.security.deletion.desc": "Remova seus dados de todos os sistemas ativos quando quiser.",
+   "landing.security.deletion.title": "Exclua a qualquer momento",
+   "landing.security.encrypted.desc": "TLS em trânsito, AES-256 em repouso. Proteção de padrão industrial.",
+@@ -3844,6 +3848,7 @@
+   "header.aria.breadcrumb": "Navegação estrutural",
+   "header.aria.openMenu": "Abrir menu",
+   "header.aria.closeMenu": "Fechar menu",
++  "header.trySample": "Experimente um exemplo",
+   "layoutTranslation.toolbarShort": "Traduzir",
+   "layoutTranslation.drawerEyebrow": "Tradução de PDF",
+   "layoutTranslation.drawerTitle": "Criar um PDF traduzido",
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index fc3675b..752de8d 100644
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -393,6 +393,10 @@
+   "landing.proof.jump.value": "一键",
+   "landing.proof.jump.label": "从回答直达它引用的原文",
+   "landing.proof.nav.ariaLabel": "本页内容",
++  "landing.entry.tryLabel": "试试示例：",
++  "landing.entry.sample.earnings": "财报",
++  "landing.entry.sample.paper": "研究论文",
++  "landing.entry.sample.court": "法院文书",
+   "landing.howItWorks.step1.title": "上传 PDF",
+   "landing.howItWorks.step1.desc": "拖放任意 PDF 文档 — 报告、论文、合同、手册",
+   "landing.howItWorks.step2.title": "提出问题",
+@@ -3883,6 +3887,7 @@
+   "header.aria.breadcrumb": "Breadcrumb",
+   "header.aria.openMenu": "Open menu",
+   "header.aria.closeMenu": "Close menu",
++  "header.trySample": "试用示例",
+   "layoutTranslation.toolbarShort": "翻译",
+   "layoutTranslation.drawerEyebrow": "PDF 翻译",
+   "layoutTranslation.drawerTitle": "创建译文 PDF",
+diff --git a/frontend/src/lib/demoSamples.ts b/frontend/src/lib/demoSamples.ts
+new file mode 100644
+index 0000000..311ddfb
+--- /dev/null
++++ b/frontend/src/lib/demoSamples.ts
+@@ -0,0 +1,52 @@
++// The three public sample documents, as the marketing surface links to them.
++// `slug` is the backend's DEMO_DOCS slug (GET /api/documents/demo), `route` the
++// short `/demo/<route>` alias DemoRedirectPageClient resolves to a document id,
++// and `questionKey` the suggested question /demo and the landing chips ask.
++// One list, so the hero chips and the /demo cards never ask different things.
++
++export interface DemoSample {
++  slug: 'alphabet-earnings' | 'attention-paper' | 'court-filing';
++  route: 'earnings' | 'paper' | 'court';
++  questionKey: string;
++  /** Short chip label on the landing hero. */
++  chipKey: string;
++  chipFallback: string;
++}
++
++export const DEMO_SAMPLES: readonly DemoSample[] = [
++  {
++    slug: 'alphabet-earnings',
++    route: 'earnings',
++    questionKey: 'demo.sample.earnings.question',
++    chipKey: 'landing.entry.sample.earnings',
++    chipFallback: 'Earnings release',
++  },
++  {
++    slug: 'attention-paper',
++    route: 'paper',
++    questionKey: 'demo.sample.paper.question',
++    chipKey: 'landing.entry.sample.paper',
++    chipFallback: 'Research paper',
++  },
++  {
++    slug: 'court-filing',
++    route: 'court',
++    questionKey: 'demo.sample.court.question',
++    chipKey: 'landing.entry.sample.court',
++    chipFallback: 'Court filing',
++  },
++];
++
++export function demoQuestionKey(slug: DemoSample['slug']): string {
++  return DEMO_SAMPLES.find((s) => s.slug === slug)!.questionKey;
++}
++
++/** Longest `?question=` the /demo/<route> redirect forwards to the reader. */
++export const DEMO_QUESTION_MAX = 300;
++
++/** `/demo/<route>?question=…`: the redirect resolves the document id, then
++ *  opens the reader with the question, which the reader asks on arrival. */
++export function demoSampleHref(sample: DemoSample, question: string): string {
++  const q = question.trim().slice(0, DEMO_QUESTION_MAX);
++  return q ? `/demo/${sample.route}?question=${encodeURIComponent(q)}` : `/demo/${sample.route}`;
++}
+diff --git a/frontend/tests/landing-entry.test.cjs b/frontend/tests/landing-entry.test.cjs
+new file mode 100644
+index 0000000..c812291
+--- /dev/null
++++ b/frontend/tests/landing-entry.test.cjs
+@@ -0,0 +1,70 @@
++// Landing entry row (M1) and masthead action (M3), plan
++// .collab/plans/2026-11-22-ui-ux-pangram-learnings.md.
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const test = require('node:test');
++require('./_load-ts.cjs');
++const { DEMO_SAMPLES, DEMO_QUESTION_MAX, demoSampleHref } = require('../src/lib/demoSamples.ts');
++
++const src = (p) => fs.readFileSync(path.join(__dirname, '../src', p), 'utf8');
++const LOCALES = ['en', 'zh', 'ja', 'ko', 'es', 'de', 'fr', 'pt', 'it', 'ar', 'hi'];
++const messages = Object.fromEntries(LOCALES.map((l) => [l, JSON.parse(src(`i18n/locales/${l}.json`))]));
++
++test('sample links carry the question through /demo/<route>, encoded and capped', () => {
++  const [earnings] = DEMO_SAMPLES;
++  assert.equal(demoSampleHref(earnings, ''), '/demo/earnings');
++  assert.equal(demoSampleHref(earnings, ' What & why? '), '/demo/earnings?question=What%20%26%20why%3F');
++  const long = decodeURIComponent(demoSampleHref(earnings, 'x'.repeat(1000)).split('question=')[1]);
++  assert.equal(long.length, DEMO_QUESTION_MAX);
++});
++
++test('every sample route resolves in the /demo/<sample> redirect, which forwards ?question=', () => {
++  const redirect = src('app/demo/[sample]/DemoRedirectPageClient.tsx');
++  for (const sample of DEMO_SAMPLES) {
++    assert.match(redirect, new RegExp(`'${sample.route}': '${sample.slug}'`), `${sample.route} is not mapped to ${sample.slug}`);
++  }
++  assert.match(redirect, /searchParams\.get\('question'\)/);
++  assert.match(redirect, /DEMO_QUESTION_MAX/);
++});
++
++test('/demo cards and the hero chips ask the same suggested questions', () => {
++  const demo = src('app/demo/DemoPageClient.tsx');
++  assert.doesNotMatch(demo, /questionKey: 'demo\.sample\./, 'DemoPageClient must read question keys from lib/demoSamples');
++  for (const sample of DEMO_SAMPLES) assert.ok(demo.includes(`demoQuestionKey('${sample.slug}')`));
++});
++
++test('the hero keeps one filled CTA; the entry row is badge + quiet chips', () => {
++  const hero = src('components/landing/HeroSection.tsx');
++  assert.equal((hero.match(/className="ed-cta"/g) || []).length, 1);
++  assert.match(hero, /className="ed-night-entry"/);
++  assert.match(hero, /DEMO_SAMPLES\.map/);
++  assert.match(hero, /className="ed-chip"/);
++  assert.match(hero, /tOr\('demo\.freeNoSignup'/);
++});
++
++test('the localized landing seeds the strings the entry row reads', () => {
++  const page = src('app/[locale]/page.tsx');
++  const prefixes = page.slice(page.indexOf('LANDING_PREFIXES'), page.indexOf('] as const'));
++  for (const key of ['demo.freeNoSignup', 'demo.sample.earnings.question', 'landing.entry.tryLabel', 'header.trySample']) {
++    const seeded = [...prefixes.matchAll(/'([^']+)'/g)].some(([, p]) => key.startsWith(p));
++    assert.ok(seeded, `${key} is not seeded for localized SSR`);
++  }
++});
++
++test('the masthead action is quiet, skips /demo, and phones get language and sign-in in the menu', () => {
++  const header = src('components/marketing/EditorialHeaderBase.tsx');
++  assert.doesNotMatch(header, /className="ed-cta"/, 'the masthead never carries a filled CTA');
++  assert.match(header, /!onDemoPage && \(/);
++  assert.match(header, /className="ed-cta-quiet"[\s\S]{0,200}labels\.trySample|labels\.trySample[\s\S]{0,10}/);
++  const panel = header.slice(header.indexOf('id="ed-mobile-nav"'));
++  assert.match(panel, /labels\.signIn/);
++  assert.match(panel, /<EdLanguageSelector/);
++  assert.match(src('i18n/chrome.ts'), /trySample: tOr\('header\.trySample'/);
++});
++
++test('entry-row and masthead strings exist in all 11 locales', () => {
++  const keys = ['header.trySample', 'landing.entry.tryLabel', 'landing.entry.sample.earnings', 'landing.entry.sample.paper', 'landing.entry.sample.court', 'demo.freeNoSignup'];
++  for (const sample of DEMO_SAMPLES) keys.push(sample.questionKey, sample.chipKey);
++  for (const l of LOCALES) for (const k of keys) assert.ok(messages[l][k], `${l}.json is missing ${k}`);
++});
+=== commit bbad062 feat(marketing): product vignettes on landing and feature pages; last free question notice (M4, M5, M7, A2)
+
+diff --git a/frontend/src/app/editorial.css b/frontend/src/app/editorial.css
+index eccc2ab..9f43660 100644
+--- a/frontend/src/app/editorial.css
++++ b/frontend/src/app/editorial.css
+@@ -904,6 +904,279 @@ html.dt-night-doc {
+   }
+ }
+ 
++/* ─── Product vignettes (components/marketing/ProductVignettes.tsx) ──────
++   Small pieces of the product in the feature cards, How it works and the
++   feature heroes. Content layer: opaque surface, never glass. Text never
++   under 12px; ink-3 only from 13px; amber only on citations. */
++.dt-editorial .ed-vignette {
++  padding: 16px 18px;
++  background: var(--ed-surface);
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-3);
++  box-shadow: var(--ed-shadow-card);
++  text-align: start;
++  font-size: 14px;
++  line-height: 1.5;
++}
++.dt-editorial .ed-vignette-q {
++  margin: 0;
++  color: var(--ed-ink-3);
++  font-size: 13px;
++  line-height: 1.45;
++}
++.dt-editorial .ed-vignette .ed-vignette-a {
++  margin-top: 8px;
++  font-size: 14px;
++  line-height: 1.5;
++}
++.dt-editorial .ed-vignette .ed-frame-source { margin-top: 12px; }
++
++.dt-editorial .ed-vignette-pagebar {
++  display: flex;
++  justify-content: space-between;
++  gap: 12px;
++  padding-bottom: 10px;
++  margin-bottom: 12px;
++  border-bottom: 1px solid var(--ed-rule);
++  color: var(--ed-ink-3);
++  font-size: 13px;
++}
++.dt-editorial .ed-vignette-doc {
++  min-width: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++.dt-editorial .ed-vignette-pageno { flex: none; font-variant-numeric: tabular-nums; }
++.dt-editorial .ed-vignette-passage {
++  position: relative;
++  margin: 0;
++  padding-left: 30px;
++  color: var(--ed-ink);
++  font-size: 14px;
++  line-height: 1.65;
++}
++.dt-editorial .ed-vignette-margin {
++  position: absolute;
++  left: 0;
++  top: 2px;
++}
++.dt-editorial .ed-vignette-margin .ed-frame-cite { margin: 0; vertical-align: 0; }
++.dt-editorial .ed-vignette-lead { color: var(--ed-ink-3); }
++.dt-editorial .ed-vignette-mark {
++  padding: 1px 2px;
++  border-radius: 3px;
++  background: var(--ed-evidence-soft);
++  color: var(--ed-ink);
++  box-shadow: inset 0 -2px 0 var(--ed-evidence);
++  -webkit-box-decoration-break: clone;
++  box-decoration-break: clone;
++}
++
++.dt-editorial .ed-vignette-pills {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 6px;
++  margin-bottom: 14px;
++}
++.dt-editorial .ed-vignette-pill {
++  padding: 3px 10px;
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-pill);
++  color: var(--ed-ink-2);
++  font-size: 13px;
++  line-height: 1.4;
++}
++.dt-editorial .ed-vignette-pill.is-active {
++  border-color: var(--ed-ink-2);
++  color: var(--ed-ink);
++  font-weight: 600;
++}
++
++.dt-editorial .ed-vignette-translate {
++  display: flex;
++  align-items: center;
++  gap: 12px;
++}
++.dt-editorial .ed-vignette-side {
++  flex: 1 1 0;
++  min-width: 0;
++  margin: 0;
++}
++.dt-editorial .ed-vignette-side figcaption {
++  margin-top: 8px;
++  color: var(--ed-ink-3);
++  font-size: 13px;
++  text-align: center;
++}
++.dt-editorial .ed-vignette-arrow {
++  flex: none;
++  color: var(--ed-ink-3);
++  font-size: 16px;
++}
++.dt-editorial .ed-vignette-arrow:dir(rtl) { transform: scaleX(-1); }
++.dt-editorial .ed-vignette-sheet {
++  display: flex;
++  flex-direction: column;
++  gap: 8px;
++  padding: 12px;
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-1);
++  background: var(--ed-paper);
++}
++.dt-editorial .ed-vignette-cols {
++  display: grid;
++  grid-template-columns: 1fr 1fr;
++  gap: 10px;
++}
++.dt-editorial .ed-vignette-cols > div {
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++}
++.dt-editorial .ed-vignette-line {
++  display: block;
++  height: 5px;
++  border-radius: 3px;
++  background: var(--ed-rule);
++}
++.dt-editorial .ed-vignette-line.is-title {
++  height: 8px;
++  margin-bottom: 4px;
++  background: var(--ed-ink-3);
++}
++.dt-editorial .ed-vignette-line.is-equation {
++  width: 46%;
++  margin-inline: auto;
++  margin-top: 2px;
++  background: var(--ed-ink-3);
++  opacity: 0.6;
++}
++.dt-editorial .ed-vignette-figure {
++  display: block;
++  height: 34px;
++  margin-bottom: 2px;
++  border: 1px solid var(--ed-rule);
++  border-radius: 3px;
++  background: var(--ed-paper-2);
++}
++
++.dt-editorial .ed-vignette-drop {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  gap: 12px;
++  padding: 18px 12px;
++  border: 1px dashed var(--ed-control-border);
++  border-radius: var(--ed-r-2);
++  text-align: center;
++}
++.dt-editorial .ed-vignette-drop-label {
++  color: var(--ed-ink-2);
++  font-size: 14px;
++}
++.dt-editorial .ed-vignette-formats {
++  display: flex;
++  flex-wrap: wrap;
++  justify-content: center;
++  gap: 6px;
++}
++.dt-editorial .ed-vignette-format {
++  padding: 2px 8px;
++  border: 1px solid var(--ed-rule);
++  border-radius: var(--ed-r-1);
++  background: var(--ed-paper);
++  color: var(--ed-ink-2);
++  font-size: 12px;
++  font-weight: 600;
++  letter-spacing: 0.02em;
++  font-variant-numeric: tabular-nums;
++}
++
++.dt-editorial .ed-feature-visual {
++  margin-bottom: 24px;
++}
++/* Side by side, the three cards share rows (visual, heading, body), so the
++   headings line up whatever each visual's height. */
++@media (min-width: 768px) {
++  .dt-editorial .ed-feature-grid > li {
++    display: grid;
++    grid-row: span 3;
++    grid-template-rows: subgrid;
++    row-gap: 0;
++  }
++}
++
++/* How it works (HowItWorks.tsx): steps beside one picture on lg, a picture
++   per step below that. */
++.dt-editorial .ed-how-steps {
++  margin: 0;
++  padding: 0;
++  list-style: none;
++  border-top: 1px solid var(--ed-rule);
++}
++.dt-editorial .ed-how-step {
++  display: grid;
++  grid-template-columns: auto minmax(0, 1fr);
++  gap: 20px;
++  padding: 28px 0;
++  border-bottom: 1px solid var(--ed-rule);
++}
++.dt-editorial .ed-how-num { min-width: 2.2ch; }
++.dt-editorial .ed-how-trigger {
++  padding: 0;
++  border: 0;
++  background: none;
++  color: inherit;
++  font: inherit;
++  text-align: start;
++  cursor: default;
++}
++.dt-editorial .ed-how-trigger:focus-visible {
++  outline: 2px solid var(--ed-ink);
++  outline-offset: 4px;
++  border-radius: var(--ed-r-1);
++}
++.dt-editorial .ed-how-inline { margin-top: 20px; }
++.dt-editorial .ed-how-visual { display: none; }
++@media (min-width: 1024px) {
++  .dt-editorial .ed-how {
++    display: grid;
++    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
++    gap: 56px;
++    align-items: center;
++  }
++  .dt-editorial .ed-how-inline { display: none; }
++  .dt-editorial .ed-how-visual { display: block; }
++  .dt-editorial .ed-how-trigger { cursor: pointer; }
++  .dt-editorial .ed-how-step .ed-num,
++  .dt-editorial .ed-how-step .ed-body {
++    color: var(--ed-ink-3);
++    transition: color var(--ed-dur-1) var(--ed-ease);
++  }
++  .dt-editorial .ed-how-step.is-active .ed-num { color: var(--ed-ink); }
++  .dt-editorial .ed-how-step.is-active .ed-body { color: var(--ed-ink-2); }
++}
++@media (prefers-reduced-motion: reduce) {
++  .dt-editorial .ed-how-step .ed-num,
++  .dt-editorial .ed-how-step .ed-body { transition: none; }
++}
++
++/* Two vignettes side by side in a feature hero (citations: the answer and the
++   page it cites). */
++.dt-editorial .ed-vignette-hero {
++  max-width: 920px;
++}
++.dt-editorial .ed-vignette-pair {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
++  gap: 16px;
++  align-items: start;
++}
++@media (max-width: 767px) {
++  .dt-editorial .ed-vignette-pair { grid-template-columns: minmax(0, 1fr); }
++}
++
+ /* ─── Night hero (plan .collab/plans/2026-09-21-landing-night.md §4) ────
+    The landing's stage. Behind the claim, a real document page sits in low
+    light (components/landing/CitationField.tsx draws it on a canvas that
+diff --git a/frontend/src/app/features/citations/CitationsContent.tsx b/frontend/src/app/features/citations/CitationsContent.tsx
+index e21d07a..c441f49 100644
+--- a/frontend/src/app/features/citations/CitationsContent.tsx
++++ b/frontend/src/app/features/citations/CitationsContent.tsx
+@@ -14,6 +14,7 @@ import {
+ } from 'lucide-react';
+ import MarketingShell from '../../../components/marketing/MarketingShell';
+ import EdPageHero from '../../../components/marketing/EdPageHero';
++import { AnswerVignette, PassageVignette } from '../../../components/marketing/ProductVignettes';
+ import EdSection from '../../../components/marketing/EdSection';
+ import EdProse from '../../../components/marketing/EdProse';
+ import EdStepRow from '../../../components/marketing/EdStepRow';
+@@ -146,6 +147,17 @@ export default async function CitationsContent({ locale }: { locale: string }) {
+         title={t('featuresCitations.heroTitle')}
+         lede={t('featuresCitations.heroSubtitle')}
+         primaryCta={{ label: t('featuresCitations.heroCta'), href: href('/demo') }}
++        variant="product"
++        product={
++          <div className="ed-vignette-hero ed-vignette-pair">
++            <AnswerVignette
++              question={t('landing.frame.question')}
++              answer={t('landing.frame.answer')}
++              source={t('landing.frame.source')}
++            />
++            <PassageVignette pageLabel={t('landing.vignette.page', { page: 1 })} />
++          </div>
++        }
+       />
+ 
+       <EdSection title={t('featuresCitations.howTitle')}>
+diff --git a/frontend/src/app/features/layout-translation/LayoutTranslationPageContent.tsx b/frontend/src/app/features/layout-translation/LayoutTranslationPageContent.tsx
+index 1e6efea..828d9d7 100644
+--- a/frontend/src/app/features/layout-translation/LayoutTranslationPageContent.tsx
++++ b/frontend/src/app/features/layout-translation/LayoutTranslationPageContent.tsx
+@@ -5,6 +5,7 @@ import { localizedHrefIfAvailable } from '../../../i18n/routing';
+ import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
+ import MarketingShell from '../../../components/marketing/MarketingShell';
+ import EdPageHero from '../../../components/marketing/EdPageHero';
++import { TranslationVignette } from '../../../components/marketing/ProductVignettes';
+ import EdSection from '../../../components/marketing/EdSection';
+ import EdCardGrid from '../../../components/marketing/EdCardGrid';
+ import EdProse from '../../../components/marketing/EdProse';
+@@ -45,6 +46,15 @@ export default function LayoutTranslationPageContent({
+           'featuresLayoutTranslation.heroSubtitle',
+           'Turn text-heavy PDFs into translated PDFs while keeping page structure, equations, citations, and visual context.',
+         )}
++        variant="product"
++        product={
++          <div className="ed-vignette-hero" style={{ maxWidth: '640px' }}>
++            <TranslationVignette
++              originalLabel={tOr('landing.vignette.original', 'Original')}
++              translatedLabel={tOr('landing.vignette.translated', 'Translated')}
++            />
++          </div>
++        }
+       />
+ 
+       <EdSection>
+diff --git a/frontend/src/app/features/multi-format/MultiFormatContent.tsx b/frontend/src/app/features/multi-format/MultiFormatContent.tsx
+index 5809eb3..d9b0b2c 100644
+--- a/frontend/src/app/features/multi-format/MultiFormatContent.tsx
++++ b/frontend/src/app/features/multi-format/MultiFormatContent.tsx
+@@ -17,6 +17,7 @@ import {
+ } from 'lucide-react';
+ import MarketingShell from '../../../components/marketing/MarketingShell';
+ import EdPageHero from '../../../components/marketing/EdPageHero';
++import { AnswerVignette, FormatsVignette } from '../../../components/marketing/ProductVignettes';
+ import EdSection from '../../../components/marketing/EdSection';
+ import EdProse from '../../../components/marketing/EdProse';
+ import EdStepRow from '../../../components/marketing/EdStepRow';
+@@ -152,6 +153,17 @@ export default async function MultiFormatContent({ locale }: { locale: string })
+         title={t('featuresMultiFormat.heroTitle')}
+         lede={t('featuresMultiFormat.heroSubtitle')}
+         primaryCta={{ label: t('featuresMultiFormat.heroCta'), href: href('/demo') }}
++        variant="product"
++        product={
++          <div className="ed-vignette-hero ed-vignette-pair">
++            <FormatsVignette dropLabel={t('landing.vignette.drop')} />
++            <AnswerVignette
++              question={t('landing.frame.question')}
++              answer={t('landing.frame.answer')}
++              source={t('landing.frame.source')}
++            />
++          </div>
++        }
+       />
+ 
+       <EdSection title={t('featuresMultiFormat.formatsTitle')}>
+diff --git a/frontend/src/app/features/multilingual/MultilingualContent.tsx b/frontend/src/app/features/multilingual/MultilingualContent.tsx
+index 4dde7e3..5f45ef2 100644
+--- a/frontend/src/app/features/multilingual/MultilingualContent.tsx
++++ b/frontend/src/app/features/multilingual/MultilingualContent.tsx
+@@ -6,6 +6,7 @@ import { localizedHrefIfAvailable } from '../../../i18n/routing';
+ import MarketingLocaleLinks from '../../../components/marketing/MarketingLocaleLinks';
+ import MarketingShell from '../../../components/marketing/MarketingShell';
+ import EdPageHero from '../../../components/marketing/EdPageHero';
++import { LanguagesVignette } from '../../../components/marketing/ProductVignettes';
+ import EdSection from '../../../components/marketing/EdSection';
+ import EdProse from '../../../components/marketing/EdProse';
+ import EdCardGrid from '../../../components/marketing/EdCardGrid';
+@@ -106,6 +107,17 @@ export default async function MultilingualContent({ locale }: { locale: string }
+         title={t('featuresMultilingual.hero.title')}
+         lede={t('featuresMultilingual.hero.subtitle')}
+         primaryCta={{ label: t('featuresMultilingual.hero.cta'), href: href('/demo') }}
++        variant="product"
++        product={
++          <div className="ed-vignette-hero" style={{ maxWidth: '560px' }}>
++            <LanguagesVignette
++              locale={locale}
++              question={t('landing.frame.question')}
++              answer={t('landing.frame.answer')}
++              source={t('landing.frame.source')}
++            />
++          </div>
++        }
+       />
+ 
+       <EdSection title={t('featuresMultilingual.supported.title')}>
+diff --git a/frontend/src/components/Chat/ChatPanel.tsx b/frontend/src/components/Chat/ChatPanel.tsx
+index 7275208..b9639fb 100644
+--- a/frontend/src/components/Chat/ChatPanel.tsx
++++ b/frontend/src/components/Chat/ChatPanel.tsx
+@@ -646,7 +646,11 @@ export default function ChatPanel({ sessionId, onCitationClick, onPreviewLayoutT
+           ) : (
+             <div className="flex items-center justify-between px-4 py-2 text-sm text-[var(--workbench-muted)]" aria-live="polite">
+               <span className={demoRemaining <= 2 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
+-                {t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
++                {/* The last free question is named as such before it is
++                    spent, not only counted (plan 2026-11-22 A2). */}
++                {demoRemaining === 1
++                  ? tOr('demo.lastQuestion', 'Last free question on this document')
++                  : t('demo.questionsRemaining', { remaining: Math.max(0, demoRemaining), total: maxUserMessages })}
+               </span>
+               <button type="button" onClick={() => openAuthModal({ location: 'demo_questions_remaining' })} className="text-sm text-[var(--workbench-muted)] hover:text-zinc-900 dark:hover:text-white hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-zinc-400">
+                 {t('demo.signInForUnlimited')}
+diff --git a/frontend/src/components/landing/FeatureGrid.tsx b/frontend/src/components/landing/FeatureGrid.tsx
+index be04f6b..768385a 100644
+--- a/frontend/src/components/landing/FeatureGrid.tsx
++++ b/frontend/src/components/landing/FeatureGrid.tsx
+@@ -2,6 +2,7 @@
+ 
+ import React from 'react';
+ import { useLocale } from '../../i18n';
++import { LanguagesVignette, PassageVignette, TranslationVignette } from '../marketing/ProductVignettes';
+ 
+ /**
+  * Landing feature set: three claims, each with one line.
+@@ -19,6 +20,10 @@ import { useLocale } from '../../i18n';
+  * at 7–10px, under the plan's 12px floor), the numbered "01 —" labels on
+  * content that is not a sequence, and the "Features" eyebrow, which was still
+  * English in four locales.
++ *
++ * Each claim now sits under a small piece of the product (2026-11-22, plan
++ * 2026-11-22-ui-ux-pangram-learnings M4): ProductVignettes, real output at
++ * 12px and up, the page the hero cites, and the hero's answer in the reader's language.
+  */
+ const features = [
+   { titleKey: 'landing.feature.citations.title', descKey: 'landing.feature.citations.desc' },
+@@ -33,14 +38,29 @@ const features = [
+ ] as const;
+ 
+ export default function FeatureGrid() {
+-  const { t, tOr } = useLocale();
++  const { t, tOr, locale } = useLocale();
++  const frame = {
++    question: t('landing.frame.question'),
++    answer: t('landing.frame.answer'),
++    source: t('landing.frame.source'),
++  };
++  const visuals: Record<string, React.ReactNode> = {
++    'landing.feature.citations.title': <PassageVignette pageLabel={tOr('landing.vignette.page', 'Page {page}', { page: 1 })} />,
++    'landing.feature.languages.title': <LanguagesVignette locale={locale} {...frame} />,
++    'landing.feature.layoutTranslation.title': (
++      <TranslationVignette
++        originalLabel={tOr('landing.vignette.original', 'Original')}
++        translatedLabel={tOr('landing.vignette.translated', 'Translated')}
++      />
++    ),
++  };
+ 
+   return (
+     <section id="features" className="ed-section">
+       <div className="ed-shell">
+         <h2 className="ed-h2 max-w-xl">{t('landing.features.title')}</h2>
+ 
+-        <ul className="mt-10 grid grid-cols-1 border-t border-[var(--ed-rule)] md:grid-cols-3">
++        <ul className="ed-feature-grid mt-10 grid grid-cols-1 border-t border-[var(--ed-rule)] md:grid-cols-3">
+           {features.map((feature, index) => {
+             const title =
+               'titleFallback' in feature ? tOr(feature.titleKey, feature.titleFallback) : t(feature.titleKey);
+@@ -57,6 +77,7 @@ export default function FeatureGrid() {
+                   index < features.length - 1 ? 'md:pe-8' : '',
+                 ].join(' ')}
+               >
++                <div className="ed-feature-visual">{visuals[feature.titleKey]}</div>
+                 <h3 className="ed-h3">{title}</h3>
+                 <p className="ed-body mt-2">{desc}</p>
+               </li>
+diff --git a/frontend/src/components/landing/HowItWorks.tsx b/frontend/src/components/landing/HowItWorks.tsx
+index 2add4a1..be3dba7 100644
+--- a/frontend/src/components/landing/HowItWorks.tsx
++++ b/frontend/src/components/landing/HowItWorks.tsx
+@@ -1,12 +1,38 @@
+ "use client";
+ 
+-import React from 'react';
++import React, { useId, useState } from 'react';
+ import { useLocale } from '../../i18n';
+ import { HOW_IT_WORKS_STEPS as steps } from './landingSchemaSources';
++import { AnswerVignette, FormatsVignette, PassageVignette } from '../marketing/ProductVignettes';
+ 
+-
++/**
++ * How it works: the three steps beside the product doing each one (plan
++ * 2026-11-22-ui-ux-pangram-learnings, M5; Pangram pairs a product shot with
++ * its numbered steps).
++ *
++ * Desktop (lg): the steps on one side, one picture on the other; pointing at,
++ * focusing or clicking a step shows its picture. Phones and tablets: each
++ * step carries its own picture, so nothing depends on hover.
++ *
++ * Every step's text is always rendered and visible (no accordion): the HowTo
++ * schema in app/HomeJsonLd.tsx reads the same keys (landingSchemaSources.ts)
++ * and must match what the page shows.
++ */
+ export default function HowItWorks() {
+   const { t, tOr } = useLocale();
++  const [active, setActive] = useState(0);
++  const panelId = useId();
++
++  const frame = {
++    question: t('landing.frame.question'),
++    answer: t('landing.frame.answer'),
++    source: t('landing.frame.source'),
++  };
++  const visuals = [
++    <FormatsVignette key="upload" dropLabel={tOr('landing.vignette.drop', 'Drop a file or paste a link')} />,
++    <AnswerVignette key="ask" {...frame} />,
++    <PassageVignette key="verify" pageLabel={tOr('landing.vignette.page', 'Page {page}', { page: 1 })} />,
++  ];
+ 
+   return (
+     <div>
+@@ -18,27 +44,40 @@ export default function HowItWorks() {
+             <h2 className="ed-h2">{t('landing.howItWorks.title')}</h2>
+           </div>
+ 
+-          <hr className="ed-rule mb-0" />
+-
+-          {/* Steps grid */}
+-          <div className="grid grid-cols-1 md:grid-cols-3">
+-            {steps.map(({ num, titleKey, descKey }, idx) => (
+-              <React.Fragment key={num}>
+-                <div
+-                  className={
+-                    'py-10 pr-8' +
+-                    (idx > 0 ? ' md:pl-8 md:border-l border-[var(--ed-rule)]' : '')
+-                  }
++          <div className="ed-how">
++            <ol className="ed-how-steps">
++              {steps.map(({ num, titleKey, descKey }, idx) => (
++                <li
++                  key={num}
++                  className={`ed-how-step${idx === active ? ' is-active' : ''}`}
++                  onMouseEnter={() => setActive(idx)}
+                 >
+-                  <div className="ed-num mb-4">{num}</div>
+-                  <h3 className="ed-h3 mb-3">{t(titleKey)}</h3>
+-                  <p className="ed-body">{t(descKey)}</p>
+-                </div>
+-              </React.Fragment>
+-            ))}
++                  <div className="ed-num ed-how-num" aria-hidden="true">{num}</div>
++                  <div className="min-w-0">
++                    <h3 className="ed-h3">
++                      {/* The button only switches the picture beside the list
++                          (lg and up); its text is the step title either way. */}
++                      <button
++                        type="button"
++                        className="ed-how-trigger"
++                        aria-controls={panelId}
++                        aria-current={idx === active ? 'step' : undefined}
++                        onClick={() => setActive(idx)}
++                        onFocus={() => setActive(idx)}
++                      >
++                        {t(titleKey)}
++                      </button>
++                    </h3>
++                    <p className="ed-body mt-3">{t(descKey)}</p>
++                    <div className="ed-how-inline">{visuals[idx]}</div>
++                  </div>
++                </li>
++              ))}
++            </ol>
++            <div id={panelId} className="ed-how-visual">
++              {visuals[active]}
++            </div>
+           </div>
+-
+-          <hr className="ed-rule mt-0" />
+         </div>
+       </section>
+     </div>
+diff --git a/frontend/src/components/marketing/ProductVignettes.tsx b/frontend/src/components/marketing/ProductVignettes.tsx
+new file mode 100644
+index 0000000..494eafb
+--- /dev/null
++++ b/frontend/src/components/marketing/ProductVignettes.tsx
+@@ -0,0 +1,175 @@
++import React from 'react';
++import { LOCALES, type Locale } from '../../i18n/locales-meta';
++import { CITED, DOC_NAME, PARAGRAPHS } from '../landing/citationFieldContent';
++import { UPLOAD_EXTENSIONS } from '../../lib/uploadFormats';
++
++/**
++ * Small pieces of the product, drawn in HTML on the editorial tokens, for the
++ * landing feature cards, How it works and the feature-page heroes (plan
++ * .collab/plans/2026-11-22-ui-ux-pangram-learnings.md, M4/M5/M7; Pangram puts
++ * mini product UI in its feature cards instead of icons).
++ *
++ * Rules:
++ *  - Pure components: no hooks, no "use client". Server feature pages and the
++ *    client landing both render them, and pass every string in already
++ *    translated.
++ *  - Only real output. The answer is the hero card's answer
++ *    (`landing.frame.*`), the page text is the verbatim sample page
++ *    (citationFieldContent.ts, always `dir="ltr" lang="en"`), and the formats
++ *    are the ones upload accepts. Change them together with those sources.
++ *  - Illustrations, not controls: `aria-hidden`, nothing focusable, the copy
++ *    beside each one says the same thing in words.
++ *  - Nothing under 12px (an earlier set of mini illustrations was removed for
++ *    7-10px text); amber `--ed-evidence` only marks citations.
++ *  - Content layer: opaque `--ed-surface`, never glass. No `.dt-editorial`
++ *    root here; the page's root owns it.
++ */
++
++export interface AnswerStrings {
++  question: string;
++  answer: string;
++  source: string;
++}
++
++export function AnswerVignette({ question, answer, source }: AnswerStrings) {
++  return (
++    <div className="ed-vignette" aria-hidden="true">
++      <p className="ed-vignette-q">{question}</p>
++      <p className="ed-frame-a ed-vignette-a">
++        {answer}
++        <span className="ed-frame-cite">1</span>
++      </p>
++      <div className="ed-frame-source">
++        <span className="ed-frame-cite">1</span>
++        <span className="ed-frame-source-doc">{source}</span>
++      </div>
++    </div>
++  );
++}
++
++/** The sentence before the cited one, from the same paragraph. */
++const CITED_PARAGRAPH = PARAGRAPHS.find((p) => p.includes(CITED)) ?? CITED;
++const LEAD_IN = CITED_PARAGRAPH.slice(0, CITED_PARAGRAPH.indexOf(CITED)).trim();
++
++export function PassageVignette({ pageLabel }: { pageLabel: string }) {
++  return (
++    <div className="ed-vignette ed-vignette-page" aria-hidden="true">
++      <div className="ed-vignette-pagebar">
++        <span className="ed-vignette-doc" dir="ltr" lang="en">{DOC_NAME}</span>
++        <span className="ed-vignette-pageno">{pageLabel}</span>
++      </div>
++      <p className="ed-vignette-passage" dir="ltr" lang="en">
++        <span className="ed-vignette-margin">
++          <span className="ed-frame-cite">1</span>
++        </span>
++        <span className="ed-vignette-lead">{LEAD_IN} </span>
++        <mark className="ed-vignette-mark">{CITED}</mark>
++      </p>
++    </div>
++  );
++}
++
++/** Four language pills (one line in a feature card), the reader's own always
++ *  among them and selected. */
++export function vignetteLanguages(current: string): { code: Locale; label: string }[] {
++  const picked: Locale[] = ['en', 'zh', 'es', 'ar'];
++  const own = LOCALES.find((l) => l.code === current)?.code;
++  const codes = own && !picked.includes(own) ? [...picked.slice(0, 3), own] : picked;
++  return codes.map((code) => ({ code, label: LOCALES.find((l) => l.code === code)!.label }));
++}
++
++export function LanguagesVignette({
++  locale,
++  question,
++  answer,
++  source,
++}: AnswerStrings & { locale: string }) {
++  const active = LOCALES.some((l) => l.code === locale) ? locale : 'en';
++  return (
++    <div className="ed-vignette" aria-hidden="true">
++      <div className="ed-vignette-pills">
++        {vignetteLanguages(active).map((l) => (
++          <span
++            key={l.code}
++            lang={l.code}
++            className={`ed-vignette-pill${l.code === active ? ' is-active' : ''}`}
++          >
++            {l.label}
++          </span>
++        ))}
++      </div>
++      <p className="ed-vignette-q">{question}</p>
++      <p className="ed-frame-a ed-vignette-a">
++        {answer}
++        <span className="ed-frame-cite">1</span>
++      </p>
++      <div className="ed-frame-source">
++        <span className="ed-frame-cite">1</span>
++        <span className="ed-frame-source-doc">{source}</span>
++      </div>
++    </div>
++  );
++}
++
++/** The layout of one page: a title, two columns of text, a figure and an
++ *  equation line. Lines are shapes, not words: this shows structure kept, it
++ *  does not pretend to be a translation of anything. */
++function PageSketch({ variant }: { variant: 'original' | 'translated' }) {
++  // Different line lengths on the translated page: the words change, the
++  // places on the page do not.
++  const left = variant === 'original' ? [92, 100, 84, 96, 70] : [100, 88, 96, 78, 90];
++  const right = variant === 'original' ? [100, 90, 96, 62] : [86, 100, 74, 94];
++  return (
++    <div className="ed-vignette-sheet">
++      <span className="ed-vignette-line is-title" style={{ width: variant === 'original' ? '72%' : '64%' }} />
++      <div className="ed-vignette-cols">
++        <div>
++          {left.map((w, i) => <span key={i} className="ed-vignette-line" style={{ width: `${w}%` }} />)}
++        </div>
++        <div>
++          <span className="ed-vignette-figure" />
++          {right.map((w, i) => <span key={i} className="ed-vignette-line" style={{ width: `${w}%` }} />)}
++        </div>
++      </div>
++      <span className="ed-vignette-line is-equation" />
++    </div>
++  );
++}
++
++export function TranslationVignette({ originalLabel, translatedLabel }: { originalLabel: string; translatedLabel: string }) {
++  return (
++    <div className="ed-vignette ed-vignette-translate" aria-hidden="true">
++      <figure className="ed-vignette-side">
++        <PageSketch variant="original" />
++        <figcaption>{originalLabel}</figcaption>
++      </figure>
++      <span className="ed-vignette-arrow">→</span>
++      <figure className="ed-vignette-side">
++        <PageSketch variant="translated" />
++        <figcaption>{translatedLabel}</figcaption>
++      </figure>
++    </div>
++  );
++}
++
++/** The formats upload accepts (lib/uploadFormats.ts, never forked) plus URL
++ *  import. */
++export const VIGNETTE_FORMATS: readonly string[] = [
++  ...UPLOAD_EXTENSIONS.map((ext) => ext.slice(1).toUpperCase()),
++  'URL',
++];
++
++export function FormatsVignette({ dropLabel }: { dropLabel: string }) {
++  return (
++    <div className="ed-vignette" aria-hidden="true">
++      <div className="ed-vignette-drop">
++        <span className="ed-vignette-drop-label">{dropLabel}</span>
++        <div className="ed-vignette-formats">
++          {VIGNETTE_FORMATS.map((f) => (
++            <span key={f} className="ed-vignette-format">{f}</span>
++          ))}
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/i18n/locales/ar.json b/frontend/src/i18n/locales/ar.json
+index 96d8ad2..791da65 100644
+--- a/frontend/src/i18n/locales/ar.json
++++ b/frontend/src/i18n/locales/ar.json
+@@ -380,6 +380,10 @@
+   "landing.entry.sample.earnings": "تقرير الأرباح",
+   "landing.entry.sample.paper": "ورقة بحثية",
+   "landing.entry.sample.court": "مستند قضائي",
++  "landing.vignette.original": "الأصل",
++  "landing.vignette.translated": "المترجَم",
++  "landing.vignette.drop": "أفلت ملفًا أو الصق رابطًا",
++  "landing.vignette.page": "الصفحة {page}",
+   "landing.howItWorks.step1.title": "ارفع ملف PDF",
+   "landing.howItWorks.step1.desc": "اسحب وأفلت أي مستند PDF — تقارير، أبحاث، عقود، أدلة",
+   "landing.howItWorks.step2.title": "اطرح أسئلة",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "الملفات حتى {max} ميغابايت في الخطة المجانية.",
+   "guestUpload.notKept": "لم يتمكن متصفحك من الاحتفاظ بالملف. اختره مرة أخرى بعد تسجيل الدخول.",
+   "demo.freeNoSignup": "5 أسئلة مجانية لكل مستند · دون تسجيل",
++  "demo.lastQuestion": "هذا آخر سؤال مجاني في هذا المستند",
+   "guestUpload.resumeMissing": "الملف الذي اخترته قبل تسجيل الدخول غير متاح في هذا المتصفح. اختره مرة أخرى."
+ }
+diff --git a/frontend/src/i18n/locales/de.json b/frontend/src/i18n/locales/de.json
+index cd41f75..c0c8e8c 100644
+--- a/frontend/src/i18n/locales/de.json
++++ b/frontend/src/i18n/locales/de.json
+@@ -392,6 +392,10 @@
+   "landing.entry.sample.earnings": "Quartalsbericht",
+   "landing.entry.sample.paper": "Forschungsartikel",
+   "landing.entry.sample.court": "Gerichtsdokument",
++  "landing.vignette.original": "Original",
++  "landing.vignette.translated": "Übersetzt",
++  "landing.vignette.drop": "Datei ablegen oder Link einfügen",
++  "landing.vignette.page": "Seite {page}",
+   "landing.howItWorks.step1.title": "Dokument hochladen",
+   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, Textdateien oder eine Web-URL einfügen. Ziehen, ablegen, fertig.",
+   "landing.howItWorks.step2.title": "Fragen stellen",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "Im kostenlosen Plan sind Dateien bis {max} MB möglich.",
+   "guestUpload.notKept": "Dein Browser konnte die Datei nicht behalten. Wähle sie nach der Anmeldung erneut aus.",
+   "demo.freeNoSignup": "5 kostenlose Fragen pro Dokument · ohne Anmeldung",
++  "demo.lastQuestion": "Letzte kostenlose Frage zu diesem Dokument",
+   "guestUpload.resumeMissing": "Die Datei, die du vor der Anmeldung ausgewählt hast, ist in diesem Browser nicht verfügbar. Wähle sie erneut aus."
+ }
+diff --git a/frontend/src/i18n/locales/en.json b/frontend/src/i18n/locales/en.json
+index dfbdc3e..d96ad23 100644
+--- a/frontend/src/i18n/locales/en.json
++++ b/frontend/src/i18n/locales/en.json
+@@ -397,6 +397,10 @@
+   "landing.entry.sample.earnings": "Earnings release",
+   "landing.entry.sample.paper": "Research paper",
+   "landing.entry.sample.court": "Court filing",
++  "landing.vignette.original": "Original",
++  "landing.vignette.translated": "Translated",
++  "landing.vignette.drop": "Drop a file or paste a link",
++  "landing.vignette.page": "Page {page}",
+   "landing.howItWorks.step1.title": "Upload your document",
+   "landing.howItWorks.step1.desc": "PDF, Word, PowerPoint, Excel, text files, or paste a web URL. Drag, drop, done.",
+   "landing.howItWorks.step2.title": "Ask questions",
+@@ -4059,5 +4063,6 @@
+   "guestUpload.tooLarge": "Files up to {max} MB on the free plan.",
+   "guestUpload.notKept": "Your browser could not keep the file. Choose it again after you sign in.",
+   "demo.freeNoSignup": "5 free questions per document · no sign-up needed",
++  "demo.lastQuestion": "Last free question on this document",
+   "guestUpload.resumeMissing": "The file you picked before signing in is not available in this browser. Choose it again."
+ }
+diff --git a/frontend/src/i18n/locales/es.json b/frontend/src/i18n/locales/es.json
+index 307e30d..0bc000d 100644
+--- a/frontend/src/i18n/locales/es.json
++++ b/frontend/src/i18n/locales/es.json
+@@ -253,6 +253,10 @@
+   "landing.entry.sample.earnings": "Informe de resultados",
+   "landing.entry.sample.paper": "Artículo de investigación",
+   "landing.entry.sample.court": "Escrito judicial",
++  "landing.vignette.original": "Original",
++  "landing.vignette.translated": "Traducido",
++  "landing.vignette.drop": "Suelta un archivo o pega un enlace",
++  "landing.vignette.page": "Página {page}",
+   "landing.howItWorks.step1.title": "Sube tu PDF",
+   "landing.howItWorks.step1.desc": "Arrastra y suelta cualquier documento PDF — informes, artículos, contratos, manuales",
+   "landing.howItWorks.step2.title": "Haz preguntas",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "Archivos de hasta {max} MB en el plan gratuito.",
+   "guestUpload.notKept": "Tu navegador no pudo guardar el archivo. Vuelve a elegirlo después de iniciar sesión.",
+   "demo.freeNoSignup": "5 preguntas gratis por documento · sin registro",
++  "demo.lastQuestion": "Última pregunta gratis en este documento",
+   "guestUpload.resumeMissing": "El archivo que elegiste antes de iniciar sesión no está disponible en este navegador. Vuelve a elegirlo."
+ }
+diff --git a/frontend/src/i18n/locales/fr.json b/frontend/src/i18n/locales/fr.json
+index 3b9c091..4676ec0 100644
+--- a/frontend/src/i18n/locales/fr.json
++++ b/frontend/src/i18n/locales/fr.json
+@@ -392,6 +392,10 @@
+   "landing.entry.sample.earnings": "Résultats financiers",
+   "landing.entry.sample.paper": "Article de recherche",
+   "landing.entry.sample.court": "Acte judiciaire",
++  "landing.vignette.original": "Original",
++  "landing.vignette.translated": "Traduit",
++  "landing.vignette.drop": "Déposez un fichier ou collez un lien",
++  "landing.vignette.page": "Page {page}",
+   "landing.howItWorks.step1.title": "Téléversez votre PDF",
+   "landing.howItWorks.step1.desc": "Glissez-déposez n'importe quel document PDF — rapports, articles, contrats, manuels",
+   "landing.howItWorks.step2.title": "Posez des questions",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "Fichiers jusqu'à {max} Mo avec l'offre gratuite.",
+   "guestUpload.notKept": "Votre navigateur n'a pas pu conserver le fichier. Choisissez-le à nouveau après vous être connecté.",
+   "demo.freeNoSignup": "5 questions gratuites par document · sans inscription",
++  "demo.lastQuestion": "Dernière question gratuite sur ce document",
+   "guestUpload.resumeMissing": "Le fichier choisi avant la connexion n'est pas disponible dans ce navigateur. Choisissez-le à nouveau."
+ }
+diff --git a/frontend/src/i18n/locales/hi.json b/frontend/src/i18n/locales/hi.json
+index de2264b..044cd25 100644
+--- a/frontend/src/i18n/locales/hi.json
++++ b/frontend/src/i18n/locales/hi.json
+@@ -380,6 +380,10 @@
+   "landing.entry.sample.earnings": "तिमाही नतीजे",
+   "landing.entry.sample.paper": "शोध पत्र",
+   "landing.entry.sample.court": "अदालती दस्तावेज़",
++  "landing.vignette.original": "मूल",
++  "landing.vignette.translated": "अनुवादित",
++  "landing.vignette.drop": "फ़ाइल छोड़ें या लिंक चिपकाएँ",
++  "landing.vignette.page": "पेज {page}",
+   "landing.howItWorks.step1.title": "अपना PDF अपलोड करें",
+   "landing.howItWorks.step1.desc": "कोई भी PDF दस्तावेज़ खींचकर छोड़ें — रिपोर्ट, शोधपत्र, अनुबंध, मैनुअल",
+   "landing.howItWorks.step2.title": "प्रश्न पूछें",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "मुफ़्त प्लान में {max} MB तक की फ़ाइलें।",
+   "guestUpload.notKept": "आपका ब्राउज़र फ़ाइल नहीं रख सका। साइन इन के बाद इसे फिर से चुनें।",
+   "demo.freeNoSignup": "हर दस्तावेज़ पर 5 मुफ़्त सवाल · साइन-अप की ज़रूरत नहीं",
++  "demo.lastQuestion": "इस दस्तावेज़ पर आख़िरी मुफ़्त सवाल",
+   "guestUpload.resumeMissing": "साइन इन से पहले चुनी गई फ़ाइल इस ब्राउज़र में उपलब्ध नहीं है। इसे फिर से चुनें।"
+ }
+diff --git a/frontend/src/i18n/locales/it.json b/frontend/src/i18n/locales/it.json
+index 27d8ae0..fd4a75b 100644
+--- a/frontend/src/i18n/locales/it.json
++++ b/frontend/src/i18n/locales/it.json
+@@ -383,6 +383,10 @@
+   "landing.entry.sample.earnings": "Risultati trimestrali",
+   "landing.entry.sample.paper": "Articolo di ricerca",
+   "landing.entry.sample.court": "Atto giudiziario",
++  "landing.vignette.original": "Originale",
++  "landing.vignette.translated": "Tradotto",
++  "landing.vignette.drop": "Trascina un file o incolla un link",
++  "landing.vignette.page": "Pagina {page}",
+   "landing.howItWorks.step1.title": "Carica il tuo PDF",
+   "landing.howItWorks.step1.desc": "Trascina e rilascia qualsiasi documento PDF — report, articoli, contratti, manuali",
+   "landing.howItWorks.step2.title": "Fai domande",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "File fino a {max} MB con il piano gratuito.",
+   "guestUpload.notKept": "Il browser non è riuscito a conservare il file. Sceglilo di nuovo dopo l'accesso.",
+   "demo.freeNoSignup": "5 domande gratuite per documento · senza registrazione",
++  "demo.lastQuestion": "Ultima domanda gratuita su questo documento",
+   "guestUpload.resumeMissing": "Il file scelto prima dell'accesso non è disponibile in questo browser. Sceglilo di nuovo."
+ }
+diff --git a/frontend/src/i18n/locales/ja.json b/frontend/src/i18n/locales/ja.json
+index 511cd8d..04af602 100644
+--- a/frontend/src/i18n/locales/ja.json
++++ b/frontend/src/i18n/locales/ja.json
+@@ -383,6 +383,10 @@
+   "landing.entry.sample.earnings": "決算発表",
+   "landing.entry.sample.paper": "研究論文",
+   "landing.entry.sample.court": "裁判書類",
++  "landing.vignette.original": "原文",
++  "landing.vignette.translated": "翻訳",
++  "landing.vignette.drop": "ファイルをドロップ、またはリンクを貼り付け",
++  "landing.vignette.page": "{page} ページ",
+   "landing.howItWorks.step1.title": "PDFをアップロード",
+   "landing.howItWorks.step1.desc": "レポート、論文、契約書、マニュアルなど、あらゆるPDFをドラッグ＆ドロップ",
+   "landing.howItWorks.step2.title": "質問する",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "無料プランでは {max} MB までのファイルに対応しています。",
+   "guestUpload.notKept": "ブラウザがファイルを保持できませんでした。サインイン後にもう一度選択してください。",
+   "demo.freeNoSignup": "1 ドキュメントにつき 5 回まで無料で質問 · 登録不要",
++  "demo.lastQuestion": "このドキュメントで最後の無料質問です",
+   "guestUpload.resumeMissing": "サインイン前に選んだファイルは、このブラウザでは利用できません。もう一度選択してください。"
+ }
+diff --git a/frontend/src/i18n/locales/ko.json b/frontend/src/i18n/locales/ko.json
+index 7107132..2598132 100644
+--- a/frontend/src/i18n/locales/ko.json
++++ b/frontend/src/i18n/locales/ko.json
+@@ -383,6 +383,10 @@
+   "landing.entry.sample.earnings": "실적 발표",
+   "landing.entry.sample.paper": "연구 논문",
+   "landing.entry.sample.court": "법원 문서",
++  "landing.vignette.original": "원문",
++  "landing.vignette.translated": "번역본",
++  "landing.vignette.drop": "파일을 끌어 놓거나 링크 붙여넣기",
++  "landing.vignette.page": "{page}페이지",
+   "landing.howItWorks.step1.title": "PDF 업로드",
+   "landing.howItWorks.step1.desc": "보고서, 논문, 계약서, 매뉴얼 등 모든 PDF를 드래그 앤 드롭",
+   "landing.howItWorks.step2.title": "질문하기",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "무료 플랜에서는 최대 {max}MB 파일까지 지원합니다.",
+   "guestUpload.notKept": "브라우저가 파일을 보관하지 못했습니다. 로그인한 뒤 다시 선택하세요.",
+   "demo.freeNoSignup": "문서당 무료 질문 5개 · 가입 필요 없음",
++  "demo.lastQuestion": "이 문서의 마지막 무료 질문입니다",
+   "guestUpload.resumeMissing": "로그인 전에 선택한 파일을 이 브라우저에서 사용할 수 없습니다. 다시 선택하세요."
+ }
+diff --git a/frontend/src/i18n/locales/pt.json b/frontend/src/i18n/locales/pt.json
+index 699168d..385f42b 100644
+--- a/frontend/src/i18n/locales/pt.json
++++ b/frontend/src/i18n/locales/pt.json
+@@ -1688,6 +1688,10 @@
+   "landing.entry.sample.earnings": "Relatório de resultados",
+   "landing.entry.sample.paper": "Artigo científico",
+   "landing.entry.sample.court": "Peça judicial",
++  "landing.vignette.original": "Original",
++  "landing.vignette.translated": "Traduzido",
++  "landing.vignette.drop": "Solte um arquivo ou cole um link",
++  "landing.vignette.page": "Página {page}",
+   "landing.security.deletion.desc": "Remova seus dados de todos os sistemas ativos quando quiser.",
+   "landing.security.deletion.title": "Exclua a qualquer momento",
+   "landing.security.encrypted.desc": "TLS em trânsito, AES-256 em repouso. Proteção de padrão industrial.",
+@@ -4057,5 +4061,6 @@
+   "guestUpload.tooLarge": "Arquivos de até {max} MB no plano gratuito.",
+   "guestUpload.notKept": "Seu navegador não conseguiu guardar o arquivo. Escolha-o novamente depois de entrar.",
+   "demo.freeNoSignup": "5 perguntas grátis por documento · sem cadastro",
++  "demo.lastQuestion": "Última pergunta grátis neste documento",
+   "guestUpload.resumeMissing": "O arquivo que você escolheu antes de entrar não está disponível neste navegador. Escolha-o novamente."
+ }
+diff --git a/frontend/src/i18n/locales/zh.json b/frontend/src/i18n/locales/zh.json
+index 752de8d..50b5ec6 100644
+--- a/frontend/src/i18n/locales/zh.json
++++ b/frontend/src/i18n/locales/zh.json
+@@ -397,6 +397,10 @@
+   "landing.entry.sample.earnings": "财报",
+   "landing.entry.sample.paper": "研究论文",
+   "landing.entry.sample.court": "法院文书",
++  "landing.vignette.original": "原文",
++  "landing.vignette.translated": "译文",
++  "landing.vignette.drop": "拖入文件或粘贴链接",
++  "landing.vignette.page": "第 {page} 页",
+   "landing.howItWorks.step1.title": "上传 PDF",
+   "landing.howItWorks.step1.desc": "拖放任意 PDF 文档 — 报告、论文、合同、手册",
+   "landing.howItWorks.step2.title": "提出问题",
+@@ -4096,5 +4100,6 @@
+   "guestUpload.tooLarge": "免费版支持最大 {max} MB 的文件。",
+   "guestUpload.notKept": "你的浏览器无法保留该文件，请在登录后重新选择。",
+   "demo.freeNoSignup": "每个文档 5 次免费提问 · 无需注册",
++  "demo.lastQuestion": "这是本文档的最后一次免费提问",
+   "guestUpload.resumeMissing": "你登录前选择的文件在此浏览器中已不可用，请重新选择。"
+ }
+diff --git a/frontend/tests/product-vignettes.test.cjs b/frontend/tests/product-vignettes.test.cjs
+new file mode 100644
+index 0000000..4285735
+--- /dev/null
++++ b/frontend/tests/product-vignettes.test.cjs
+@@ -0,0 +1,125 @@
++// Product vignettes (plan .collab/plans/2026-11-22-ui-ux-pangram-learnings.md
++// M4/M5/M7) and the last-free-question notice (A2).
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const Module = require('node:module');
++const test = require('node:test');
++const ts = require('typescript');
++const React = require('react');
++const { renderToStaticMarkup } = require('react-dom/server');
++require('./_load-ts.cjs');
++
++const SRC = path.resolve(__dirname, '../src');
++const src = (p) => fs.readFileSync(path.join(SRC, p), 'utf8');
++function loadTsx(relative) {
++  const filename = path.join(SRC, relative);
++  const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
++    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
++    fileName: filename,
++  }).outputText;
++  const loaded = new Module(filename, module);
++  loaded.filename = filename;
++  loaded.paths = Module._nodeModulePaths(path.dirname(filename));
++  loaded._compile(compiled, filename);
++  return loaded.exports;
++}
++
++const V = loadTsx('components/marketing/ProductVignettes.tsx');
++const { CITED } = require('../src/components/landing/citationFieldContent.ts');
++const { UPLOAD_EXTENSIONS } = require('../src/lib/uploadFormats.ts');
++const LOCALES = ['en', 'zh', 'ja', 'ko', 'es', 'de', 'fr', 'pt', 'it', 'ar', 'hi'];
++const frame = { question: 'Q?', answer: 'A.', source: 'Source, p. 1' };
++
++test('vignettes are pure: no client directive, no hooks (server feature pages render them)', () => {
++  const code = src('components/marketing/ProductVignettes.tsx');
++  assert.doesNotMatch(code, /^["']use client["']/m);
++  assert.doesNotMatch(code, /\buse(State|Effect|LayoutEffect|Locale|Ref|Memo|Callback|Id)\(/);
++});
++
++test('every vignette is an illustration: aria-hidden, nothing focusable', () => {
++  const rendered = [
++    React.createElement(V.AnswerVignette, frame),
++    React.createElement(V.PassageVignette, { pageLabel: 'Page 1' }),
++    React.createElement(V.LanguagesVignette, { ...frame, locale: 'de' }),
++    React.createElement(V.TranslationVignette, { originalLabel: 'O', translatedLabel: 'T' }),
++    React.createElement(V.FormatsVignette, { dropLabel: 'Drop' }),
++  ].map((el) => renderToStaticMarkup(el));
++  for (const html of rendered) {
++    assert.match(html, /^<div class="ed-vignette[^"]*" aria-hidden="true">/);
++    assert.doesNotMatch(html, /<(a|button|input|textarea|select)\b|tabindex/);
++  }
++});
++
++test('the passage quotes the cited sentence verbatim, left-to-right English', () => {
++  const html = renderToStaticMarkup(React.createElement(V.PassageVignette, { pageLabel: 'Page 1' }));
++  const escaped = CITED.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
++  assert.ok(html.includes(`<mark class="ed-vignette-mark">${escaped}</mark>`));
++  assert.match(html, /class="ed-vignette-passage" dir="ltr" lang="en"/);
++});
++
++test('format chips are the upload list plus URL, and still number seven (the proof strip says 7)', () => {
++  assert.deepEqual(V.VIGNETTE_FORMATS, [...UPLOAD_EXTENSIONS.map((e) => e.slice(1).toUpperCase()), 'URL']);
++  assert.equal(V.VIGNETTE_FORMATS.length, 7);
++});
++
++test("the language vignette always shows and selects the reader's own language", () => {
++  for (const locale of LOCALES) {
++    const langs = V.vignetteLanguages(locale);
++    assert.equal(langs.length, 4);
++    assert.ok(langs.some((l) => l.code === locale), `${locale} missing`);
++    const html = renderToStaticMarkup(React.createElement(V.LanguagesVignette, { ...frame, locale }));
++    assert.match(html, new RegExp(`lang="${locale}" class="ed-vignette-pill is-active"`));
++  }
++});
++
++test('vignette styles stay at 12px and up, ink-3 at 13px and up, and scoped', () => {
++  const css = src('app/editorial.css');
++  const block = css.slice(css.indexOf('/* ─── Product vignettes'), css.indexOf('/* ─── Night hero'));
++  assert.ok(block.length > 200);
++  for (const [, size] of block.matchAll(/font-size:\s*(\d+)px/g)) assert.ok(Number(size) >= 12, `font-size ${size}px`);
++  for (const rule of block.split('}')) {
++    const sel = rule.slice(0, rule.indexOf('{')).trim().replace(/\/\*[\s\S]*?\*\//g, '').trim();
++    if (!sel || sel.startsWith('@media')) continue;
++    for (const part of sel.split(',').map((x) => x.trim()).filter(Boolean)) {
++      assert.ok(part.startsWith('.dt-editorial ') || part.startsWith('@'), `unscoped selector: ${part}`);
++    }
++    if (/color:\s*var\(--ed-ink-3\)/.test(rule)) {
++      const size = Number((rule.match(/font-size:\s*(\d+)px/) || [])[1] || 13);
++      assert.ok(size >= 13, `${sel}: ink-3 below 13px`);
++    }
++  }
++});
++
++test('landing and feature pages use the vignettes; How it works keeps every step visible', () => {
++  assert.match(src('components/landing/FeatureGrid.tsx'), /<PassageVignette[\s\S]*<LanguagesVignette[\s\S]*<TranslationVignette/);
++  const how = src('components/landing/HowItWorks.tsx');
++  assert.match(how, /FormatsVignette[\s\S]*AnswerVignette[\s\S]*PassageVignette/);
++  assert.match(how, /steps\.map\([\s\S]*t\(titleKey\)[\s\S]*t\(descKey\)/);
++  assert.doesNotMatch(how, /hidden=\{|aria-expanded/, 'no accordion: the HowTo schema matches visible text');
++  for (const [file, name] of [
++    ['app/features/citations/CitationsContent.tsx', 'PassageVignette'],
++    ['app/features/multilingual/MultilingualContent.tsx', 'LanguagesVignette'],
++    ['app/features/multi-format/MultiFormatContent.tsx', 'FormatsVignette'],
++    ['app/features/layout-translation/LayoutTranslationPageContent.tsx', 'TranslationVignette'],
++  ]) {
++    const code = src(file);
++    assert.match(code, /variant="product"/, `${file} hero is not the product variant`);
++    assert.ok(code.includes(`<${name}`), `${file} does not render ${name}`);
++  }
++});
++
++test('the reader names the last free question before it is spent', () => {
++  const chat = src('components/Chat/ChatPanel.tsx');
++  assert.match(chat, /demoRemaining === 1\s*\?\s*tOr\('demo\.lastQuestion'/);
++});
++
++test('vignette and last-question strings exist in all 11 locales', () => {
++  const keys = ['landing.vignette.original', 'landing.vignette.translated', 'landing.vignette.drop', 'landing.vignette.page', 'demo.lastQuestion',
++    'landing.frame.question', 'landing.frame.answer', 'landing.frame.source'];
++  for (const l of LOCALES) {
++    const m = JSON.parse(src(`i18n/locales/${l}.json`));
++    for (const k of keys) assert.ok(m[k], `${l}.json missing ${k}`);
++    assert.ok(m['landing.vignette.page'].includes('{page}'), `${l} page label lost {page}`);
++  }
++});
